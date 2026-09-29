@@ -31,17 +31,12 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     Column {
         ScreenBar(route.title, back = back)
         if (route.section == "following")
-            Row(
-                Modifier.padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                FilterChip(restrict == "public", { restrict = "public" }, label = { Text("公开关注") })
-                FilterChip(
-                    restrict == "private",
-                    { restrict = "private" },
-                    label = { Text("非公开关注") },
-                )
-            }
+            ChoiceSegments(
+                restrict,
+                listOf("public" to "公开关注", "private" to "非公开关注"),
+                { restrict = it },
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            )
         PullToRefreshBox(
             people.loadState.refresh is LoadState.Loading && people.itemCount > 0,
             { people.refresh() },

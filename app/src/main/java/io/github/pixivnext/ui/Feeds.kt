@@ -77,19 +77,28 @@ fun KindTabs(selected: String, onSelect: (String) -> Unit, novel: Boolean = true
                 "illust" to strings.getString(R.string.ui_2a47176e3d),
                 "manga" to strings.getString(R.string.ui_6a0b30d361),
             )
-    Row(
+    ChoiceSegments(
+        selected,
+        kinds,
+        onSelect,
         Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        kinds.forEach { (key, label) ->
-            FilterChip(
-                selected == key,
-                { onSelect(key) },
-                label = { Text(label) },
-                leadingIcon =
-                    if (selected == key) {
-                        { AppIcon(Glyph.Check, null, Modifier.size(16.dp)) }
-                    } else null,
+    )
+}
+
+@Composable
+fun ChoiceSegments(
+    selected: String,
+    options: List<Pair<String, String>>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    SingleChoiceSegmentedButtonRow(modifier) {
+        options.forEachIndexed { index, (key, label) ->
+            SegmentedButton(
+                selected = selected == key,
+                onClick = { onSelect(key) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                label = { Text(label, maxLines = 1) },
             )
         }
     }
@@ -201,21 +210,15 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             },
         )
         KindTabs(kind, { kind = it })
-        Row(
-            Modifier.padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(
-                !private,
-                { private = false },
-                label = { Text(strings.getString(R.string.ui_dfe5a318ab)) },
-            )
-            FilterChip(
-                private,
-                { private = true },
-                label = { Text(strings.getString(R.string.ui_82b464fc64)) },
-            )
-        }
+        ChoiceSegments(
+            if (private) "private" else "public",
+            listOf(
+                "public" to strings.getString(R.string.ui_dfe5a318ab),
+                "private" to strings.getString(R.string.ui_82b464fc64),
+            ),
+            { private = it == "private" },
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+        )
         FeedGrid(
             FeedSpec(
                 section = "bookmarks",
@@ -633,19 +636,16 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
             keyboardActions =
                 androidx.compose.foundation.text.KeyboardActions(onSearch = { submit(word) }),
         )
-        Row(
-            Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        ChoiceSegments(
+            kind,
             listOf(
-                    "illust" to strings.getString(R.string.ui_f394cdc91d),
-                    "novel" to strings.getString(R.string.ui_6eb705b4ce),
-                    "user" to strings.getString(R.string.ui_698bea5124),
-                )
-                .forEach { (key, label) ->
-                    FilterChip(kind == key, { kind = key }, label = { Text(label) })
-                }
-        }
+                "illust" to strings.getString(R.string.ui_f394cdc91d),
+                "novel" to strings.getString(R.string.ui_6eb705b4ce),
+                "user" to strings.getString(R.string.ui_698bea5124),
+            ),
+            { kind = it },
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+        )
         if (submitted.isNotEmpty()) {
             if (kind == "user") {
                 if (userLoading) LoadingState()
