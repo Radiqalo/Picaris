@@ -119,24 +119,42 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                         HomeScreen(vm, navigate)
                                     }
                                     entry<Search>(metadata = ListDetailSceneStrategy.listPane()) {
-                                        SearchScreen(vm, navigate, back)
+                                        ScrollingScreen { SearchScreen(vm, navigate, back) }
                                     }
-                                    entry<People> { PeopleScreen(it, vm, navigate, back) }
-                                    entry<Replies> { RepliesScreen(it, vm, navigate, back) }
-                                    entry<Comments> { CommentsScreen(it.work, vm, navigate, back) }
+                                    entry<People> {
+                                        ScrollingScreen { PeopleScreen(it, vm, navigate, back) }
+                                    }
+                                    entry<Replies> {
+                                        ScrollingScreen { RepliesScreen(it, vm, navigate, back) }
+                                    }
+                                    entry<Comments> {
+                                        ScrollingScreen {
+                                            CommentsScreen(it.work, vm, navigate, back)
+                                        }
+                                    }
                                     entry<Detail>(metadata = ListDetailSceneStrategy.detailPane()) {
-                                        DetailScreen(it.work, vm, navigate, back)
+                                        ScrollingScreen {
+                                            DetailScreen(it.work, vm, navigate, back)
+                                        }
                                     }
-                                    entry<Reader> { ReaderScreen(it.work, vm, back) }
+                                    entry<Reader> {
+                                        ScrollingScreen { ReaderScreen(it.work, vm, back) }
+                                    }
                                     entry<Author>(metadata = ListDetailSceneStrategy.listPane()) {
-                                        AuthorScreen(it.user, vm, navigate, back)
+                                        ScrollingScreen {
+                                            AuthorScreen(it.user, vm, navigate, back)
+                                        }
                                     }
                                     entry<Collection>(
                                         metadata = ListDetailSceneStrategy.listPane()
                                     ) {
-                                        CollectionScreen(it, vm, navigate, back)
+                                        ScrollingScreen { CollectionScreen(it, vm, navigate, back) }
                                     }
-                                    entry<Utility> { UtilityScreen(it.page, vm, navigate, back) }
+                                    entry<Utility> {
+                                        ScrollingScreen {
+                                            UtilityScreen(it.page, vm, navigate, back)
+                                        }
+                                    }
                                 },
                         )
                     }
@@ -212,14 +230,16 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             ) { padding ->
                 Box(Modifier.padding(padding)) {
                     holder.SaveableStateProvider(tab) {
-                        when (tab) {
-                            0 ->
-                                DiscoverScreen(vm, navigate) {
-                                    navigate(Search)
-                                }
-                            1 -> FollowScreen(vm, navigate)
-                            2 -> BookmarkScreen(vm, navigate)
-                            else -> ProfileScreen(vm, navigate)
+                        ScrollingScreen {
+                            when (tab) {
+                                0 ->
+                                    DiscoverScreen(vm, navigate) {
+                                        navigate(Search)
+                                    }
+                                1 -> FollowScreen(vm, navigate)
+                                2 -> BookmarkScreen(vm, navigate)
+                                else -> ProfileScreen(vm, navigate)
+                            }
                         }
                     }
                 }

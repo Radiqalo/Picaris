@@ -176,6 +176,7 @@ private fun ThreadScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                scrollBehavior = LocalAppBarScrollBehavior.current,
                 title = { Text(if (parent == null) "评论区" else "评论回复") },
                 navigationIcon = { IconButton(back) { AppIcon(Glyph.Back, "返回") } },
                 actions = {

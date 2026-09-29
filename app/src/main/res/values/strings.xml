@@ -2,7 +2,6 @@
     <string name="app_name">PixivNext</string>
     <string name="ui_00925a8ece">回到曾经遇见的作品</string>
     <string name="ui_074bfabad3">动图超过预览大小限制，请下载原始帧包</string>
-    <string name="ui_08807238af">让浏览更合你的习惯</string>
     <string name="ui_094616a53c">小说详情</string>
     <string name="ui_09b58aa342">外观</string>
     <string name="ui_0a7bef0788">清理浏览历史</string>
@@ -22,7 +21,6 @@
     <string name="ui_19fa805abc">正在寻找灵感…</string>
     <string name="ui_1a62da8063">屏蔽标签</string>
     <string name="ui_1c31f74a1d">搜索筛选</string>
-    <string name="ui_1e3a75cb16">发现你喜欢的世界</string>
     <string name="ui_1f68f47fa2">风景</string>
     <string name="ui_2184c031c9">查看作者</string>
     <string name="ui_218f19435d">已授权自定义目录</string>
@@ -52,10 +50,8 @@
     <string name="ui_37e46b67a6">系统网络</string>
     <string name="ui_38820b3dc3">打开文件</string>
     <string name="ui_3bb3442038">打开下载文件</string>
-    <string name="ui_3eaf2e3522">演示预览 · 原创示例画作</string>
     <string name="ui_3f9550508b">继续下载</string>
     <string name="ui_408822a29e">收藏喜欢的作品后，就能在这里找到它们</string>
-    <string name="ui_4095704c57">今天的热门作品</string>
     <string name="ui_40b33b3472">外观、阅读、网络与内容过滤</string>
     <string name="ui_414559692f">偏好与帮助</string>
     <string name="ui_4544c7e538">输入作者 ID，以逗号或换行分隔</string>
@@ -70,7 +66,6 @@
     <string name="ui_50c005951d">将新下载保存到系统目录</string>
     <string name="ui_5196834bd3">最早发布</string>
     <string name="ui_523e40a074">发现</string>
-    <string name="ui_52fa2ddd72">为喜欢的作品留一个位置</string>
     <string name="ui_53c753e091">无法缓存动图</string>
     <string name="ui_582c4d5fb8">离线保存，随时欣赏</string>
     <string name="ui_590a4df471">暂时无法加载作品</string>
@@ -85,7 +80,6 @@
     <string name="ui_615547dc71">最新发布</string>
     <string name="ui_63931d2cca">网页登录添加账号</string>
     <string name="ui_63fd41f453">移除账号</string>
-    <string name="ui_67479eba56">从喜欢的事物出发</string>
     <string name="ui_67c6787737">私人收藏</string>
     <string name="ui_68bb566c45">浏览插画、漫画与小说，收藏你的灵感。</string>
     <string name="ui_698bea5124">作者</string>
@@ -133,7 +127,6 @@
     <string name="ui_a768103aef">让灵感，在这里相遇</string>
     <string name="ui_a82c993d73">我的</string>
     <string name="ui_a91a2209d7">以逗号或换行分隔</string>
-    <string name="ui_ad53a21f2d">把喜欢的世界随身携带</string>
     <string name="ui_b0911e6444">小说插图</string>
     <string name="ui_b0de623882">夏日</string>
     <string name="ui_b26a82da6c">动图帧文件缺失</string>
@@ -148,7 +141,6 @@
     <string name="ui_bed172efc9">关于</string>
     <string name="ui_c7e8e58589">退出演示模式</string>
     <string name="ui_ca05850133">将移除此账号的本机登录凭据，下载文件仍然保留。</string>
-    <string name="ui_cf77178185">遇见下一份灵感</string>
     <string name="ui_d00981d6ce">排行榜</string>
     <string name="ui_d07cee786a">收藏</string>
     <string name="ui_d26f35cd03">搜索作品标题、喜欢的标签，或者创作者的名字。</string>
@@ -158,7 +150,6 @@
     <string name="ui_d70fcfc258">一个专注于画作、阅读与发现的非官方 Pixiv 客户端。所有作品归其创作者所有。</string>
     <string name="ui_d7ddb05929">非官方客户端</string>
     <string name="ui_d80ba66133">使用系统壁纸配色</string>
-    <string name="ui_d8876d61d4">各账号的资料库独立保存</string>
     <string name="ui_d95ef5ba39">HTTP 代理</string>
     <string name="ui_da33a1a4d5">显示成人内容</string>
     <string name="ui_dc35af8d69">排序</string>
@@ -181,7 +172,6 @@
     <string name="ui_f15043c361">作品、标签或创作者</string>
     <string name="ui_f1f896b6ff">已关注</string>
     <string name="ui_f1fd08eeb6">还没有浏览记录</string>
-    <string name="ui_f2e922da96">喜欢的创作者，最新的灵感</string>
     <string name="ui_f331d21383">SOCKS 代理</string>
     <string name="ui_f394cdc91d">作品</string>
     <string name="ui_f3be3e4b09">开始阅读</string>

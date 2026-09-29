@@ -127,6 +127,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                 }
             AnimatedVisibility(chrome, Modifier.align(Alignment.TopCenter)) {
                 TopAppBar(
+                    scrollBehavior = LocalAppBarScrollBehavior.current,
                     title = { Text(work.title, maxLines = 1) },
                     navigationIcon = {
                         IconButton(back) {
@@ -432,6 +433,7 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                scrollBehavior = LocalAppBarScrollBehavior.current,
                 title = { Text(work.title, maxLines = 1) },
                 navigationIcon = {
                     IconButton(back) {

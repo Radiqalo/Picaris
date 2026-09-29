@@ -54,6 +54,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     Scaffold(
         topBar = {
             TopAppBar(
+                scrollBehavior = LocalAppBarScrollBehavior.current,
                 title = {
                     Text(
                         if (work.isNovel) strings.getString(R.string.ui_094616a53c)

@@ -12,6 +12,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -28,19 +29,27 @@ import io.github.pixivnext.R
 import io.github.pixivnext.core.*
 import io.github.pixivnext.designsystem.*
 
+val LocalAppBarScrollBehavior = staticCompositionLocalOf<TopAppBarScrollBehavior?> { null }
+
+@Composable
+fun ScrollingScreen(content: @Composable () -> Unit) {
+    val behavior = TopAppBarDefaults.exitAlwaysScrollBehavior()
+    CompositionLocalProvider(LocalAppBarScrollBehavior provides behavior) {
+        Box(Modifier.fillMaxSize().nestedScroll(behavior.nestedScrollConnection)) { content() }
+    }
+}
+
 @Composable
 fun ScreenBar(
     title: String,
-    subtitle: String? = null,
     back: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
-    MediumFlexibleTopAppBar(
-        title = { Text(title) },
-        subtitle = subtitle?.let { { Text(it) } },
-        expandedHeight = 128.dp,
+    TopAppBar(
+        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        scrollBehavior = LocalAppBarScrollBehavior.current,
         navigationIcon = {
             if (back != null)
                 IconButton(back) { AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540)) }
@@ -91,9 +100,7 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> U
     val demo by vm.demo.collectAsStateWithLifecycle()
     Column {
         ScreenBar(
-            strings.getString(R.string.ui_523e40a074),
-            if (demo) strings.getString(R.string.ui_3eaf2e3522)
-            else strings.getString(R.string.ui_cf77178185),
+            strings.getString(R.string.ui_523e40a074) + if (demo) " · 演示" else "",
             actions = {
                 IconButton(search) {
                     AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
@@ -126,10 +133,6 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> U
                             strings.getString(R.string.ui_d00981d6ce),
                             style = MaterialTheme.typography.titleSmall,
                         )
-                        Text(
-                            strings.getString(R.string.ui_4095704c57),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
                     }
                 }
             }
@@ -154,10 +157,6 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> U
                             strings.getString(R.string.ui_5f16d9ef91),
                             style = MaterialTheme.typography.titleSmall,
                         )
-                        Text(
-                            strings.getString(R.string.ui_67479eba56),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
                     }
                 }
             }
@@ -173,10 +172,7 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 
     var kind by rememberSaveable { mutableStateOf("illust") }
     Column {
-        ScreenBar(
-            strings.getString(R.string.ui_e0fd2cee4c),
-            strings.getString(R.string.ui_f2e922da96),
-        )
+        ScreenBar(strings.getString(R.string.ui_e0fd2cee4c))
         KindTabs(kind, { kind = it })
         FeedGrid(FeedSpec(section = "follow", kind = kind), vm, navigate, Modifier.weight(1f))
     }
@@ -191,7 +187,6 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     Column {
         ScreenBar(
             strings.getString(R.string.ui_d07cee786a),
-            strings.getString(R.string.ui_52fa2ddd72),
             actions = {
                 IconButton({ private = !private }) {
                     AppIcon(
@@ -602,7 +597,6 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
     Column {
         ScreenBar(
             strings.getString(R.string.ui_f04090805c),
-            strings.getString(R.string.ui_1e3a75cb16),
             back = back,
             actions = {
                 IconButton({ filter = true }) {

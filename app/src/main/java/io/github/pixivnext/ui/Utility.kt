@@ -207,7 +207,6 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     Column {
         ScreenBar(
             strings.getString(R.string.ui_a82c993d73),
-            strings.getString(R.string.ui_ad53a21f2d),
             actions = {
                 IconButton({ navigate(Utility("settings")) }) {
                     AppIcon(Glyph.Settings, strings.getString(R.string.ui_7debf9cb03))
@@ -411,7 +410,6 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
     Column {
         ScreenBar(
             strings.getString(R.string.ui_7debf9cb03),
-            strings.getString(R.string.ui_08807238af),
             back,
         )
         LazyColumn(
@@ -799,7 +797,6 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
     Column {
         ScreenBar(
             strings.getString(R.string.ui_9d4ca7f307),
-            strings.getString(R.string.ui_d8876d61d4),
             back,
         )
         LazyColumn(
@@ -978,7 +975,6 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     Column {
         ScreenBar(
             strings.getString(R.string.ui_18df1a67a2),
-            "${tasks.count {it.status=="complete"}} 个文件已保存",
             back,
         )
         if (tasks.isEmpty())
