@@ -31,7 +31,7 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     Column {
         ScreenBar(route.title, back = back)
         if (route.section == "following")
-            ChoiceSegments(
+            ChoiceChips(
                 restrict,
                 listOf("public" to "公开关注", "private" to "非公开关注"),
                 { restrict = it },

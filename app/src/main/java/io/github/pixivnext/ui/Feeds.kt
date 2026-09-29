@@ -77,28 +77,34 @@ fun KindTabs(selected: String, onSelect: (String) -> Unit, novel: Boolean = true
                 "illust" to strings.getString(R.string.ui_2a47176e3d),
                 "manga" to strings.getString(R.string.ui_6a0b30d361),
             )
-    ChoiceSegments(
+    ChoiceChips(
         selected,
         kinds,
         onSelect,
         Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+        showCheck = true,
     )
 }
 
 @Composable
-fun ChoiceSegments(
+fun ChoiceChips(
     selected: String,
     options: List<Pair<String, String>>,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
+    showCheck: Boolean = false,
 ) {
-    SingleChoiceSegmentedButtonRow(modifier) {
-        options.forEachIndexed { index, (key, label) ->
-            SegmentedButton(
-                selected = selected == key,
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEach { (key, label) ->
+            val isSelected = selected == key
+            FilterChip(
+                selected = isSelected,
                 onClick = { onSelect(key) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                 label = { Text(label, maxLines = 1) },
+                leadingIcon =
+                    if (showCheck && isSelected) {
+                        { AppIcon(Glyph.Check, null, Modifier.size(16.dp)) }
+                    } else null,
             )
         }
     }
@@ -210,7 +216,7 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             },
         )
         KindTabs(kind, { kind = it })
-        ChoiceSegments(
+        ChoiceChips(
             if (private) "private" else "public",
             listOf(
                 "public" to strings.getString(R.string.ui_dfe5a318ab),
@@ -636,7 +642,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
             keyboardActions =
                 androidx.compose.foundation.text.KeyboardActions(onSearch = { submit(word) }),
         )
-        ChoiceSegments(
+        ChoiceChips(
             kind,
             listOf(
                 "illust" to strings.getString(R.string.ui_f394cdc91d),
