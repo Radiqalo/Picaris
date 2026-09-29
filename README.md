@@ -1,0 +1,104 @@
+# PixivNext
+
+独立实现的 Android 17 / Material 3 Expressive Pixiv 客户端。包名 `io.github.pixivnext`，版本 `0.2.0`。只接受 Android 17（API 37）及以上，不包含旧系统兼容分支。
+
+## 0.2.0 交互调整
+
+- 主页分页会话保留在 ViewModel；从详情、搜索和底栏其它页面返回时复用已加载内容与滚动位置。手动下拉刷新、账号切换与内容过滤修改才开启新的主页加载。
+- 作品卡片的 ❤️ 可直接收藏/取消收藏；列表和详情同步展示收藏状态与计数，不通过刷新主页来同步。
+- 底栏保留发现、动态、收藏、我的；搜索使用主页入口，作为可返回的独立页面。
+- 我的页面增加我的关注（公开/非公开）、粉丝、好 P 友和作品。用户列表支持分页与重试。
+- 点详情图片直接打开原图/漫画/动图阅读器；「查看原图」移入右上角更多菜单。小说保留「开始阅读」。
+- 详情显示评论预览，完整评论区支持分页、贴图、回复、正文选择、发表评论和错误重试。无回复评论直接打开回复输入框；已有回复打开回复列表。演示评论仅保留在当前应用会话内。
+
+## 已实现
+
+- 官方网页 PKCE 登录、refresh token 导入、多账号切换与移除、并发请求的凭据刷新合并。登录凭据使用 Android Keystore AES-GCM 加密；备份和设备迁移排除应用数据。
+- 插画、漫画、小说推荐；排行榜；关注动态；公开/非公开收藏；标签、作品与创作者搜索；日期、匹配方式和排序筛选。热度排序仅对 Premium 账号显示。
+- 作品详情、标签跳转、作者页面、小说系列、相关插画、收藏/取消收藏、关注/取消关注、系统分享及作品链接入口。
+- 原图缩放、多页横向翻阅/纵向阅读、动图 ZIP 帧时序播放；小说正文、章节、分页、插图、文字选择、字号与行距调整。
+- Room 历史与阅读进度、搜索历史、分页缓存；按账号隔离。离线优先打开已下载的原图、小说文本和动图文件。
+- Android User-Initiated Data Transfer 下载队列、通知、暂停/继续/取消/重试、带资源验证的 HTTP Range 续传；MediaStore 或 SAF 自选目录。动图同时保存 ZIP 与帧时序 JSON。
+- 跟随系统/浅色/深色、动态配色、自定义种子色、阅读器纯黑背景；成人内容、AI 作品、标签和作者屏蔽；系统/直连/HTTP/SOCKS 网络配置。
+- Navigation 3 自适应列表与详情双栏、手机底栏/大屏侧栏、系统返回手势、edge-to-edge、大字体布局。
+- 明确标识的离线演示入口；演示插图由本地 Canvas 绘制，小说正文是原创样例。演示数据不代表真实 Pixiv 请求，不能下载。
+
+## 技术版本
+
+版本锁定在 `gradle/libs.versions.toml`；预发布组件按用户要求启用。
+
+| 组件 | 版本 |
+| --- | --- |
+| SDK | compile 37.2 / min 37 / target 37 |
+| Gradle / Android Gradle Plugin | 9.8.0 / 9.5.0-alpha07 |
+| Kotlin / KSP / Hilt | 2.4.20 / 2.3.12 / 2.60.1 |
+| Compose BOM alpha / Material 3 | 2026.09.01 / 1.5.0-alpha29 |
+| Navigation 3 / adaptive-navigation3 | 1.3.0-alpha01 / 1.4.0-alpha02 |
+| Activity / Lifecycle | 1.14.0-alpha03 / 2.12.0-alpha04 |
+| Room / DataStore / Paging | 2.8.5 / 1.3.0-alpha11 / 3.5.1 |
+| Ktor / OkHttp / Coil / Telephoto | 3.6.0 / 5.5.0 / 3.6.3 / 0.19.0 |
+| MaterialKolor / 色彩规范 | 5.0.1 / MD3 Expressive SPEC_2025 |
+| WorkManager / Macrobenchmark | 2.12.0 / 1.5.0 |
+
+Kotlin 2.5.0-Beta1 已尝试，但 Hilt 2.60.1 的元数据读取器拒绝 Kotlin 2.5 元数据；因此使用最新已验证兼容的 Kotlin 2.4.20。Compose 最新 alpha 要求 compile SDK 至少 37.1，因此使用 37.2，而运行最低版本仍为 Android 17 API 37。
+
+## 构建
+
+安装支持该 AGP 的 Android Studio、Android SDK Platform 37.2、Platform Tools 和 Build Tools。最终构建及 Lint 使用 Android Studio JBR 25；源码字节码目标为 JVM 21。早期构建也曾在 JDK 27 下通过，但预发布 Lint 出现过 FIR 分析会话错误，因此推荐 JBR 25。工程默认关闭 Gradle 项目并行，串行完整检查已通过。
+
+在项目根目录创建本机 `local.properties`：
+
+```properties
+sdk.dir=/your/path/to/Android/Sdk
+```
+
+```sh
+./gradlew :app:assembleDebug :app:testDebugUnitTest :core:testDebugUnitTest :designsystem:testDebugUnitTest :app:lintDebug
+./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:assembleBenchmark
+```
+
+`debug` 使用独立包名 `io.github.pixivnext.qa`，开发和设备测试不会覆盖已登录的客户端。`benchmark` 是启用 R8 与资源压缩、使用本机 debug 证书签名的非 debuggable 测试版，也是本次交付 APK 所用变体；同签名可直接升级 0.1.0，保留应用数据。`release` 不绑定私人签名配置，正式发布前需要自行配置发布密钥。不要使用测试签名发布到商店。
+
+源码归档不含 `local.properties`、SDK、模拟器、Gradle 缓存、构建结果或用户凭据；首次构建需要下载依赖。
+
+## Baseline Profile
+
+在可 root 的 Android 17 AOSP/Google APIs 模拟器或支持的真机上运行：
+
+```sh
+./gradlew :benchmark:connectedBenchmarkAndroidTest -PgenerateProfile \
+  -Pandroid.testInstrumentationRunnerArguments.class=io.github.pixivnext.benchmark.ClientBaselineProfile \
+  -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+```
+
+`-PgenerateProfile` 临时关闭目标 APK 的混淆，以采集能映射到下一次 R8 构建的原始类/方法规则。将输出的 `*-baseline-prof.txt` 放入 `app/src/main/baseline-prof.txt`，`*-startup-prof.txt` 放入 `app/src/main/startup-prof.txt`。正常构建时不传该参数，恢复 R8 和资源压缩。
+
+冷启动/滚动测试使用 `ClientBenchmark` 类运行；模拟器输出只能用于可执行性检查，不能代表真机性能。
+
+## 登录与网络
+
+推荐使用「网页登录」，通过 Custom Tabs 打开 Pixiv 的官方页面，完成后回调到应用。应用不收集密码。若设备装有其它处理 `pixiv://` 的客户端，系统可能要求选择 PixivNext；refresh token 导入可作为替代入口。
+
+应用内代理用于 API、图片与下载；Custom Tabs 遵循浏览器/系统网络设置。不内置域名绕过、内置节点或第三方登录服务。请不要把 refresh token 发给别人、写入源码或日志。
+
+Pixiv 没有为本项目授权公开 API。OAuth 与应用接口采用第三方客户端通用协议，服务端可能变更、限制或拒绝请求；网页小说格式发生变化时会显示错误，而不是静默显示空正文。使用时遵守 Pixiv 条款及作品作者的权限要求。
+
+## 验证与边界
+
+实际测试结果、设备信息与真实账号只读调试范围见交付目录的 `验证记录-0.2.0.md`。测试包含内容过滤、原图页序、小说 HTML 解析、并发凭据刷新、下载资源变化/续传范围/416 恢复、Room 账号隔离和暂停竞争，以及 Compose 页面流程。
+
+本次使用已登录的 Android 17 真机，只读验证覆盖升级后登录保留、真实推荐、公开/非公开关注列表、评论正文与贴图读取，以及主页返回后的内容和位置保留。没有执行真实账号收藏/关注修改、发表评论或回复；这些写入流程使用隔离演示包和测试替身验证。全新网页登录、真实下载/动图播放、真实小说评论和已有回复的服务端列表仍未完整联调。预发布工具链的稳定性仍需长期使用验证。
+
+当前创作者搜索仅加载服务端第一页；小说支持常见章节/分页/ruby/插图标记，复杂 jump/jumpuri 等标记未完整排版；下载小说导出文本，不打包小说插图；动图输出 ZIP + JSON，不导出视频。插图离线读取依赖 Coil 缓存或已保存文件。FANBOX/COMIC、通知中心、上传编辑、视频转码和其它扩展产品未包含在首版范围内。
+
+## 模块
+
+- `app`：Compose 页面、Hilt ViewModel、系统登录入口、UIDT 下载与维护任务。
+- `core`：协议模型、Ktor/OkHttp、Keystore 凭据、Room/DataStore、Paging、小说解析和可验证续传。
+- `designsystem`：MD3 Expressive 主题、动态图色、原创矢量图标。
+- `benchmark`：冷启动/滚动 Macrobenchmark 和 Baseline Profile 采集。
+
+## 设计参考与依赖
+
+功能与布局参考 [Pixiv-Shaft](https://github.com/CeuiLiSA/Pixiv-Shaft)，MD3 视觉参考 [MaterialFiles](https://github.com/zhanghai/MaterialFiles) 与 [FooIbar/EhViewer](https://github.com/FooIbar/EhViewer)。界面、图标和样例图均为本项目独立实现；没有复制参考仓库的 UI 源文件、品牌图或作品素材。依赖来源和许可证见 `THIRD_PARTY_NOTICES.md`。
