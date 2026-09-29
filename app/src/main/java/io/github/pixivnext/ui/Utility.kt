@@ -316,7 +316,7 @@ fun SettingRow(
             },
             leadingContent = {
                 Box(
-                    Modifier.size(48.dp)
+                    Modifier.size(56.dp)
                         .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
