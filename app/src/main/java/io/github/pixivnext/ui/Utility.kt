@@ -38,118 +38,51 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
     val busy by vm.busy.collectAsStateWithLifecycle()
     var import by remember { mutableStateOf(false) }
     val tokenState = rememberTextFieldState()
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-        Column(
-            Modifier.widthIn(max = 560.dp)
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
+    Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+        IconButton(
+            settings,
+            Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 12.dp),
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "PixivNext",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(settings) {
-                    AppIcon(Glyph.Settings, strings.getString(R.string.ui_7debf9cb03))
-                }
-            }
-            Box(
-                Modifier.fillMaxWidth()
-                    .height(290.dp)
-                    .clip(
-                        RoundedCornerShape(
-                            topStart = 64.dp,
-                            topEnd = 28.dp,
-                            bottomStart = 28.dp,
-                            bottomEnd = 64.dp,
-                        )
-                    )
-            ) {
-                DemoArt(0, Modifier.fillMaxSize())
-                Surface(
-                    Modifier.align(Alignment.BottomStart).padding(24.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = .88f),
-                ) {
-                    Row(
-                        Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        AppIcon(Glyph.Discover, null, tint = MaterialTheme.colorScheme.primary)
-                        Text(
-                            strings.getString(R.string.ui_a768103aef),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+            AppIcon(Glyph.Settings, strings.getString(R.string.ui_7debf9cb03))
+        }
+        Column(
+            Modifier.align(Alignment.Center)
+                .widthIn(max = 440.dp)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("PixivNext", style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(8.dp))
+            Button(
+                {
+                    vm.run {
+                        val url = vm.auth.startLogin()
+                        CustomTabsIntent.Builder()
+                            .setShowTitle(true)
+                            .build()
+                            .launchUrl(context, url.toUri())
                     }
-                }
+                },
+                Modifier.fillMaxWidth().height(56.dp),
+                enabled = !busy,
+            ) {
+                AppIcon(Glyph.Person, null)
+                Spacer(Modifier.width(10.dp))
+                Text(strings.getString(R.string.ui_77373439fa))
             }
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    strings.getString(R.string.ui_e3fd516dc8),
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-                Text(
-                    strings.getString(R.string.ui_68bb566c45),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            OutlinedButton(
+                { import = true },
+                Modifier.fillMaxWidth().height(52.dp),
+                enabled = !busy,
+            ) {
+                Text(strings.getString(R.string.ui_91e037beb0))
             }
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    {
-                        vm.run {
-                            val url = vm.auth.startLogin()
-                            CustomTabsIntent.Builder()
-                                .setShowTitle(true)
-                                .build()
-                                .launchUrl(context, url.toUri())
-                        }
-                    },
-                    Modifier.fillMaxWidth().height(56.dp),
-                    enabled = !busy,
-                ) {
-                    AppIcon(Glyph.Person, null)
-                    Spacer(Modifier.width(10.dp))
-                    Text(strings.getString(R.string.ui_77373439fa))
-                }
-                OutlinedButton(
-                    { import = true },
-                    Modifier.fillMaxWidth().height(52.dp),
-                    enabled = !busy,
-                ) {
-                    Text(strings.getString(R.string.ui_91e037beb0))
-                }
-                TextButton({ vm.preview() }, Modifier.fillMaxWidth()) {
-                    Text(strings.getString(R.string.ui_288ccac9b4))
-                }
+            TextButton({ vm.preview() }, Modifier.fillMaxWidth()) {
+                Text(strings.getString(R.string.ui_288ccac9b4))
             }
             if (busy) LinearWavyProgressIndicator(Modifier.fillMaxWidth())
-            Text(
-                strings.getString(R.string.ui_69ec8bf794),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                TextButton({
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, "https://www.pixiv.net/terms/".toUri())
-                    )
-                }) {
-                    Text(strings.getString(R.string.ui_d6166d6460))
-                }
-                Text(
-                    strings.getString(R.string.ui_d7ddb05929),
-                    Modifier.padding(top = 14.dp),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
     if (import)
