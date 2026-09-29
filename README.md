@@ -1,8 +1,8 @@
 # PixivNext
 
-独立实现的 Android 17 / Material 3 Expressive Pixiv 客户端。包名 `io.github.pixivnext`，版本 `0.2.0`。只接受 Android 17（API 37）及以上，不包含旧系统兼容分支。
+独立实现的 Android 17 / Material 3 Expressive Pixiv 客户端。包名 `io.github.pixivnext`，版本 `0.2.1`。只接受 Android 17（API 37）及以上，不包含旧系统兼容分支。
 
-## 开发中小更新（版本保持 0.2.0）
+## 开发中小更新（版本保持 0.2.1）
 
 - 主页默认仅显示作品图片；设置 → 外观 →「显示作者与作品名」可恢复文字。设置持久保存，只改变呈现，不刷新主页分页。
 - 喜欢底框缩小，并保留 48dp 点击范围；与作品页数角标统一圆角和内边距。
