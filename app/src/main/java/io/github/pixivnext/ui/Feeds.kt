@@ -434,34 +434,41 @@ fun WorkCard(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-            Surface(
-                onClick = onLike,
-                enabled = !likedBusy,
+            Box(
                 modifier =
                     Modifier.align(Alignment.BottomEnd)
-                        .padding(8.dp)
+                        .padding(4.dp)
+                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                        .clickable(enabled = !likedBusy, role = Role.Button, onClick = onLike)
                         .testTag("like_${work.type}_${work.id}")
                         .semantics {
                             contentDescription =
                                 if (work.is_bookmarked) "取消喜欢 ${work.title}" else "喜欢 ${work.title}"
                             stateDescription = if (work.is_bookmarked) "已喜欢" else "未喜欢"
                         },
-                shape = RoundedCornerShape(20.dp),
-                color = Color.Black.copy(alpha = .48f),
-                contentColor = Color.White,
+                contentAlignment = Alignment.Center,
             ) {
-                Row(
-                    Modifier.heightIn(min = 48.dp).padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color.Black.copy(alpha = .48f),
+                    contentColor = Color.White,
                 ) {
-                    AppIcon(
-                        if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
-                        null,
-                        Modifier.size(20.dp),
-                        tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
-                    )
-                    Text(compact(work.total_bookmarks), style = MaterialTheme.typography.labelSmall)
+                    Row(
+                        Modifier.heightIn(min = 28.dp).padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        AppIcon(
+                            if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                            null,
+                            Modifier.size(16.dp),
+                            tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
+                        )
+                        Text(
+                            compact(work.total_bookmarks),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                 }
             }
         }
