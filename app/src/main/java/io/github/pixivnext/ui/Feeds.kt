@@ -29,6 +29,9 @@ import io.github.pixivnext.R
 import io.github.pixivnext.core.*
 import io.github.pixivnext.designsystem.*
 
+private val WorkImageBadgeInset = 8.dp
+private val WorkImageBadgeShape = RoundedCornerShape(10.dp)
+
 val LocalAppBarScrollBehavior = staticCompositionLocalOf<TopAppBarScrollBehavior?> { null }
 
 @Composable
@@ -416,8 +419,8 @@ fun WorkCard(
                 }
             if (work.page_count > 1 || work.type == "ugoira" || work.isNovel)
                 Surface(
-                    Modifier.align(Alignment.TopEnd).padding(8.dp),
-                    shape = RoundedCornerShape(10.dp),
+                    Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset),
+                    shape = WorkImageBadgeShape,
                     color = Color.Black.copy(alpha = .52f),
                     contentColor = Color.White,
                 ) {
@@ -432,7 +435,7 @@ fun WorkCard(
             Box(
                 modifier =
                     Modifier.align(Alignment.BottomEnd)
-                        .padding(4.dp)
+                        .padding(WorkImageBadgeInset)
                         .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                         .clickable(enabled = !likedBusy, role = Role.Button, onClick = onLike)
                         .testTag("like_${work.type}_${work.id}")
@@ -441,10 +444,10 @@ fun WorkCard(
                                 if (work.is_bookmarked) "取消喜欢 ${work.title}" else "喜欢 ${work.title}"
                             stateDescription = if (work.is_bookmarked) "已喜欢" else "未喜欢"
                         },
-                contentAlignment = Alignment.Center,
+                contentAlignment = Alignment.BottomEnd,
             ) {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = WorkImageBadgeShape,
                     color = Color.Black.copy(alpha = .48f),
                     contentColor = Color.White,
                 ) {
