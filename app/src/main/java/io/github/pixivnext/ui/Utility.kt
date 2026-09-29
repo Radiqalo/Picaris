@@ -211,7 +211,12 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             }
             item {
                 SettingsGroup("我的 Pixiv") {
-                    SettingRow("我的关注", "公开与非公开关注", Glyph.Person) {
+                    SettingRow(
+                        "我的关注",
+                        "公开与非公开关注",
+                        Glyph.Person,
+                        position = SettingsRowPosition.First,
+                    ) {
                         navigate(People("following", "我的关注"))
                     }
                     SettingRow("我的粉丝", "关注我的创作者与读者", Glyph.Person) {
@@ -220,7 +225,12 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     SettingRow("我的好 P 友", "互相成为好 P 友的用户", Glyph.Person) {
                         navigate(People("mypixiv", "我的好 P 友"))
                     }
-                    SettingRow("我的作品", "插画、漫画与小说", Glyph.Discover) {
+                    SettingRow(
+                        "我的作品",
+                        "插画、漫画与小说",
+                        Glyph.Discover,
+                        position = SettingsRowPosition.Last,
+                    ) {
                         account?.user?.let { navigate(Author(it)) }
                     }
                 }
@@ -231,6 +241,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         strings.getString(R.string.ui_29f6711704),
                         strings.getString(R.string.ui_00925a8ece),
                         Glyph.History,
+                        position = SettingsRowPosition.First,
                     ) {
                         navigate(Utility("history"))
                     }
@@ -245,6 +256,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         strings.getString(R.string.ui_9d4ca7f307),
                         strings.getString(R.string.ui_23fee3cacc),
                         Glyph.Person,
+                        position = SettingsRowPosition.Last,
                     ) {
                         navigate(Utility("accounts"))
                     }
@@ -256,6 +268,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         strings.getString(R.string.ui_7debf9cb03),
                         strings.getString(R.string.ui_40b33b3472),
                         Glyph.Settings,
+                        position = SettingsRowPosition.First,
                     ) {
                         navigate(Utility("settings"))
                     }
@@ -263,6 +276,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         strings.getString(R.string.ui_272209c708),
                         "Android 17 · Material 3 Expressive",
                         Glyph.Discover,
+                        position = SettingsRowPosition.Last,
                     ) {
                         navigate(Utility("about"))
                     }
@@ -292,17 +306,15 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Surface(
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-        ) {
-            Column(
-                Modifier.fillMaxWidth().padding(6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                content = content,
-            )
-        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
     }
+}
+
+enum class SettingsRowPosition {
+    First,
+    Middle,
+    Last,
+    Only,
 }
 
 @Composable
@@ -311,11 +323,31 @@ fun SettingRow(
     summary: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector = Glyph.Settings,
     action: @Composable (() -> Unit)? = null,
+    position: SettingsRowPosition = SettingsRowPosition.Middle,
     onClick: () -> Unit = {},
 ) {
+    val shape =
+        when (position) {
+            SettingsRowPosition.First ->
+                RoundedCornerShape(
+                    topStart = 32.dp,
+                    topEnd = 32.dp,
+                    bottomEnd = 8.dp,
+                    bottomStart = 8.dp,
+                )
+            SettingsRowPosition.Middle -> RoundedCornerShape(8.dp)
+            SettingsRowPosition.Last ->
+                RoundedCornerShape(
+                    topStart = 8.dp,
+                    topEnd = 8.dp,
+                    bottomEnd = 32.dp,
+                    bottomStart = 32.dp,
+                )
+            SettingsRowPosition.Only -> RoundedCornerShape(32.dp)
+        }
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainerLowest,
     ) {
         ListItem(
             onClick = onClick,
@@ -384,6 +416,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                                 },
                             )
                         },
+                        position = SettingsRowPosition.First,
                     ) {
                         vm.update { it.copy(showHomeMetadata = !it.showHomeMetadata) }
                     }
@@ -417,6 +450,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                                 color = androidx.compose.ui.graphics.Color(s.seed),
                             ) {}
                         },
+                        position = SettingsRowPosition.Last,
                     ) {
                         dialog = "color"
                     }
@@ -431,6 +465,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         action = {
                             Switch(s.blackReader, { v -> vm.update { it.copy(blackReader = v) } })
                         },
+                        position = SettingsRowPosition.First,
                     ) {
                         vm.update { it.copy(blackReader = !it.blackReader) }
                     }
@@ -453,6 +488,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_1a62da8063),
                         strings.getString(R.string.ui_df855f5c93),
+                        position = SettingsRowPosition.Middle,
                     ) {
                         dialog = "tags"
                     }
@@ -460,6 +496,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_0ed0fdd725),
                         strings.getString(R.string.ui_4544c7e538),
                         Glyph.Person,
+                        position = SettingsRowPosition.Last,
                     ) {
                         dialog = "users"
                     }
@@ -475,6 +512,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                             "direct" -> strings.getString(R.string.ui_7d7358e103)
                             else -> strings.getString(R.string.ui_8c99b2221d)
                         },
+                        position = SettingsRowPosition.First,
                     ) {
                         dialog = "proxy"
                     }
@@ -483,6 +521,9 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         if (s.downloadTree.isEmpty()) strings.getString(R.string.ui_ef4c6139ae)
                         else strings.getString(R.string.ui_218f19435d),
                         Glyph.Download,
+                        position =
+                            if (s.downloadTree.isEmpty()) SettingsRowPosition.Last
+                            else SettingsRowPosition.Middle,
                     ) {
                         tree.launch(null)
                     }
@@ -491,6 +532,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                             strings.getString(R.string.ui_7e9cc10823),
                             strings.getString(R.string.ui_50c005951d),
                             Glyph.Download,
+                            position = SettingsRowPosition.Last,
                         ) {
                             vm.update { it.copy(downloadTree = "") }
                         }
@@ -502,12 +544,14 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_0a7bef0788),
                         strings.getString(R.string.ui_be6850c1b8),
                         Glyph.History,
+                        position = SettingsRowPosition.First,
                     ) {
                         dialog = "history"
                     }
                     SettingRow(
                         strings.getString(R.string.ui_92ec4c46d9),
                         strings.getString(R.string.ui_698dc8c56e),
+                        position = SettingsRowPosition.Last,
                     ) {
                         dialog = "cache"
                     }
