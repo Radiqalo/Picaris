@@ -354,7 +354,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 SettingsGroup(strings.getString(R.string.ui_09b58aa342)) {
                     SettingRow(
                         "显示作者与作品名",
-                        "在发现和动态图片下显示文字",
+                        "在发现、动态和收藏瀑布流中显示文字",
                         action = {
                             Switch(
                                 s.showHomeMetadata,
