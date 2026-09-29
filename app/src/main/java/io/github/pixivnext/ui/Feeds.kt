@@ -341,6 +341,10 @@ fun FeedGrid(
     val grid = rememberLazyStaggeredGridState()
     val refreshing = items.loadState.refresh is LoadState.Loading
     val error = items.loadState.refresh as? LoadState.Error
+    val showFeedMetadata =
+        (spec.section != "recommended" &&
+            spec.section != "follow" &&
+            spec.section != "bookmarks") || settings.showHomeMetadata
     PullToRefreshBox(
         isRefreshing = refreshing && items.itemCount > 0,
         onRefresh = { items.refresh() },
@@ -369,7 +373,7 @@ fun FeedGrid(
                     columns = StaggeredGridCells.Adaptive(160.dp),
                     state = grid,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalItemSpacing = 16.dp,
+                    verticalItemSpacing = if (showFeedMetadata) 8.dp else 16.dp,
                     contentPadding =
                         PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
                     modifier = Modifier.fillMaxSize().testTag("feedGrid"),
@@ -382,10 +386,7 @@ fun FeedGrid(
                                 current,
                                 index.takeIf { rank },
                                 likedBusy = identity in busy,
-                                showMetadata =
-                                    (spec.section != "recommended" &&
-                                        spec.section != "follow" &&
-                                        spec.section != "bookmarks") || settings.showHomeMetadata,
+                                showMetadata = showFeedMetadata,
                                 onLike = { vm.run { vm.bookmark(current) } },
                             ) {
                                 vm.record(current)
@@ -439,7 +440,7 @@ fun WorkCard(
             .semantics {
                 if (!showMetadata) contentDescription = "${work.title}，${work.user.name}"
             }
-            .padding(bottom = if (showMetadata) 4.dp else 0.dp)
+            .padding(bottom = if (showMetadata) 2.dp else 0.dp)
     ) {
         Box(Modifier.fillMaxWidth().clip(WorkImageShape)) {
             WorkImage(
@@ -514,14 +515,14 @@ fun WorkCard(
         if (showMetadata) {
             Text(
                 work.title,
-                Modifier.padding(top = 5.dp, start = 3.dp, end = 3.dp),
+                Modifier.padding(top = 2.dp, start = 3.dp, end = 3.dp),
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 work.user.name,
-                Modifier.padding(top = 1.dp, start = 3.dp, end = 3.dp),
+                Modifier.padding(start = 3.dp, end = 3.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
