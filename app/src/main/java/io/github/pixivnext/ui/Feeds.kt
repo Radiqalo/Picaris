@@ -33,7 +33,7 @@ val LocalAppBarScrollBehavior = staticCompositionLocalOf<TopAppBarScrollBehavior
 
 @Composable
 fun ScrollingScreen(content: @Composable () -> Unit) {
-    val behavior = TopAppBarDefaults.exitAlwaysScrollBehavior()
+    val behavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     CompositionLocalProvider(LocalAppBarScrollBehavior provides behavior) {
         Box(Modifier.fillMaxSize().nestedScroll(behavior.nestedScrollConnection)) { content() }
     }
