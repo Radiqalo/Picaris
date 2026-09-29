@@ -400,7 +400,7 @@ fun WorkCard(
             .semantics {
                 if (!showMetadata) contentDescription = "${work.title}，${work.user.name}"
             }
-            .padding(bottom = if (showMetadata) 12.dp else 0.dp)
+            .padding(bottom = if (showMetadata) 4.dp else 0.dp)
     ) {
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))) {
             WorkImage(
@@ -475,14 +475,14 @@ fun WorkCard(
         if (showMetadata) {
             Text(
                 work.title,
-                Modifier.padding(top = 9.dp, start = 3.dp, end = 3.dp),
+                Modifier.padding(top = 5.dp, start = 3.dp, end = 3.dp),
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 work.user.name,
-                Modifier.padding(top = 3.dp, start = 3.dp, end = 3.dp),
+                Modifier.padding(top = 1.dp, start = 3.dp, end = 3.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
