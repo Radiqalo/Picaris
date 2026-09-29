@@ -292,7 +292,16 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+        Surface(
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                content = content,
+            )
+        }
     }
 }
 
@@ -305,7 +314,7 @@ fun SettingRow(
     onClick: () -> Unit = {},
 ) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         ListItem(

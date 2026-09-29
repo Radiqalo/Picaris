@@ -31,6 +31,7 @@ import io.github.pixivnext.designsystem.*
 
 private val WorkImageBadgeInset = 8.dp
 private val WorkImageBadgeShape = RoundedCornerShape(10.dp)
+private val WorkImageShape = RoundedCornerShape(14.dp)
 
 val LocalAppBarScrollBehavior = staticCompositionLocalOf<TopAppBarScrollBehavior?> { null }
 
@@ -94,18 +95,47 @@ fun ChoiceChips(
     modifier: Modifier = Modifier,
     showCheck: Boolean = false,
 ) {
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEach { (key, label) ->
-            val isSelected = selected == key
-            FilterChip(
-                selected = isSelected,
-                onClick = { onSelect(key) },
-                label = { Text(label, maxLines = 1) },
-                leadingIcon =
-                    if (showCheck && isSelected) {
-                        { AppIcon(Glyph.Check, null, Modifier.size(16.dp)) }
-                    } else null,
-            )
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Row(
+            Modifier.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            options.forEachIndexed { index, (key, label) ->
+                val isSelected = selected == key
+                val chipShape =
+                    when (index) {
+                        0 ->
+                            RoundedCornerShape(
+                                topStart = 24.dp,
+                                bottomStart = 24.dp,
+                                topEnd = 8.dp,
+                                bottomEnd = 8.dp,
+                            )
+                        options.lastIndex ->
+                            RoundedCornerShape(
+                                topStart = 8.dp,
+                                bottomStart = 8.dp,
+                                topEnd = 24.dp,
+                                bottomEnd = 24.dp,
+                            )
+                        else -> RoundedCornerShape(8.dp)
+                    }
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onSelect(key) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(label, maxLines = 1) },
+                    shape = chipShape,
+                    leadingIcon =
+                        if (showCheck && isSelected) {
+                            { AppIcon(Glyph.Check, null, Modifier.size(16.dp)) }
+                        } else null,
+                )
+            }
         }
     }
 }
@@ -404,14 +434,14 @@ fun WorkCard(
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     Column(
-        Modifier.clip(RoundedCornerShape(22.dp))
+        Modifier.clip(WorkImageShape)
             .clickable(onClick = onClick)
             .semantics {
                 if (!showMetadata) contentDescription = "${work.title}，${work.user.name}"
             }
             .padding(bottom = if (showMetadata) 4.dp else 0.dp)
     ) {
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))) {
+        Box(Modifier.fillMaxWidth().clip(WorkImageShape)) {
             WorkImage(
                 work,
                 Modifier.fillMaxWidth().aspectRatio(if (work.isNovel) .9f else work.aspect),
