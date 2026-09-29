@@ -31,6 +31,12 @@ android {
             initWith(getByName("release"))
             applicationIdSuffix = ".qa"
             signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             matchingFallbacks += listOf("release")
         }
         create("benchmark") {
