@@ -344,7 +344,8 @@ fun FeedGrid(
                                 index.takeIf { rank },
                                 likedBusy = identity in busy,
                                 showMetadata =
-                                    spec.section != "recommended" || settings.showHomeMetadata,
+                                    (spec.section != "recommended" && spec.section != "follow") ||
+                                        settings.showHomeMetadata,
                                 onLike = { vm.run { vm.bookmark(current) } },
                             ) {
                                 vm.record(current)
