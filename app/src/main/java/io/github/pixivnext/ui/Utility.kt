@@ -285,19 +285,14 @@ fun UtilityScreen(page: String, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
 
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             title,
-            Modifier.padding(start = 8.dp),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
+            Modifier.padding(start = 4.dp),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-        ) {
-            Column(content = content)
-        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
     }
 }
 
@@ -309,16 +304,33 @@ fun SettingRow(
     action: @Composable (() -> Unit)? = null,
     onClick: () -> Unit = {},
 ) {
-    ListItem(
-        onClick = onClick,
-        content = { Text(title) },
-        supportingContent = { Text(summary) },
-        leadingContent = { AppIcon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-        trailingContent = action ?: { AppIcon(Glyph.Arrow, null, Modifier.size(18.dp)) },
-        colors =
-            ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier,
-    )
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        ListItem(
+            onClick = onClick,
+            content = { Text(title, style = MaterialTheme.typography.titleMedium) },
+            supportingContent = {
+                Text(summary, style = MaterialTheme.typography.bodyMedium)
+            },
+            leadingContent = {
+                Box(
+                    Modifier.size(48.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppIcon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+            },
+            trailingContent = action ?: { AppIcon(Glyph.Arrow, null, Modifier.size(18.dp)) },
+            colors =
+                ListItemDefaults.colors(
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent
+                ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }
 
 @Composable

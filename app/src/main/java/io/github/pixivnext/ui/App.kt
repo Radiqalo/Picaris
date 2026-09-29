@@ -213,7 +213,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
                     if (!wide)
-                        NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+                        NavigationBar(containerColor = MaterialTheme.colorScheme.background) {
                             tabs.forEachIndexed { index, title ->
                                 NavigationBarItem(
                                     selected = tab == index,

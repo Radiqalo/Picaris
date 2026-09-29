@@ -48,9 +48,27 @@ fun PixivTheme(
             if (dark) dynamicDarkColorScheme(LocalContext.current)
             else dynamicLightColorScheme(LocalContext.current)
         } else androidx.compose.runtime.remember(seed, dark) { seededColors(seed, dark) }
+    val referenceColors =
+        if (dark) colors
+        else
+            colors.copy(
+                primary = Color(0xFF356783),
+                onPrimary = Color.White,
+                background = Color(0xFFF7F8FC),
+                surface = Color(0xFFF7F8FC),
+                surfaceContainerLowest = Color.White,
+                surfaceContainerLow = Color(0xFFF0F3F9),
+                surfaceContainer = Color(0xFFEDF1F8),
+                surfaceContainerHigh = Color(0xFFE7EDF5),
+                surfaceContainerHighest = Color(0xFFE1E8F1),
+                primaryContainer = Color(0xFFD7EAF8),
+                onPrimaryContainer = Color(0xFF17394E),
+                secondaryContainer = Color(0xFFD7EAF8),
+                onSecondaryContainer = Color(0xFF17394E),
+            )
 
     MaterialExpressiveTheme(
-        colorScheme = colors,
+        colorScheme = referenceColors,
         motionScheme = MotionScheme.expressive(),
         typography =
             Typography(
