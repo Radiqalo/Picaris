@@ -345,6 +345,8 @@ fun FeedGrid(
                                 current,
                                 index.takeIf { rank },
                                 likedBusy = identity in busy,
+                                showMetadata =
+                                    spec.section != "recommended" || settings.showHomeMetadata,
                                 onLike = { vm.run { vm.bookmark(current) } },
                             ) {
                                 vm.record(current)
@@ -386,6 +388,7 @@ fun WorkCard(
     work: Work,
     rank: Int? = null,
     likedBusy: Boolean = false,
+    showMetadata: Boolean = true,
     onLike: () -> Unit,
     onClick: () -> Unit,
 ) {
@@ -394,7 +397,10 @@ fun WorkCard(
     Column(
         Modifier.clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
-            .padding(bottom = 12.dp)
+            .semantics {
+                if (!showMetadata) contentDescription = "${work.title}，${work.user.name}"
+            }
+            .padding(bottom = if (showMetadata) 12.dp else 0.dp)
     ) {
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp))) {
             WorkImage(
@@ -459,21 +465,23 @@ fun WorkCard(
                 }
             }
         }
-        Text(
-            work.title,
-            Modifier.padding(top = 9.dp, start = 3.dp, end = 3.dp),
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            work.user.name,
-            Modifier.padding(top = 3.dp, start = 3.dp, end = 3.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (showMetadata) {
+            Text(
+                work.title,
+                Modifier.padding(top = 9.dp, start = 3.dp, end = 3.dp),
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                work.user.name,
+                Modifier.padding(top = 3.dp, start = 3.dp, end = 3.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

@@ -12,6 +12,12 @@ class ClientUiTest {
     @get:Rule val ui = createAndroidComposeRule<MainActivity>()
 
     private fun preview() {
+        ui.activityRule.scenario.onActivity {
+            val vm = androidx.lifecycle.ViewModelProvider(it)[AppViewModel::class.java]
+            kotlinx.coroutines.runBlocking {
+                vm.settingsStore.update { settings -> settings.copy(showHomeMetadata = true) }
+            }
+        }
         ui.onNodeWithText("先体验界面").performScrollTo().performClick()
         ui.waitUntil(15000) { ui.onAllNodesWithText("海风经过的午后").fetchSemanticsNodes().isNotEmpty() }
     }

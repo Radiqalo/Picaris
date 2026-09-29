@@ -191,6 +191,7 @@ data class Settings(
     val dynamicColor: Boolean = true,
     val seed: Long = 0xFF6256CA,
     val blackReader: Boolean = true,
+    val showHomeMetadata: Boolean = false,
     val showAdult: Boolean = false,
     val hideAi: Boolean = false,
     val blockedTags: String = "",

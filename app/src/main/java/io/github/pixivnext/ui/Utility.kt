@@ -422,6 +422,20 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
             item {
                 SettingsGroup(strings.getString(R.string.ui_09b58aa342)) {
                     SettingRow(
+                        "显示作者与作品名",
+                        "在主页图片下显示文字",
+                        action = {
+                            Switch(
+                                s.showHomeMetadata,
+                                { v ->
+                                    vm.update { it.copy(showHomeMetadata = v) }
+                                },
+                            )
+                        },
+                    ) {
+                        vm.update { it.copy(showHomeMetadata = !it.showHomeMetadata) }
+                    }
+                    SettingRow(
                         strings.getString(R.string.ui_e848ddd482),
                         when (s.theme) {
                             "light" -> strings.getString(R.string.ui_80ec9e2b1b)
