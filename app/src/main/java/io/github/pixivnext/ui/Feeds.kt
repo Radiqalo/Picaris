@@ -70,19 +70,12 @@ fun ScreenBar(
         if (back != null)
             IconButton(back) { AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540)) }
     }
-    if (back == null)
-        MediumFlexibleTopAppBar(
-            title = titleContent,
-            scrollBehavior = LocalAppBarScrollBehavior.current,
-            actions = actions,
-        )
-    else
-        TopAppBar(
-            title = titleContent,
-            scrollBehavior = LocalAppBarScrollBehavior.current,
-            navigationIcon = navigationContent,
-            actions = actions,
-        )
+    TopAppBar(
+        title = titleContent,
+        scrollBehavior = LocalAppBarScrollBehavior.current,
+        navigationIcon = navigationContent,
+        actions = actions,
+    )
 }
 
 @Composable
@@ -373,7 +366,7 @@ fun CollectionScreen(
 
     Column {
         if (route.section == "ranking" || route.section == "search")
-            MediumFlexibleTopAppBar(
+            TopAppBar(
                 title = {
                     Text(
                         if (route.section == "search") "#${route.title}" else route.title,
