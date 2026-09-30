@@ -19,6 +19,14 @@ object PixivSpacing {
     val section = 24.dp
 }
 
+/** Grouped controls sit above the page background in the surface hierarchy. */
+object PixivContainerDefaults {
+    @Composable
+    fun listItemColors() = ListItemDefaults.segmentedColors(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    )
+}
+
 internal fun seededColors(seed: Long, dark: Boolean) =
     com.materialkolor.dynamicColorScheme(
         seedColor = Color(seed),

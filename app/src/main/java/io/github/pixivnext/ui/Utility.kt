@@ -179,6 +179,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         "我的作品" to { account?.user?.let { navigate(Author(it)) }; Unit },
                     ).forEachIndexed { index, (label, action) ->
                         SegmentedListItem(
+                            colors = PixivContainerDefaults.listItemColors(),
                             onClick = action,
                             shapes = ListItemDefaults.segmentedShapes(index, 3),
                             content = { Text(label, style = MaterialTheme.typography.titleMedium) },
@@ -195,6 +196,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         Triple("about", strings.getString(R.string.ui_272209c708), Glyph.Discover),
                     ).forEachIndexed { index, (page, label, icon) ->
                         SegmentedListItem(
+                            colors = PixivContainerDefaults.listItemColors(),
                             onClick = { navigate(Utility(page)) },
                             shapes = ListItemDefaults.segmentedShapes(index, 2),
                             content = { Text(label) },
@@ -312,6 +314,7 @@ fun SettingRow(
         }
     val feedback = selectionFeedback()
     SegmentedListItem(
+        colors = PixivContainerDefaults.listItemColors(),
         onClick = { feedback(); onClick() },
         shapes = ListItemDefaults.segmentedShapes(index, count),
         content = { Text(title, style = MaterialTheme.typography.titleMedium) },
@@ -344,6 +347,7 @@ private fun SettingChoiceBlock(
         SettingsRowPosition.Last -> 2
     }
     SegmentedListItem(
+        colors = PixivContainerDefaults.listItemColors(),
         onClick = {},
         shapes = ListItemDefaults.segmentedShapes(index, if (position == SettingsRowPosition.Only) 1 else 3),
         content = {

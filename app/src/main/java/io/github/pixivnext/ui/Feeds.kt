@@ -1380,6 +1380,7 @@ fun UserRow(
     val leading: @Composable () -> Unit = { Avatar(user) }
     if (segment != null)
         SegmentedListItem(
+            colors = PixivContainerDefaults.listItemColors(),
             onClick = onClick,
             shapes = ListItemDefaults.segmentedShapes(segment.first, segment.second),
             content = content,
