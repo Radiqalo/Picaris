@@ -902,15 +902,34 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
 }
 
 @Composable
-fun UserRow(user: User, onClick: () -> Unit, action: @Composable (() -> Unit)? = null) {
-    ListItem(
-        onClick = onClick,
-        content = { Text(user.name) },
-        supportingContent = { Text("@${user.account.ifEmpty {user.id.toString()}}") },
-        leadingContent = { Avatar(user) },
-        trailingContent = action,
-        modifier = Modifier,
-    )
+fun UserRow(
+    user: User,
+    onClick: () -> Unit,
+    segment: Pair<Int, Int>? = null,
+    action: @Composable (() -> Unit)? = null,
+) {
+    val content: @Composable () -> Unit = { Text(user.name) }
+    val supporting: @Composable () -> Unit = {
+        Text("@${user.account.ifEmpty {user.id.toString()}}")
+    }
+    val leading: @Composable () -> Unit = { Avatar(user) }
+    if (segment != null)
+        SegmentedListItem(
+            onClick = onClick,
+            shapes = ListItemDefaults.segmentedShapes(segment.first, segment.second),
+            content = content,
+            supportingContent = supporting,
+            leadingContent = leading,
+            trailingContent = action,
+        )
+    else
+        ListItem(
+            onClick = onClick,
+            content = content,
+            supportingContent = supporting,
+            leadingContent = leading,
+            trailingContent = action,
+        )
 }
 
 @Composable

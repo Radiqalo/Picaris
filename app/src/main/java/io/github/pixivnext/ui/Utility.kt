@@ -782,25 +782,32 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
             contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            items(data.accounts, key = { it.user.id }) { a ->
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                ) {
-                    UserRow(
-                        a.user,
-                        {
-                            vm.select(a.user.id)
-                            back()
-                        },
-                    ) {
-                        Row {
-                            if (data.activeId == a.user.id && !isDemo)
-                                AppIcon(Glyph.Check, strings.getString(R.string.ui_922c94aae3))
-                            IconButton({ remove = a }) {
-                                AppIcon(Glyph.Close, strings.getString(R.string.ui_63fd41f453))
-                            }
-                        }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    data.accounts.forEachIndexed { index, a ->
+                        UserRow(
+                            a.user,
+                            {
+                                vm.select(a.user.id)
+                                back()
+                            },
+                            segment = index to data.accounts.size,
+                            action = {
+                                Row {
+                                    if (data.activeId == a.user.id && !isDemo)
+                                        AppIcon(
+                                            Glyph.Check,
+                                            strings.getString(R.string.ui_922c94aae3),
+                                        )
+                                    IconButton({ remove = a }) {
+                                        AppIcon(
+                                            Glyph.Close,
+                                            strings.getString(R.string.ui_63fd41f453),
+                                        )
+                                    }
+                                }
+                            },
+                        )
                     }
                 }
             }
