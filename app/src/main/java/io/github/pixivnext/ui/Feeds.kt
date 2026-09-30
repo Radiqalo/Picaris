@@ -13,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -188,33 +187,10 @@ fun RecommendedHomeScreen(
 @Composable
 fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-    val sections = listOf("recommend", "ranking", "follow")
-    val labels = listOf(
-        strings.getString(R.string.discover_recommend),
-        strings.getString(R.string.ui_d00981d6ce),
-        strings.getString(R.string.discover_following),
-    )
-    var section by rememberSaveable { mutableStateOf("recommend") }
-    val holder = rememberSaveableStateHolder()
     Column {
         ScreenBar(strings.getString(R.string.ui_523e40a074))
-        PrimaryTabRow(selectedTabIndex = sections.indexOf(section)) {
-            sections.forEachIndexed { index, key ->
-                Tab(
-                    selected = section == key,
-                    onClick = { section = key },
-                    text = { Text(labels[index]) },
-                )
-            }
-        }
         Box(Modifier.weight(1f)) {
-            holder.SaveableStateProvider(section) {
-                when (section) {
-                    "ranking" -> RankingFeedScreen(vm, navigate)
-                    "follow" -> FollowScreen(vm, navigate)
-                    else -> DiscoveryLanding(vm, navigate)
-                }
-            }
+            DiscoveryLanding(vm, navigate)
         }
     }
 }
@@ -244,6 +220,17 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         Modifier.fillMaxSize(),
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
+                FilledTonalButton(
+                    onClick = {
+                        navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking"))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    AppIcon(Glyph.Rank, null)
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(strings.getString(R.string.ui_d00981d6ce))
+                }
                 if (trends.isNotEmpty()) {
                     Text(
                         strings.getString(R.string.discover_featured),
@@ -327,23 +314,11 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 }
 
 @Composable
-private fun RankingFeedScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
-    val settings by vm.settings.collectAsStateWithLifecycle()
-    var mode by rememberSaveable { mutableStateOf("day") }
-    FeedGrid(
-        FeedSpec(section = "ranking", kind = settings.contentKind, mode = mode),
-        vm,
-        navigate,
-        Modifier.fillMaxSize(),
-        rank = true,
-        header = { RankingModePicker(mode, { mode = it }) },
-    )
-}
-
-@Composable
 fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
+    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     Column {
+        ScreenBar(strings.getString(R.string.ui_753ccc8e2e))
         FeedGrid(
             FeedSpec(section = "follow", kind = settings.contentKind),
             vm,
@@ -354,13 +329,14 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 }
 
 @Composable
-fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
+fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     var private by rememberSaveable { mutableStateOf(false) }
     Column {
         ScreenBar(
             strings.getString(R.string.ui_d07cee786a),
+            back = back,
             actions = {
                 IconButton(onClick = { private = !private }) {
                     AppIcon(

@@ -183,10 +183,10 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         listOf(
             strings.getString(R.string.tab_home),
             strings.getString(R.string.ui_523e40a074),
-            strings.getString(R.string.ui_d07cee786a),
+            strings.getString(R.string.ui_753ccc8e2e),
             strings.getString(R.string.ui_a82c993d73),
         )
-    val icons = listOf(materialSymbol(MaterialSymbol.Home), Glyph.Discover, Glyph.Heart, Glyph.Person)
+    val icons = listOf(materialSymbol(MaterialSymbol.Home), Glyph.Discover, Glyph.Feed, Glyph.Person)
     val holder = rememberSaveableStateHolder()
     val homeReselection = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val selectTab: (Int) -> Unit = { index ->
@@ -267,7 +267,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                         navigate(Search)
                                     }
                                 1 -> DiscoverScreen(vm, navigate)
-                                2 -> BookmarkScreen(vm, navigate)
+                                2 -> FollowScreen(vm, navigate)
                                 else -> ProfileScreen(vm, navigate)
                             }
                         }

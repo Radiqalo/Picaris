@@ -231,10 +231,17 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             item {
                 SettingsGroup(strings.getString(R.string.ui_11d0497857)) {
                     SettingRow(
+                        strings.getString(R.string.ui_d07cee786a),
+                        strings.getString(R.string.ui_7355147b10),
+                        Glyph.Heart,
+                        position = SettingsRowPosition.First,
+                    ) {
+                        navigate(Utility("bookmarks"))
+                    }
+                    SettingRow(
                         strings.getString(R.string.ui_29f6711704),
                         strings.getString(R.string.ui_00925a8ece),
                         Glyph.History,
-                        position = SettingsRowPosition.First,
                     ) {
                         navigate(Utility("history"))
                     }
@@ -275,6 +282,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 @Composable
 fun UtilityScreen(page: String, vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     when (page) {
+        "bookmarks" -> BookmarkScreen(vm, navigate, back)
         "settings" -> SettingsScreen(vm, back)
         "accounts" -> AccountScreen(vm, back)
         "downloads" -> DownloadsScreen(vm, navigate, back)
