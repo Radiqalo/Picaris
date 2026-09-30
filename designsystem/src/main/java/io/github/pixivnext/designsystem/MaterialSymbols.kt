@@ -11,6 +11,7 @@ enum class MaterialSymbol(val resource: Int) {
     Lock(R.drawable.ms_lock),
     LockOpen(R.drawable.ms_lock_open),
     Inbox(R.drawable.ms_inbox),
+    Calendar(R.drawable.ms_calendar_month),
 }
 
 @Composable

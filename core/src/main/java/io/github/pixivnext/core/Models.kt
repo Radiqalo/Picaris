@@ -179,6 +179,7 @@ data class FeedSpec(
     val kind: String = "illust",
     val word: String = "",
     val mode: String = "day",
+    val date: String = "",
     val restrict: String = "public",
     val userId: Long = 0,
     val sort: String = "date_desc",

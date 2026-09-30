@@ -100,6 +100,7 @@ constructor(
             when (s.section) {
                 "ranking" -> {
                     q["mode"] = s.mode
+                    if (s.date.isNotEmpty()) q["date"] = s.date
                     "v1/$kind/ranking"
                 }
                 "follow" -> {

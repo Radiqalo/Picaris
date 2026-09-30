@@ -424,12 +424,17 @@ fun CollectionScreen(
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
 
+    var rankingDate by rememberSaveable { mutableStateOf("") }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
+
     Column {
         if (route.section == "ranking" || route.section == "search")
             TopAppBar(
                 title = {
                     Text(
-                        if (route.section == "search") "#${route.title}" else route.title,
+                        if (route.section == "search") "#${route.title}"
+                        else if (rankingDate.isNotEmpty()) "${route.title} · $rankingDate"
+                        else route.title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -439,11 +444,17 @@ fun CollectionScreen(
                         AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540))
                     }
                 },
+                actions = {
+                    if (route.section == "ranking")
+                        IconButton(onClick = { showDatePicker = true }) {
+                            AppIcon(materialSymbol(MaterialSymbol.Calendar), "选择榜单日期")
+                        }
+                },
                 scrollBehavior = LocalAppBarScrollBehavior.current,
             )
         else ScreenBar(route.title, back = back)
         if (route.section == "ranking")
-            RankingPages(vm, navigate, Modifier.weight(1f))
+            RankingPages(vm, navigate, Modifier.weight(1f), rankingDate)
         else FeedGrid(
             FeedSpec(
                 section = route.section,
@@ -458,10 +469,46 @@ fun CollectionScreen(
             Modifier.weight(1f),
         )
     }
+    if (showDatePicker) {
+        val today = remember { java.time.LocalDate.now(java.time.ZoneId.of("Asia/Tokyo")) }
+        val lastDate = today.minusDays(1)
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = java.time.LocalDate.parse(rankingDate.ifEmpty { lastDate.toString() })
+                .atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    java.time.Instant.ofEpochMilli(utcTimeMillis).atZone(java.time.ZoneOffset.UTC)
+                        .toLocalDate() <= lastDate
+                override fun isSelectableYear(year: Int): Boolean = year <= lastDate.year
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        state.selectedDateMillis?.let {
+                            rankingDate = java.time.Instant.ofEpochMilli(it)
+                                .atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
+                        }
+                        showDatePicker = false
+                    },
+                    enabled = state.selectedDateMillis != null,
+                ) { Text("查看") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { rankingDate = ""; showDatePicker = false }) { Text("最新榜单") }
+                    TextButton(onClick = { showDatePicker = false }) { Text("取消") }
+                }
+            },
+        ) { DatePicker(state, showModeToggle = false) }
+    }
+
 }
 
 @Composable
-private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier: Modifier) {
+private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier: Modifier, date: String) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val modes =
@@ -495,7 +542,7 @@ private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier:
             key = { modes[it].first },
         ) { page ->
             FeedGrid(
-                FeedSpec(section = "ranking", kind = settings.contentKind, mode = modes[page].first),
+                FeedSpec(section = "ranking", kind = settings.contentKind, mode = modes[page].first, date = date),
                 vm,
                 navigate,
                 Modifier.fillMaxSize(),
