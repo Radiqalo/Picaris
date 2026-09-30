@@ -183,6 +183,18 @@ constructor(
 
     fun clearSearch() = run { dao.clearSearch(accountId) }
 
+    suspend fun beginLogin() = auth.startLogin()
+
+    suspend fun setDownloadTree(uri: String) = settingsStore.update { it.copy(downloadTree = uri) }
+
+    fun clearLibrary(history: Boolean) = run {
+        if (history) dao.clearHistory(accountId) else dao.clearCache(accountId)
+    }
+
+    fun removeAccount(id: Long) = run { auth.remove(id) }
+
+    fun downloadAction(id: Long, status: String) = run { downloads.action(id, status) }
+
     suspend fun user(initial: User): User =
         if (demo.value) initial else repo.user(accountId, initial.id).first
 

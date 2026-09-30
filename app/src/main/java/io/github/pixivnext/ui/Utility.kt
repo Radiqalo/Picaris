@@ -58,7 +58,7 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
             Button(
                 {
                     vm.run {
-                        val url = vm.auth.startLogin()
+                        val url = vm.beginLogin()
                         CustomTabsIntent.Builder()
                             .setShowTitle(true)
                             .build()
@@ -371,7 +371,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or
                             Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                     )
-                    vm.settingsStore.update { it.copy(downloadTree = uri.toString()) }
+                    vm.setDownloadTree(uri.toString())
                 }
         }
     Column {
@@ -684,10 +684,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 confirmButton = {
                     TextButton({
                         val history = dialog == "history"
-                        vm.run {
-                            if (history) vm.dao.clearHistory(vm.accountId)
-                            else vm.dao.clearCache(vm.accountId)
-                        }
+                        vm.clearLibrary(history)
                         dialog = null
                     }) {
                         Text(strings.getString(R.string.ui_907c3945d8))
@@ -815,7 +812,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                 Button(
                     {
                         vm.run {
-                            val url = vm.auth.startLogin()
+                            val url = vm.beginLogin()
                             CustomTabsIntent.Builder().build().launchUrl(context, url.toUri())
                         }
                     },
@@ -885,7 +882,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
             text = { Text(strings.getString(R.string.ui_ca05850133)) },
             confirmButton = {
                 TextButton({
-                    vm.run { vm.auth.remove(a.user.id) }
+                    vm.removeAccount(a.user.id)
                     remove = null
                 }) {
                     Text(strings.getString(R.string.ui_2f752c005e))
@@ -1007,7 +1004,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                 when (task.status) {
                                     "running" ->
                                         IconButton({
-                                            vm.run { vm.downloads.action(task.id, "paused") }
+                                            vm.downloadAction(task.id, "paused")
                                         }) {
                                             AppIcon(
                                                 Glyph.Pause,
@@ -1019,7 +1016,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                     "failed",
                                     "cancelled" ->
                                         IconButton({
-                                            vm.run { vm.downloads.action(task.id, "queued") }
+                                            vm.downloadAction(task.id, "queued")
                                         }) {
                                             AppIcon(
                                                 Glyph.Play,
@@ -1084,7 +1081,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                 )
                                 if (task.status != "complete" && task.status != "cancelled")
                                     TextButton({
-                                        vm.run { vm.downloads.action(task.id, "cancelled") }
+                                        vm.downloadAction(task.id, "cancelled")
                                     }) {
                                         Text(strings.getString(R.string.ui_4d0b4688c7))
                                     }

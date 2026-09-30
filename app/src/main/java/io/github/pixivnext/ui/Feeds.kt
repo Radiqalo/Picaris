@@ -585,6 +585,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
     var userLoading by remember { mutableStateOf(false) }
     val history by vm.searchHistory.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
+    val active by vm.active.collectAsStateWithLifecycle()
     fun submit(value: String) {
         word.setTextAndPlaceCursorAtEnd(value)
         submitted = value.trim()
@@ -790,7 +791,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                             "date_asc" to strings.getString(R.string.ui_5196834bd3),
                         )
                         .let { list ->
-                            (if (vm.auth.active?.premium == true)
+                            (if (active?.premium == true)
                                     list +
                                         listOf(
                                             "popular_desc" to
