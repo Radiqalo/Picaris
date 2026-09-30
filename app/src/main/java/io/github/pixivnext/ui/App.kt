@@ -145,9 +145,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                     navigationMotion.metadata(NavigationMotionStyle.Zoom)
                                 }
                                 val pageDecorator = remember(navigationMotion) {
-                                    NavEntryDecorator<NavKey> { entry ->
-                                        NavigationPage(navigationMotion::settled) { entry.Content() }
-                                    }
+                                    NavigationPageSceneDecorator(navigationMotion::settled)
                                 }
                                 NavDisplay(
                                     backStack = backStack,
@@ -165,7 +163,8 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                         )
                                     },
                                     entryDecorators =
-                                        listOf(rememberSaveableStateHolderNavEntryDecorator(), pageDecorator),
+                                        listOf(rememberSaveableStateHolderNavEntryDecorator()),
+                                    sceneDecoratorStrategies = listOf(pageDecorator),
                                     onBack = back,
                                     sceneStrategies =
                                         if (backStack.lastOrNull() is Detail) listOf(strategy)

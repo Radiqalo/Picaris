@@ -32,10 +32,31 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.scene.Scene
+import androidx.navigation3.scene.SceneDecoratorStrategy
+import androidx.navigation3.scene.SceneDecoratorStrategyScope
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 
 internal val LocalNavigationGestureActive = staticCompositionLocalOf { false }
+
+internal class NavigationPageSceneDecorator(
+    private val onSettled: () -> Unit,
+) : SceneDecoratorStrategy<NavKey> {
+    override fun SceneDecoratorStrategyScope<NavKey>.decorateScene(scene: Scene<NavKey>): Scene<NavKey> =
+        NavigationPageScene(scene, onSettled)
+}
+
+private data class NavigationPageScene(
+    val scene: Scene<NavKey>,
+    val onSettled: () -> Unit,
+) : Scene<NavKey> by scene {
+    override val key: Any = scene::class to scene.key
+    override val content: @Composable () -> Unit = {
+        NavigationPage(onSettled) { scene.content() }
+    }
+}
 
 internal enum class NavigationMotionStyle { Slide, Zoom }
 
@@ -137,7 +158,7 @@ internal fun NavigationPage(onSettled: () -> Unit, content: @Composable () -> Un
     val density = LocalDensity.current
     Surface(
         modifier = Modifier.fillMaxSize().graphicsLayer {
-            val rounding = corners.coerceIn(0f, 1f)
+            val rounding = if (gestureActive) 1f else corners.coerceIn(0f, 1f)
             shape = pageShape.copy(
                 topStart = CornerSize(pageShape.topStart.toPx(size, density) * rounding),
                 topEnd = CornerSize(pageShape.topEnd.toPx(size, density) * rounding),
