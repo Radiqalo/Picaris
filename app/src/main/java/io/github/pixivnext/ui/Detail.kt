@@ -460,8 +460,14 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                             modifier = Modifier.fillMaxWidth(.75f).height(ButtonDefaults.MediumContainerHeight),
                             shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
                         ) { Text(if (user.is_followed) "已关注" else "关注") }
-                        Row(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
-                            if (profileLoaded) Text("${profile.total_follow_users} 关注", style = MaterialTheme.typography.bodySmall,
+                        Row(
+                            modifier = Modifier.heightIn(min = 24.dp),
+                            horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // Keep the text line measured before the profile arrives, including at larger font scales.
+                            Text(if (profileLoaded) "${profile.total_follow_users} 关注" else " ",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                             profile.region?.takeIf { it.isNotBlank() }?.let {
                                 Text(it, style = MaterialTheme.typography.bodySmall,
