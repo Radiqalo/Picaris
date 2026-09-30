@@ -305,11 +305,11 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
             }
             Row(
                 Modifier.align(Alignment.TopCenter).fillMaxWidth()
-                    .statusBarsPadding().padding(12.dp),
+                    .statusBarsPadding().padding(12.dp).workTransitionControls(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 IconButton(onClick = back) { AppIcon(Glyph.Back, "返回") }
-                IconButton(onClick = { moreMenu = true }) {
+                IconButton(onClick = { if (canOpenReader) moreMenu = true }) {
                     AppIcon(Glyph.More, "更多操作")
                 }
             }

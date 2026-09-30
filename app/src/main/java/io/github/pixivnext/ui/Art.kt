@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.geometry.Offset
@@ -27,6 +28,20 @@ import kotlin.math.*
 
 val LocalWorkTransition = staticCompositionLocalOf<SharedTransitionScope?> { null }
 val LocalImageTransitionEnabled = staticCompositionLocalOf { true }
+
+@Composable
+fun Modifier.workTransitionControls(): Modifier {
+    val navigation = LocalNavAnimatedContentScope.current
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val opacity by navigation.transition.animateFloat(
+        transitionSpec = { effects }, label = "artwork controls opacity",
+    ) { if (it == EnterExitState.Visible) 1f else 0f }
+    val transition = LocalWorkTransition.current
+    val overlay = if (transition != null) with(transition) {
+        this@workTransitionControls.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 2f)
+    } else this
+    return overlay.graphicsLayer { alpha = opacity.coerceIn(0f, 1f) }
+}
 
 @Composable
 fun Modifier.aboveWorkTransition(): Modifier {
