@@ -58,6 +58,10 @@ data class Collection(
 fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val account by vm.active.collectAsStateWithLifecycle()
+    androidx.lifecycle.compose.LifecycleResumeEffect(account?.user?.id) {
+        vm.syncAccountProfile()
+        onPauseOrDispose { }
+    }
     val revision by vm.revision.collectAsStateWithLifecycle()
     val backStack = rememberNavBackStack(Home)
     val snackbar = remember { SnackbarHostState() }

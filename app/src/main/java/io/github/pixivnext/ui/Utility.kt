@@ -134,6 +134,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val isDemo by vm.demo.collectAsStateWithLifecycle()
     val account by vm.active.collectAsStateWithLifecycle()
+    LaunchedEffect(account?.user?.id) { vm.syncAccountProfile() }
     Column {
         ScreenBar(strings.getString(R.string.ui_a82c993d73), actions = { ContentKindAction(vm) })
         LazyColumn(
@@ -148,7 +149,10 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content),
                     ) {
-                        Avatar(account?.user ?: User(), Modifier.size(72.dp))
+                        Avatar(account?.user ?: User(), Modifier.size(72.dp).clip(CircleShape)
+                            .clickable(enabled = account != null, onClickLabel = "我的主页") {
+                                account?.user?.let { navigate(Author(it)) }
+                            })
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight)) {
                             Text(account?.user?.name ?: "PixivNext",
                                 style = MaterialTheme.typography.headlineSmall,

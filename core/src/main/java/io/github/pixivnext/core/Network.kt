@@ -136,6 +136,16 @@ constructor(private val vault: CredentialStore, private val oauth: OAuthExchange
         commit(data.value.copy(activeId = id))
     }
 
+    suspend fun updateUser(accountId: Long, user: User) = mutex.withLock {
+        require(user.id == accountId) { "账号资料不匹配" }
+        val current = data.value
+        if (current.accounts.any { it.user.id == accountId && it.user != user }) {
+            commit(current.copy(accounts = current.accounts.map {
+                if (it.user.id == accountId) it.copy(user = user) else it
+            }))
+        }
+    }
+
     suspend fun remove(id: Long) = mutex.withLock {
         val accounts = data.value.accounts.filterNot { it.user.id == id }
         commit(
@@ -244,7 +254,15 @@ class PixivOAuth @Inject constructor(private val network: Network) : OAuthExchan
         if (!response.status.isSuccess())
             throw PixivException(response.status.value, "登录失败，请检查登录凭据与网络（${response.status.value}）")
         val root = (json["response"] as? JsonObject) ?: json
-        val user = AppJson.decodeFromJsonElement<User>(root.getValue("user"))
+        val userJson = root.getValue("user").jsonObject
+        val decodedUser = AppJson.decodeFromJsonElement<User>(userJson)
+        val avatar = userJson["image_urls"]?.jsonObject?.let { images ->
+            listOf("px_170x170", "px_50x50", "px_16x16").firstNotNullOfOrNull { size ->
+                images[size]?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+            }
+        }
+        val user = if (decodedUser.profile_image_urls.medium.isBlank() && avatar != null)
+            decodedUser.copy(profile_image_urls = ImageUrls(medium = avatar)) else decodedUser
         return Account(
             user,
             root.getValue("access_token").jsonPrimitive.content,

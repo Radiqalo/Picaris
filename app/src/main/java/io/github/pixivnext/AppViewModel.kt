@@ -199,6 +199,24 @@ constructor(
 
     suspend fun tags(): List<Tag> = repo.tags(accountId)
 
+    private var profileSync: Job? = null
+    private var profileSyncAccount: Long? = null
+    fun syncAccountProfile() {
+        val account = accountId
+        if (account <= 0L) return
+        if (profileSyncAccount == account && profileSync?.isActive == true) return
+        profileSync?.cancel()
+        profileSyncAccount = account
+        profileSync = viewModelScope.launch {
+            try {
+                val details = repo.authorDetails(account, account)
+                auth.updateUser(account, details.user)
+                authorProfiles.remove(account to account)
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { /* Preserve the last known profile while offline. */ }
+        }
+    }
+
     private val discoveryTrends = mutableMapOf<FeedSession, Deferred<List<TrendingTag>>>()
     private val discoveryAuthors = mutableMapOf<FeedSession, Deferred<List<UserPreview>>>()
     private val authorProfiles = mutableMapOf<Pair<Long, Long>, Deferred<AuthorDetails>>()
