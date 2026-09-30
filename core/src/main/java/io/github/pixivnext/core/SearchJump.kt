@@ -2,7 +2,7 @@ package io.github.pixivnext.core
 
 import java.net.URI
 
-/** Explicit Pixiv targets; plain numbers follow the global image/novel mode. */
+/** Only explicit IDs and Pixiv links jump; bare numbers remain search keywords. */
 sealed interface SearchJump {
     data class Artwork(val id: Long, val novel: Boolean) : SearchJump
     data class Artist(val id: Long) : SearchJump
@@ -11,7 +11,6 @@ sealed interface SearchJump {
 fun parseSearchJump(input: String, novelMode: Boolean): SearchJump? {
     val value = input.trim()
     fun id(value: String?) = value?.toLongOrNull()?.takeIf { it > 0 }
-    id(value)?.let { return SearchJump.Artwork(it, novelMode) }
     Regex("^(?:画师|作者|用户|user|artist|uid)(?:\\s*id)?\\s*[:：#]?\\s*(\\d+)$", RegexOption.IGNORE_CASE)
         .matchEntire(value)?.groupValues?.get(1)?.let { id(it) }
         ?.let { return SearchJump.Artist(it) }
@@ -19,7 +18,7 @@ fun parseSearchJump(input: String, novelMode: Boolean): SearchJump? {
         .matchEntire(value)?.let { match ->
             id(match.groupValues[2])?.let {
                 val kind = match.groupValues[1].lowercase()
-                return SearchJump.Artwork(it, kind == "小说" || kind == "novel")
+                return SearchJump.Artwork(it, kind == "小说" || kind == "novel" || (kind == "作品" && novelMode))
             }
         }
     val link = Regex("(?:https?://)?(?:www\\.|touch\\.)?pixiv\\.net/[^\\s]+", RegexOption.IGNORE_CASE)

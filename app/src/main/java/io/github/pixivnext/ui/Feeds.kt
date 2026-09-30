@@ -931,14 +931,14 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit,
     val demo by vm.demo.collectAsStateWithLifecycle()
     val active by vm.active.collectAsStateWithLifecycle()
     var jumping by remember { mutableStateOf(false) }
-    fun submit(value: String) {
+    fun submit(value: String, selectedJump: SearchJump? = null) {
         if (jumping || value.isBlank()) return
         val query = value.trim()
         word.setTextAndPlaceCursorAtEnd(query)
         searchScope.launch { searchState.animateToCollapsed() }
         focus.clearFocus()
         keyboard?.hide()
-        val jump = parseSearchJump(query, settings.contentKind == "novel")
+        val jump = selectedJump ?: parseSearchJump(query, settings.contentKind == "novel")
         if (jump != null) {
             jumping = true
             vm.run {
@@ -995,7 +995,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit,
         SearchBarDefaults.InputField(
             textFieldState = word,
             searchBarState = searchState,
-            onSearch = ::submit,
+            onSearch = { submit(it) },
             placeholder = { Text("关键词、ID 或 Pixiv 链接") },
             leadingIcon = { AppIcon(Glyph.Search, null) },
             trailingIcon = {
@@ -1008,6 +1008,30 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit,
                     }
             },
         )
+    }
+    val idSuggestions: @Composable () -> Unit = {
+        val input = word.text.toString().trim()
+        val id = input.takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
+            ?.toLongOrNull()?.takeIf { it > 0 }
+        if (id != null) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+            ) {
+                SuggestionChip(
+                    onClick = { submit(input, SearchJump.Artist(id)) },
+                    enabled = !jumping,
+                    label = { Text("作者 ID") },
+                    icon = { AppIcon(Glyph.Person, null) },
+                )
+                SuggestionChip(
+                    onClick = { submit(input, SearchJump.Artwork(id, settings.contentKind == "novel")) },
+                    enabled = !jumping,
+                    label = { Text("作品 ID") },
+                    icon = { AppIcon(materialSymbol(MaterialSymbol.Image), null) },
+                )
+            }
+        }
     }
     Column {
         ScreenBar(
@@ -1024,6 +1048,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit,
             inputField = searchField,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
+        idSuggestions()
         if (jumping) LoadingState()
         else if (submitted.isNotEmpty()) {
             PrimaryTabRow(selectedTabIndex = resultPager.currentPage) {
@@ -1125,6 +1150,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit,
             }
     }
     ExpandedFullScreenSearchBar(state = searchState, inputField = searchField) {
+        idSuggestions()
         history.take(8).forEach { entry ->
             ListItem(
                 leadingContent = { AppIcon(Glyph.History, null) },
