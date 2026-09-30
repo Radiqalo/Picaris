@@ -113,6 +113,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                 .clickable(enabled = canOpenReader) { openReader(current) }
                                 .testTag("detailImage"),
                             sharedTransition = true,
+                            rounded = false,
                         )
                     }
                 LazyColumn(
@@ -137,6 +138,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                             .clickable(enabled = canOpenReader) { openReader(current) }
                                             .testTag("detailImage"),
                                         sharedTransition = true,
+                                        rounded = false,
                                     )
                                 }
                             } else
@@ -147,6 +149,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                         .clickable(enabled = canOpenReader) { openReader(current) }
                                         .testTag("detailImage"),
                                     sharedTransition = true,
+                                    rounded = false,
                                 )
                         }
                     item {

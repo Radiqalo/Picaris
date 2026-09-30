@@ -1,6 +1,10 @@
 package io.github.pixivnext.ui
 
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.compose.foundation.Canvas
@@ -9,6 +13,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
@@ -42,17 +49,37 @@ fun WorkImage(
     scale: ContentScale = ContentScale.Crop,
     url: String = work.cover,
     sharedTransition: Boolean = false,
+    rounded: Boolean = true,
 ) {
     val transition = LocalWorkTransition.current
     val imageModifier = if (sharedTransition && LocalImageTransitionEnabled.current && transition != null) {
         val navigationScope = LocalNavAnimatedContentScope.current
         val boundsAnimation = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.geometry.Rect>()
+        val shape = MaterialTheme.shapes.small
+        val cornerMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+        val rounding by navigationScope.transition.animateFloat(
+            transitionSpec = { cornerMotion }, label = "artwork corners",
+        ) { visibility ->
+            if ((visibility == EnterExitState.Visible) == rounded) 1f else 0f
+        }
+        val animatedShape = object : Shape {
+            override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+                val progress = rounding.coerceIn(0f, 1f)
+                return shape.copy(
+                    topStart = CornerSize(shape.topStart.toPx(size, density) * progress),
+                    topEnd = CornerSize(shape.topEnd.toPx(size, density) * progress),
+                    bottomStart = CornerSize(shape.bottomStart.toPx(size, density) * progress),
+                    bottomEnd = CornerSize(shape.bottomEnd.toPx(size, density) * progress),
+                ).createOutline(size, layoutDirection, density)
+            }
+        }
         with(transition) {
             modifier.sharedElement(
                 sharedContentState = rememberSharedContentState("work-image:${work.type}:${work.id}"),
                 animatedVisibilityScope = navigationScope,
                 boundsTransform = { _, _ -> boundsAnimation },
-            )
+                clipInOverlayDuringTransition = OverlayClip(animatedShape),
+            ).clip(animatedShape)
         }
     } else modifier
     if (work.demo >= 0) DemoArt(work.demo, imageModifier)
