@@ -8,7 +8,9 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.pager.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,6 +46,8 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
     ) { vm.download(work) }
     var chrome by rememberSaveable { mutableStateOf(true) }
     var vertical by rememberSaveable { mutableStateOf(false) }
+    var pageDialog by rememberSaveable { mutableStateOf(false) }
+    var pageInput by rememberSaveable { mutableStateOf("") }
     var localPages by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     LaunchedEffect(work.id) {
         localPages =
@@ -156,33 +160,76 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                         expanded = true,
                         modifier = Modifier.navigationBarsPadding().padding(bottom = 16.dp),
                     ) {
-                        IconButton({ vertical = !vertical }) {
+                        IconButton(onClick = {
+                            scope.launch {
+                                if (vertical) pager.scrollToPage(page)
+                                else list.scrollToItem(page)
+                                vertical = !vertical
+                            }
+                        }) {
                             AppIcon(
                                 Glyph.Book,
                                 if (vertical) strings.getString(R.string.ui_86380149bb)
                                 else strings.getString(R.string.ui_4a58070031),
                             )
                         }
-                        Text("${page + 1} / $count", style = MaterialTheme.typography.labelLarge)
-                        Slider(
-                            rememberSliderState(
-                                    page.toFloat(),
-                                    steps = (count - 2).coerceAtLeast(0),
-                                    trackRange = 0f..(count - 1).toFloat(),
-                                )
-                                .also { it.value = page.toFloat() },
-                            onValueChange = {
+                        IconButton(
+                            onClick = {
                                 scope.launch {
-                                    if (vertical) list.scrollToItem(it.toInt())
-                                    else pager.scrollToPage(it.toInt())
+                                    if (vertical) list.animateScrollToItem(page - 1)
+                                    else pager.animateScrollToPage(page - 1)
                                 }
                             },
-                            modifier = Modifier.width(160.dp),
-                        )
+                            enabled = page > 0,
+                        ) { AppIcon(Glyph.Back, "上一张") }
+                        TextButton(onClick = { pageInput = "${page + 1}"; pageDialog = true }) {
+                            Text("${page + 1} / $count", style = MaterialTheme.typography.labelLarge)
+                        }
+                        IconButton(
+                            onClick = {
+                                scope.launch {
+                                    if (vertical) list.animateScrollToItem(page + 1)
+                                    else pager.animateScrollToPage(page + 1)
+                                }
+                            },
+                            enabled = page < count - 1,
+                        ) { AppIcon(Glyph.Arrow, "下一张") }
                     }
                 }
         }
     }
+    if (pageDialog) {
+        val selectedPage = pageInput.toIntOrNull()?.takeIf { it in 1..count }
+        AlertDialog(
+            onDismissRequest = { pageDialog = false },
+            title = { Text("跳转页码") },
+            text = {
+                OutlinedTextField(
+                    value = pageInput,
+                    onValueChange = { value -> pageInput = value.filter(Char::isDigit) },
+                    label = { Text("页码（1–$count）") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedPage?.let { selected ->
+                            scope.launch {
+                                if (vertical) list.scrollToItem(selected - 1)
+                                else pager.scrollToPage(selected - 1)
+                            }
+                        }
+                        pageDialog = false
+                    },
+                    enabled = selectedPage != null,
+                ) { Text("跳转") }
+            },
+            dismissButton = { TextButton(onClick = { pageDialog = false }) { Text("取消") } },
+        )
+    }
+
 }
 
 @Composable
