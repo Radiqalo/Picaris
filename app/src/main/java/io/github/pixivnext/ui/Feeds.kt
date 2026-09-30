@@ -103,6 +103,7 @@ fun KindTabs(
         onSelect,
         modifier,
         showCheck = true,
+        alignment = Alignment.CenterHorizontally,
     )
 }
 
@@ -113,13 +114,15 @@ fun ChoiceChips(
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier,
     showCheck: Boolean = false,
+    alignment: Alignment.Horizontal = Alignment.Start,
 ) {
     val sources = remember(options) { List(options.size) { MutableInteractionSource() } }
     ButtonGroup(
         overflowIndicator = { menu -> ButtonGroupDefaults.OverflowIndicator(menuState = menu) },
         modifier = modifier,
         expandedRatio = 1f,
-        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+        horizontalArrangement =
+            Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween, alignment),
     ) {
         options.forEachIndexed { index, (key, label) ->
             customItem(
