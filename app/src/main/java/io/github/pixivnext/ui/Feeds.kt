@@ -416,7 +416,10 @@ private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier:
     val pager = rememberPagerState(pageCount = { modes.size })
     val scope = rememberCoroutineScope()
     Column(modifier) {
-        PrimaryScrollableTabRow(selectedTabIndex = pager.currentPage) {
+        PrimaryScrollableTabRow(
+            selectedTabIndex = pager.currentPage,
+            edgePadding = 0.dp,
+        ) {
             modes.forEachIndexed { index, (_, title) ->
                 Tab(
                     selected = pager.currentPage == index,
