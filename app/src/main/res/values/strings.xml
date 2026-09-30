@@ -14,6 +14,9 @@
     <string name="discover_works">推荐作品</string>
     <string name="discover_novels">推荐小说</string>
     <string name="discover_pixivision">PIXIVISION</string>
+    <string name="pixivision_load_failed">特辑暂时无法加载</string>
+    <string name="pixivision_retry">重试</string>
+    <string name="pixivision_page">第 %1$d 篇，共 %2$d 篇特辑</string>
     <string name="ui_00925a8ece">回到曾经遇见的作品</string>
     <string name="ui_074bfabad3">动图超过预览大小限制，请下载原始帧包</string>
     <string name="ui_094616a53c">小说详情</string>

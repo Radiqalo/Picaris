@@ -23,7 +23,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextOverflow
@@ -197,7 +196,6 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 @Composable
 private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-    val uriHandler = LocalUriHandler.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
@@ -258,15 +256,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(strings.getString(R.string.ui_d00981d6ce))
                 }
-                FilledTonalButton(
-                    onClick = { uriHandler.openUri("https://www.pixivision.net/zh/") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    AppIcon(materialSymbol(MaterialSymbol.Book), null)
-                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(strings.getString(R.string.discover_pixivision))
-                }
+                PixivisionCarousel(vm)
                 if (recommendedTags.isNotEmpty()) {
                     Text(strings.getString(R.string.discover_tags),
                         style = MaterialTheme.typography.titleLarge)

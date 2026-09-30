@@ -31,6 +31,7 @@ constructor(
     val downloads: DownloadManager,
     val dao: LibraryDao,
     val network: Network,
+    private val pixivision: PixivisionRepository,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     val settings = settingsStore.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Settings())
@@ -226,6 +227,7 @@ constructor(
 
     private val discoveryTrends = mutableMapOf<FeedSession, Deferred<List<TrendingTag>>>()
     private val discoveryAuthors = mutableMapOf<FeedSession, Deferred<List<UserPreview>>>()
+    private var pixivisionRequest: Deferred<List<PixivisionArticle>>? = null
     private val authorProfiles = mutableMapOf<Pair<Long, Long>, Deferred<AuthorDetails>>()
     private fun discoveryKey() = FeedSession(accountId, demo.value,
         FeedSpec(kind = settings.value.contentKind), settings.value.contentFilter())
@@ -234,6 +236,25 @@ constructor(
     }
     fun cachedRecommendedAuthors(): List<UserPreview>? = discoveryAuthors[discoveryKey()]?.let {
         if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
+    }
+
+    private fun demoPixivisionArticles() = Demo.works.filterNot { it.isNovel }.take(5).map { work ->
+        PixivisionArticle(work.id, "演示特辑 · ${work.title}", "", "", work.demo)
+    }
+
+    fun cachedPixivisionArticles(): List<PixivisionArticle>? {
+        if (demo.value) return demoPixivisionArticles()
+        return pixivisionRequest?.let {
+            if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
+        }
+    }
+
+    suspend fun pixivisionArticles(): List<PixivisionArticle> {
+        if (demo.value) return demoPixivisionArticles()
+        if (pixivisionRequest?.isCancelled == true) pixivisionRequest = null
+        val request = pixivisionRequest ?: viewModelScope.async { pixivision.articles() }
+            .also { pixivisionRequest = it }
+        return request.await()
     }
 
     suspend fun trendingTags(): List<TrendingTag> {
