@@ -1,5 +1,12 @@
 <resources>
     <string name="app_name">PixivNext</string>
+    <string name="tab_home">首页</string>
+    <string name="discover_recommend">推荐</string>
+    <string name="discover_following">关注动态</string>
+    <string name="discover_featured">热门作品与标签</string>
+    <string name="discover_tags">推荐标签</string>
+    <string name="discover_artists">推荐作者</string>
+    <string name="discover_works">推荐作品</string>
     <string name="ui_00925a8ece">回到曾经遇见的作品</string>
     <string name="ui_074bfabad3">动图超过预览大小限制，请下载原始帧包</string>
     <string name="ui_094616a53c">小说详情</string>

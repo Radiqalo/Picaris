@@ -22,6 +22,8 @@ data class User(
 
 @Serializable data class Tag(val name: String = "", val translated_name: String? = null)
 
+data class TrendingTag(val tag: Tag, val cover: Work)
+
 @Serializable data class MetaPage(val image_urls: ImageUrls = ImageUrls())
 
 @Serializable data class SinglePage(val original_image_url: String = "")

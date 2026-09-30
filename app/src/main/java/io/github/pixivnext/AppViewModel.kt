@@ -178,6 +178,11 @@ constructor(
 
     suspend fun tags(): List<Tag> = repo.tags(accountId)
 
+    suspend fun trendingTags(): List<TrendingTag> =
+        if (demo.value) Demo.works.flatMap { work -> work.tags.map { TrendingTag(it, work) } }
+            .distinctBy { it.tag.name }
+        else repo.trendingTags(accountId)
+
     suspend fun searchUsers(word: String): List<User> =
         if (demo.value) Demo.works.map { it.user } else repo.searchUsers(accountId, word)
 

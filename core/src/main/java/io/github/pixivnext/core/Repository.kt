@@ -299,6 +299,20 @@ constructor(
                 )
             } ?: emptyList()
 
+    suspend fun trendingTags(account: Long): List<TrendingTag> {
+        val filter = settings.flow.first().contentFilter()
+        return api.get(account, "v1/trending-tags/illust", mapOf("filter" to "for_android"))["trend_tags"]
+            ?.jsonArray?.mapNotNull { item ->
+                val data = item.jsonObject
+                val name = data["tag"]?.jsonPrimitive?.content.orEmpty()
+                val cover = data["illust"]?.let {
+                    runCatching { AppJson.decodeFromJsonElement<Work>(it) }.getOrNull()
+                }
+                if (name.isBlank() || cover == null || !filter.allows(cover)) null
+                else TrendingTag(Tag(name, data["translated_name"]?.jsonPrimitive?.contentOrNull), cover)
+            } ?: emptyList()
+    }
+
     suspend fun ugoira(account: Long, id: Long): Ugoira {
         val key = "ugoira-metadata:$id"
         return try {

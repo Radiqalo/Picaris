@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -164,14 +165,14 @@ fun ChoiceChips(
 }
 
 @Composable
-fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> Unit) {
+fun RecommendedHomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     var kind by rememberSaveable { mutableStateOf("illust") }
     val demo by vm.demo.collectAsStateWithLifecycle()
     Column {
         ScreenBar(
-            strings.getString(R.string.ui_523e40a074) + if (demo) " · 演示" else "",
+            strings.getString(R.string.tab_home) + if (demo) " · 演示" else "",
             actions = {
                 IconButton(search) {
                     AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
@@ -187,42 +188,174 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> U
             navigate,
             Modifier.weight(1f),
             header = {
-                Column {
-                    FilledTonalButton(
-                        onClick = {
-                            navigate(
-                                Collection(
-                                    strings.getString(R.string.ui_d00981d6ce),
-                                    "ranking",
-                                    kind,
-                                )
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shapes = ButtonDefaults.shapes(),
-                    ) {
-                        AppIcon(Glyph.Rank, null)
-                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                        Text(strings.getString(R.string.ui_d00981d6ce))
-                    }
-                    KindTabs(
-                        kind,
-                        { kind = it },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
-                    )
-                }
+                KindTabs(
+                    kind,
+                    { kind = it },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
+                )
             },
         )
     }
 }
 
 @Composable
-fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
+fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
+    val sections = listOf("recommend", "ranking", "follow")
+    val labels = listOf(
+        strings.getString(R.string.discover_recommend),
+        strings.getString(R.string.ui_d00981d6ce),
+        strings.getString(R.string.discover_following),
+    )
+    var section by rememberSaveable { mutableStateOf("recommend") }
+    val holder = rememberSaveableStateHolder()
+    Column {
+        ScreenBar(strings.getString(R.string.ui_523e40a074))
+        PrimaryTabRow(selectedTabIndex = sections.indexOf(section)) {
+            sections.forEachIndexed { index, key ->
+                Tab(
+                    selected = section == key,
+                    onClick = { section = key },
+                    text = { Text(labels[index]) },
+                )
+            }
+        }
+        Box(Modifier.weight(1f)) {
+            holder.SaveableStateProvider(section) {
+                when (section) {
+                    "ranking" -> RankingFeedScreen(vm, navigate)
+                    "follow" -> FollowScreen(vm, navigate)
+                    else -> DiscoveryLanding(vm, navigate)
+                }
+            }
+        }
+    }
+}
 
+@Composable
+private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    val demo by vm.demo.collectAsStateWithLifecycle()
+    val trends by produceState(emptyList<TrendingTag>(), vm.accountId, demo) {
+        value = try {
+            vm.trendingTags()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+    FeedGrid(
+        FeedSpec(kind = "illust"),
+        vm,
+        navigate,
+        Modifier.fillMaxSize(),
+        header = {
+            Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
+                if (trends.isNotEmpty()) {
+                    Text(
+                        strings.getString(R.string.discover_featured),
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(trends.take(6), key = { it.tag.name }) { trend ->
+                            ElevatedCard(
+                                onClick = {
+                                    navigate(Collection(trend.tag.name, "search", word = trend.tag.name))
+                                },
+                                modifier = Modifier.width(260.dp),
+                            ) {
+                                Box {
+                                    WorkImage(trend.cover, Modifier.fillMaxWidth().height(150.dp))
+                                    Surface(
+                                        modifier = Modifier.align(Alignment.BottomStart),
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    ) {
+                                        Text(
+                                            "#${trend.tag.name}",
+                                            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        strings.getString(R.string.discover_tags),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(trends, key = { it.tag.name }) { trend ->
+                            SuggestionChip(
+                                onClick = {
+                                    navigate(Collection(trend.tag.name, "search", word = trend.tag.name))
+                                },
+                                label = { Text("#${trend.tag.translated_name ?: trend.tag.name}") },
+                            )
+                        }
+                    }
+                    val artists = trends.map { it.cover.user }.distinctBy { it.id }.take(10)
+                    if (artists.isNotEmpty()) {
+                        Text(
+                            strings.getString(R.string.discover_artists),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(artists, key = { it.id }) { artist ->
+                                ElevatedCard(onClick = { navigate(Author(artist)) }) {
+                                    Row(
+                                        Modifier.width(180.dp).padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        Avatar(artist)
+                                        Text(
+                                            artist.name,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.titleSmall,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Text(
+                    strings.getString(R.string.discover_works),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun RankingFeedScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
+    var kind by rememberSaveable { mutableStateOf("illust") }
+    var mode by rememberSaveable { mutableStateOf("day") }
+    FeedGrid(
+        FeedSpec(section = "ranking", kind = kind, mode = mode),
+        vm,
+        navigate,
+        Modifier.fillMaxSize(),
+        rank = true,
+        header = {
+            Column {
+                RankingModePicker(mode, { mode = it })
+                KindTabs(kind, { kind = it }, modifier = Modifier.fillMaxWidth())
+            }
+        },
+    )
+}
+
+@Composable
+fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     var kind by rememberSaveable { mutableStateOf("illust") }
     Column {
-        ScreenBar(strings.getString(R.string.ui_e0fd2cee4c))
         FeedGrid(
             FeedSpec(section = "follow", kind = kind),
             vm,

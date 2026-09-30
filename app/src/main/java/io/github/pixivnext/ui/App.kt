@@ -176,12 +176,12 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val tabs =
         listOf(
+            strings.getString(R.string.tab_home),
             strings.getString(R.string.ui_523e40a074),
-            strings.getString(R.string.ui_753ccc8e2e),
             strings.getString(R.string.ui_d07cee786a),
             strings.getString(R.string.ui_a82c993d73),
         )
-    val icons = listOf(Glyph.Discover, Glyph.Feed, Glyph.Heart, Glyph.Person)
+    val icons = listOf(Glyph.Feed, Glyph.Discover, Glyph.Heart, Glyph.Person)
     val holder = rememberSaveableStateHolder()
     Box(Modifier.fillMaxSize()) {
         val wide =
@@ -240,10 +240,10 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         ScrollingScreen {
                             when (tab) {
                                 0 ->
-                                    DiscoverScreen(vm, navigate) {
+                                    RecommendedHomeScreen(vm, navigate) {
                                         navigate(Search)
                                     }
-                                1 -> FollowScreen(vm, navigate)
+                                1 -> DiscoverScreen(vm, navigate)
                                 2 -> BookmarkScreen(vm, navigate)
                                 else -> ProfileScreen(vm, navigate)
                             }
