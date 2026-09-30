@@ -35,7 +35,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     val current = bookmarks[identity]?.apply(work) ?: work
     val actionBusy = identity in busy
     var privateDialog by remember { mutableStateOf(false) }
-    var moreMenu by remember { mutableStateOf(false) }
+    var fabMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val permission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -45,6 +45,19 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         vm.run {
             work = vm.bookmark(current, public)
         }
+    }
+    fun share() {
+        val link =
+            if (work.isNovel) "https://www.pixiv.net/novel/show.php?id=${work.id}"
+            else "https://www.pixiv.net/artworks/${work.id}"
+        context.startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND)
+                    .setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, "${work.title}\n$link"),
+                strings.getString(R.string.ui_df80b48aa7),
+            )
+        )
     }
     LaunchedEffect(initial.id) {
         if (initial.demo < 0)
@@ -66,49 +79,54 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                         AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540))
                     }
                 },
-                actions = {
-                    IconButton({
-                        val link =
-                            if (work.isNovel) "https://www.pixiv.net/novel/show.php?id=${work.id}"
-                            else "https://www.pixiv.net/artworks/${work.id}"
-                        context.startActivity(
-                            Intent.createChooser(
-                                Intent(Intent.ACTION_SEND)
-                                    .setType("text/plain")
-                                    .putExtra(Intent.EXTRA_TEXT, "${work.title}\n$link"),
-                                strings.getString(R.string.ui_df80b48aa7),
-                            )
-                        )
-                    }) {
-                        AppIcon(Glyph.Share, strings.getString(R.string.ui_7a92434114))
-                    }
-                    Box {
-                        IconButton({ moreMenu = true }) { AppIcon(Glyph.More, "更多操作") }
-                        DropdownMenu(moreMenu, { moreMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
-                                onClick = {
-                                    moreMenu = false
-                                    navigate(Reader(current))
-                                },
-                                leadingIcon = {
-                                    AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null)
-                                },
-                            )
-                            if (!current.is_bookmarked)
-                                DropdownMenuItem(
-                                    text = { Text("非公开收藏") },
-                                    onClick = {
-                                        moreMenu = false
-                                        privateDialog = true
-                                    },
-                                    enabled = !actionBusy,
-                                    leadingIcon = { AppIcon(Glyph.Heart, null) },
-                                )
-                        }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButtonMenu(
+                expanded = fabMenu,
+                button = {
+                    ToggleFloatingActionButton(
+                        checked = fabMenu,
+                        onCheckedChange = { fabMenu = it },
+                    ) {
+                        AppIcon(if (fabMenu) Glyph.Close else Glyph.More, "更多操作")
                     }
                 },
-            )
+            ) {
+                FloatingActionButtonMenuItem(
+                    onClick = {
+                        fabMenu = false
+                        navigate(Reader(current))
+                    },
+                    text = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
+                    icon = { AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null) },
+                )
+                FloatingActionButtonMenuItem(
+                    onClick = {
+                        fabMenu = false
+                        share()
+                    },
+                    text = { Text(strings.getString(R.string.ui_7a92434114)) },
+                    icon = { AppIcon(Glyph.Share, null) },
+                )
+                FloatingActionButtonMenuItem(
+                    onClick = {
+                        fabMenu = false
+                        permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    },
+                    text = { Text(strings.getString(R.string.ui_255d6cabdc)) },
+                    icon = { AppIcon(Glyph.Download, null) },
+                )
+                if (!current.is_bookmarked && !actionBusy)
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            fabMenu = false
+                            privateDialog = true
+                        },
+                        text = { Text("非公开收藏") },
+                        icon = { AppIcon(Glyph.Heart, null) },
+                    )
+            }
         },
         bottomBar = {
             Surface(shadowElevation = 2.dp, color = MaterialTheme.colorScheme.surfaceContainer) {
@@ -117,12 +135,6 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    FilledTonalIconButton(
-                        { permission.launch(Manifest.permission.POST_NOTIFICATIONS) },
-                        Modifier.size(52.dp),
-                    ) {
-                        AppIcon(Glyph.Download, strings.getString(R.string.ui_255d6cabdc))
-                    }
                     Button(
                         { bookmark() },
                         enabled = !actionBusy,
@@ -162,7 +174,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                             work,
                             Modifier.fillMaxWidth()
                                 .aspectRatio(work.aspect)
-                                .clip(RoundedCornerShape(28.dp))
+                                .clip(MaterialTheme.shapes.large)
                                 .clickable { navigate(Reader(current)) }
                                 .testTag("detailImage"),
                         )
@@ -183,7 +195,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                         work,
                                         Modifier.fillMaxHeight()
                                             .aspectRatio(work.aspect)
-                                            .clip(RoundedCornerShape(28.dp))
+                                            .clip(MaterialTheme.shapes.large)
                                             .clickable { navigate(Reader(current)) }
                                             .testTag("detailImage"),
                                     )
@@ -193,7 +205,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                     work,
                                     Modifier.fillMaxWidth()
                                         .aspectRatio(work.aspect.coerceAtLeast(.85f))
-                                        .clip(RoundedCornerShape(28.dp))
+                                        .clip(MaterialTheme.shapes.large)
                                         .clickable { navigate(Reader(current)) }
                                         .testTag("detailImage"),
                                 )
@@ -228,7 +240,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                     }
                     item {
                         Surface(
-                            shape = RoundedCornerShape(24.dp),
+                            shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
                             UserRow(work.user, { navigate(Author(work.user)) }) {
