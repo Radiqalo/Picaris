@@ -135,8 +135,6 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 
     val isDemo by vm.demo.collectAsStateWithLifecycle()
     val account by vm.active.collectAsStateWithLifecycle()
-    val history by vm.history.collectAsStateWithLifecycle()
-    val downloads by vm.downloadList.collectAsStateWithLifecycle()
     Column {
         ScreenBar(
             strings.getString(R.string.ui_a82c993d73),
@@ -179,27 +177,28 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         }
                         Row(
                             Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(32.dp),
+                            horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
                         ) {
-                            Column {
-                                Text(
-                                    history.size.toString(),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                )
-                                Text(
-                                    strings.getString(R.string.ui_f69150fb1b),
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
-                            Column {
-                                Text(
-                                    downloads.count { it.status == "complete" }.toString(),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                )
-                                Text(
-                                    strings.getString(R.string.ui_0c955150ac),
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
+                            listOf(
+                                Triple("bookmarks", strings.getString(R.string.profile_bookmarks), Glyph.Heart),
+                                Triple("history", strings.getString(R.string.profile_history), Glyph.History),
+                                Triple("downloads", strings.getString(R.string.ui_18df1a67a2), Glyph.Download),
+                            ).forEach { (page, label, icon) ->
+                                FilledTonalButton(
+                                    onClick = { navigate(Utility(page)) },
+                                    modifier = Modifier.weight(1f),
+                                    shapes = ButtonDefaults.shapes(),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+                                    ) {
+                                        AppIcon(icon, null)
+                                        Text(label, style = MaterialTheme.typography.labelMedium,
+                                            maxLines = 1)
+                                    }
+                                }
                             }
                         }
                     }
@@ -225,33 +224,6 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         position = SettingsRowPosition.Last,
                     ) {
                         account?.user?.let { navigate(Author(it)) }
-                    }
-                }
-            }
-            item {
-                SettingsGroup(strings.getString(R.string.ui_11d0497857)) {
-                    SettingRow(
-                        strings.getString(R.string.ui_d07cee786a),
-                        strings.getString(R.string.ui_7355147b10),
-                        Glyph.Heart,
-                        position = SettingsRowPosition.First,
-                    ) {
-                        navigate(Utility("bookmarks"))
-                    }
-                    SettingRow(
-                        strings.getString(R.string.ui_29f6711704),
-                        strings.getString(R.string.ui_00925a8ece),
-                        Glyph.History,
-                    ) {
-                        navigate(Utility("history"))
-                    }
-                    SettingRow(
-                        strings.getString(R.string.ui_18df1a67a2),
-                        strings.getString(R.string.ui_582c4d5fb8),
-                        Glyph.Download,
-                        position = SettingsRowPosition.Last,
-                    ) {
-                        navigate(Utility("downloads"))
                     }
                 }
             }
