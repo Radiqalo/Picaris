@@ -116,6 +116,11 @@ data class Work(
                         image_urls.original.ifEmpty { cover }
                     }
                 )
+
+    val previews
+        get() = if (meta_pages.isNotEmpty()) meta_pages.map { page ->
+            page.image_urls.large.ifEmpty { page.image_urls.medium.ifEmpty { page.image_urls.original } }
+        } else listOf(cover.ifEmpty { originals.first() })
 }
 
 @Serializable

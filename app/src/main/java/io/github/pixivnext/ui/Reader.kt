@@ -46,9 +46,14 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
     ) { vm.download(work) }
     var chrome by rememberSaveable { mutableStateOf(true) }
     var vertical by rememberSaveable { mutableStateOf(false) }
+    var showOriginal by rememberSaveable(work.id) { mutableStateOf(false) }
+    val originalFeedback = toggleFeedback()
+    val imagePages = if (showOriginal) work.originals else work.previews
     var pageDialog by rememberSaveable { mutableStateOf(false) }
     var pageInput by rememberSaveable { mutableStateOf("") }
     var localPages by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    fun pageUrl(page: Int): String =
+        if (showOriginal) localPages[page] ?: imagePages[page] else imagePages[page]
     LaunchedEffect(work.id) {
         localPages =
             vm.completed(work)
@@ -94,7 +99,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                             )
                         else
                             ReaderImage(
-                                localPages[page] ?: work.originals[page],
+                                pageUrl(page),
                                 "${work.title} 第${page+1}页",
                                 Modifier.fillMaxWidth().aspectRatio(work.aspect),
                             ) {
@@ -116,7 +121,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                         )
                     } else
                         ReaderImage(
-                            localPages[page] ?: work.originals[page],
+                            pageUrl(page),
                             work.title,
                             Modifier.fillMaxSize(),
                         ) {
@@ -133,6 +138,20 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                         }
                     },
                     actions = {
+                        if (work.type != "ugoira") IconToggleButton(
+                            checked = showOriginal,
+                            onCheckedChange = {
+                                originalFeedback(it)
+                                showOriginal = it
+                            },
+                            colors = IconButtonDefaults.iconToggleButtonColors(
+                                contentColor = text,
+                                checkedContentColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        ) {
+                            Icon(materialSymbol(MaterialSymbol.Image),
+                                if (showOriginal) "原图已开启，点击切换预览图" else "查看原图")
+                        }
                         IconButton(onClick = {
                             downloadPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }) {
