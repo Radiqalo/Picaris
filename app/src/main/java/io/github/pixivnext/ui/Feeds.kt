@@ -77,7 +77,12 @@ fun ScreenBar(
 }
 
 @Composable
-fun KindTabs(selected: String, onSelect: (String) -> Unit, novel: Boolean = true) {
+fun KindTabs(
+    selected: String,
+    onSelect: (String) -> Unit,
+    novel: Boolean = true,
+    modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     val kinds =
@@ -96,7 +101,7 @@ fun KindTabs(selected: String, onSelect: (String) -> Unit, novel: Boolean = true
         selected,
         kinds,
         onSelect,
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+        modifier,
         showCheck = true,
     )
 }
@@ -173,19 +178,38 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> U
                 }
             },
         )
-        FilledTonalButton(
-            onClick = {
-                navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking", kind))
+        FeedGrid(
+            FeedSpec(kind = kind),
+            vm,
+            navigate,
+            Modifier.weight(1f),
+            header = {
+                Column {
+                    FilledTonalButton(
+                        onClick = {
+                            navigate(
+                                Collection(
+                                    strings.getString(R.string.ui_d00981d6ce),
+                                    "ranking",
+                                    kind,
+                                )
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        AppIcon(Glyph.Rank, null)
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text(strings.getString(R.string.ui_d00981d6ce))
+                    }
+                    KindTabs(
+                        kind,
+                        { kind = it },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
+                    )
+                }
             },
-            modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
-            shapes = ButtonDefaults.shapes(),
-        ) {
-            AppIcon(Glyph.Rank, null)
-            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-            Text(strings.getString(R.string.ui_d00981d6ce))
-        }
-        KindTabs(kind, { kind = it })
-        FeedGrid(FeedSpec(kind = kind), vm, navigate, Modifier.weight(1f))
+        )
     }
 }
 
@@ -196,8 +220,19 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     var kind by rememberSaveable { mutableStateOf("illust") }
     Column {
         ScreenBar(strings.getString(R.string.ui_e0fd2cee4c))
-        KindTabs(kind, { kind = it })
-        FeedGrid(FeedSpec(section = "follow", kind = kind), vm, navigate, Modifier.weight(1f))
+        FeedGrid(
+            FeedSpec(section = "follow", kind = kind),
+            vm,
+            navigate,
+            Modifier.weight(1f),
+            header = {
+                KindTabs(
+                    kind,
+                    { kind = it },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
+                )
+            },
+        )
     }
 }
 
@@ -208,28 +243,7 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     var kind by rememberSaveable { mutableStateOf("illust") }
     var private by rememberSaveable { mutableStateOf(false) }
     Column {
-        ScreenBar(
-            strings.getString(R.string.ui_d07cee786a),
-            actions = {
-                IconButton({ private = !private }) {
-                    AppIcon(
-                        if (private) Glyph.Person else Glyph.Heart,
-                        if (private) strings.getString(R.string.ui_67c6787737)
-                        else strings.getString(R.string.ui_373ffa6d97),
-                    )
-                }
-            },
-        )
-        KindTabs(kind, { kind = it })
-        ChoiceChips(
-            if (private) "private" else "public",
-            listOf(
-                "public" to strings.getString(R.string.ui_dfe5a318ab),
-                "private" to strings.getString(R.string.ui_82b464fc64),
-            ),
-            { private = it == "private" },
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-        )
+        ScreenBar(strings.getString(R.string.ui_d07cee786a))
         FeedGrid(
             FeedSpec(
                 section = "bookmarks",
@@ -239,6 +253,24 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             vm,
             navigate,
             Modifier.weight(1f),
+            header = {
+                Column {
+                    KindTabs(
+                        kind,
+                        { kind = it },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
+                    )
+                    ChoiceChips(
+                        if (private) "private" else "public",
+                        listOf(
+                            "public" to strings.getString(R.string.ui_dfe5a318ab),
+                            "private" to strings.getString(R.string.ui_82b464fc64),
+                        ),
+                        { private = it == "private" },
+                        Modifier.fillMaxWidth(),
+                    )
+                }
+            },
         )
     }
 }
@@ -334,7 +366,7 @@ fun FeedGrid(
     val items = flow.collectAsLazyPagingItems()
     val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
     val busy by vm.bookmarkBusy.collectAsStateWithLifecycle()
-    val grid = rememberLazyStaggeredGridState()
+    val grid = key(spec) { rememberLazyStaggeredGridState() }
     val refreshing = items.loadState.refresh is LoadState.Loading
     val error = items.loadState.refresh as? LoadState.Error
     val showFeedMetadata =
