@@ -4,6 +4,9 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.AnimationVector
+import androidx.compose.animation.core.TwoWayConverter
+import androidx.compose.animation.core.VectorizedFiniteAnimationSpec
 import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.ui.geometry.Rect
@@ -36,6 +39,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -52,6 +56,67 @@ val LocalTransitionTapRouter = staticCompositionLocalOf<TransitionTapRouter?> { 
 val LocalFeedTapTargetsEnabled = staticCompositionLocalOf { false }
 internal class ArtworkReturnFeedback(val type: String, val id: Long)
 internal val LocalArtworkReturnFeedback = staticCompositionLocalOf<ArtworkReturnFeedback?> { null }
+internal class ArtworkPreviewHandoff {
+    var root: LayoutCoordinates? = null
+    val bounds = mutableMapOf<String, Rect>()
+}
+internal val LocalArtworkPreviewHandoff = staticCompositionLocalOf<ArtworkPreviewHandoff?> { null }
+
+private class PreviewBoundsAnimationSpec(
+    private val previewBounds: Rect,
+    private val animationSpec: FiniteAnimationSpec<Rect>,
+) : FiniteAnimationSpec<Rect> {
+    override fun <Vector : AnimationVector> vectorize(
+        converter: TwoWayConverter<Rect, Vector>,
+    ): VectorizedFiniteAnimationSpec<Vector> {
+        val animation = animationSpec.vectorize(converter)
+        val preview = converter.convertToVector(previewBounds)
+        return object : VectorizedFiniteAnimationSpec<Vector> by animation {
+            override fun getValueFromNanos(
+                playTimeNanos: Long, initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
+            ): Vector = animation.getValueFromNanos(playTimeNanos, preview, targetValue, initialVelocity)
+
+            override fun getVelocityFromNanos(
+                playTimeNanos: Long, initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
+            ): Vector = animation.getVelocityFromNanos(playTimeNanos, preview, targetValue, initialVelocity)
+
+            override fun getDurationNanos(
+                initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
+            ): Long = animation.getDurationNanos(preview, targetValue, initialVelocity)
+
+            override fun getEndVelocity(
+                initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
+            ): Vector = animation.getEndVelocity(preview, targetValue, initialVelocity)
+        }
+    }
+}
+
+@Composable
+private fun Modifier.captureArtworkPreview(key: String): Modifier {
+    val handoff = LocalArtworkPreviewHandoff.current ?: return this
+    val preview = LocalNavigationGestureInProgress.current
+    val visible = LocalNavigationSharedElementVisible.current
+    val coordinates = remember(key) { arrayOfNulls<LayoutCoordinates>(1) }
+    return onGloballyPositioned { coordinates[0] = it }.drawWithContent {
+        val root = handoff.root
+        val image = coordinates[0]
+        if (preview && visible && root?.isAttached == true && image?.isAttached == true) {
+            handoff.bounds[key] = root.localBoundingBoxOf(image, clipBounds = false)
+        }
+        drawContent()
+    }
+}
+
+@Composable
+private fun artworkHandoffMotion(key: String): () -> FiniteAnimationSpec<Rect> {
+    val motion = artworkBoundsMotion()
+    val handoff = LocalArtworkPreviewHandoff.current
+    val returningFromPreview = LocalNavigationGestureActive.current && !LocalNavigationGestureInProgress.current
+    return {
+        val bounds = if (returningFromPreview) handoff?.bounds?.get(key) else null
+        if (bounds != null) PreviewBoundsAnimationSpec(bounds, motion) else motion
+    }
+}
 
 class TransitionTapRouter {
     private data class Target(val bounds: Rect, val onClick: () -> Unit)
@@ -218,11 +283,13 @@ fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier
             override val shouldKeepEnabledForOngoingAnimation: Boolean = false
         }
     }
-    val motion = artworkBoundsMotion()
+    val sharedKey = "author:$id:avatar"
+    val motion = artworkHandoffMotion(sharedKey)
     return with(transition) {
-        val key = rememberSharedContentState("author:$id:avatar", config)
-        this@authorAvatarTransition.sharedElementWithCallerManagedVisibility(key, visible,
-            boundsTransform = { _, _ -> motion },
+        val key = rememberSharedContentState(sharedKey, config)
+        this@authorAvatarTransition.captureArtworkPreview(sharedKey)
+            .sharedElementWithCallerManagedVisibility(key, visible,
+            boundsTransform = { _, _ -> motion() },
             renderInOverlayDuringTransition = !gestureActive,
             clipInOverlayDuringTransition = OverlayClip(CircleShape))
     }
@@ -251,7 +318,8 @@ fun WorkImage(
             }
         }
         val navigationScope = LocalNavAnimatedContentScope.current
-        val boundsAnimation = artworkBoundsMotion()
+        val sharedKey = "work-image:${work.type}:${work.id}"
+        val boundsAnimation = artworkHandoffMotion(sharedKey)
         val shape = MaterialTheme.shapes.small
         val cornerMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
         val rounding by navigationScope.transition.animateFloat(
@@ -271,10 +339,10 @@ fun WorkImage(
             }
         }
         with(transition) {
-            modifier.sharedElementWithCallerManagedVisibility(
-                sharedContentState = rememberSharedContentState("work-image:${work.type}:${work.id}", config),
+            modifier.captureArtworkPreview(sharedKey).sharedElementWithCallerManagedVisibility(
+                sharedContentState = rememberSharedContentState(sharedKey, config),
                 visible = visible,
-                boundsTransform = { _, _ -> boundsAnimation },
+                boundsTransform = { _, _ -> boundsAnimation() },
                 renderInOverlayDuringTransition = !gestureActive,
                 clipInOverlayDuringTransition = OverlayClip(animatedShape),
             ).clip(animatedShape)

@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
@@ -88,14 +89,21 @@ internal fun NavigationPageDisplay(
         },
     )
     val gestureInProgress = navigationEventState.transitionState is NavigationEventTransitionState.InProgress
+    val handoff = remember { ArtworkPreviewHandoff() }
+    var previousGestureInProgress by remember { mutableStateOf(false) }
+    SideEffect {
+        if (gestureInProgress && !previousGestureInProgress) handoff.bounds.clear()
+        previousGestureInProgress = gestureInProgress
+    }
     CompositionLocalProvider(
         LocalNavigationGestureInProgress provides gestureInProgress,
         LocalNavigationCurrentSceneKey provides scene.key,
+        LocalArtworkPreviewHandoff provides handoff,
     ) {
         NavDisplay(
             sceneState = sceneState,
             navigationEventState = navigationEventState,
-            modifier = modifier,
+            modifier = modifier.onGloballyPositioned { handoff.root = it },
             transitionSpec = { motion.forward(this) },
             popTransitionSpec = { motion.back(this) },
             predictivePopTransitionSpec = { swipeEdge ->
