@@ -159,9 +159,6 @@ fun RecommendedHomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: 
                 IconButton(search) {
                     AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
                 }
-                IconButton({ navigate(Utility("downloads")) }) {
-                    AppIcon(Glyph.Download, strings.getString(R.string.ui_18df1a67a2))
-                }
             },
         )
         FeedGrid(

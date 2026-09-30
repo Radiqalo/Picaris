@@ -218,9 +218,6 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     SettingRow("我的粉丝", "关注我的创作者与读者", Glyph.Person) {
                         navigate(People("follower", "我的粉丝"))
                     }
-                    SettingRow("我的好 P 友", "互相成为好 P 友的用户", Glyph.Person) {
-                        navigate(People("mypixiv", "我的好 P 友"))
-                    }
                     SettingRow(
                         "我的作品",
                         "插画、漫画与小说",
