@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import io.github.pixivnext.AppViewModel
 import io.github.pixivnext.R
 import io.github.pixivnext.core.*
@@ -24,6 +25,15 @@ import io.github.pixivnext.designsystem.*
 @Composable
 fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
+    val navigationTransition = LocalNavAnimatedContentScope.current.transition
+    val imageTransition = LocalWorkTransition.current
+    val canOpenReader = !navigationTransition.isRunning && imageTransition?.isTransitionActive != true
+
+    fun openReader(work: Work) {
+        // Recheck at the event boundary so repeated taps cannot skip the entering detail page.
+        if (!navigationTransition.isRunning && imageTransition?.isTransitionActive != true)
+            navigate(Reader(work))
+    }
 
     var work by remember { mutableStateOf(initial) }
     val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
@@ -90,7 +100,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                             work,
                             Modifier.fillMaxWidth()
                                 .aspectRatio(work.aspect)
-                                .clickable { navigate(Reader(current)) }
+                                .clickable(enabled = canOpenReader) { openReader(current) }
                                 .testTag("detailImage"),
                             sharedTransition = true,
                         )
@@ -114,7 +124,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                         work,
                                         Modifier.fillMaxHeight()
                                             .aspectRatio(work.aspect)
-                                            .clickable { navigate(Reader(current)) }
+                                            .clickable(enabled = canOpenReader) { openReader(current) }
                                             .testTag("detailImage"),
                                         sharedTransition = true,
                                     )
@@ -124,7 +134,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                     work,
                                     Modifier.fillMaxWidth()
                                         .aspectRatio(work.aspect.coerceAtLeast(.85f))
-                                        .clickable { navigate(Reader(current)) }
+                                        .clickable(enabled = canOpenReader) { openReader(current) }
                                         .testTag("detailImage"),
                                     sharedTransition = true,
                                 )
@@ -194,7 +204,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                         item {
                             Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                                 FilledTonalButton(
-                                    { navigate(Reader(current)) },
+                                    { openReader(current) },
                                     Modifier.fillMaxWidth().height(52.dp),
                                 ) {
                                     AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null)
@@ -298,7 +308,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                         DropdownMenuItem(
                             text = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
                             leadingIcon = { AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null) },
-                            onClick = { moreMenu = false; navigate(Reader(current)) },
+                            onClick = { moreMenu = false; openReader(current) },
                         )
                         DropdownMenuItem(
                             text = { Text(strings.getString(R.string.ui_7a92434114)) },
