@@ -81,21 +81,23 @@ internal fun NavigationPageDisplay(
         currentInfo = SceneInfo(scene),
         backInfo = sceneState.previousScenes.map { SceneInfo(it) },
     )
+    val handoff = remember { ArtworkPreviewHandoff() }
     NavigationBackHandler(
         state = navigationEventState,
         isBackEnabled = scene.previousEntries.isNotEmpty(),
         onBackCompleted = {
+            handoff.captureReleasedBounds()
             repeat(entries.size - scene.previousEntries.size) { onBack() }
         },
     )
     val gestureInProgress = navigationEventState.transitionState is NavigationEventTransitionState.InProgress
-    val handoff = remember { ArtworkPreviewHandoff() }
     var previousGestureInProgress by remember { mutableStateOf(false) }
     SideEffect {
         if (gestureInProgress && !previousGestureInProgress) {
             handoff.bounds.clear()
             handoff.pendingHandoffs.clear()
             handoff.sampledHandoffs.clear()
+            handoff.previewSources.clear()
         }
         previousGestureInProgress = gestureInProgress
     }

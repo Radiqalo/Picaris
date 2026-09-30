@@ -62,6 +62,18 @@ internal class ArtworkPreviewHandoff {
     val bounds = mutableMapOf<String, Rect>()
     val pendingHandoffs = mutableSetOf<String>()
     val sampledHandoffs = mutableSetOf<String>()
+    val previewSources = mutableMapOf<String, LayoutCoordinates>()
+
+    fun captureReleasedBounds() {
+        val previewRoot = root?.takeIf { it.isAttached } ?: return
+        previewSources.forEach { (key, image) ->
+            if (image.isAttached) {
+                bounds[key] = previewRoot.localBoundingBoxOf(image, clipBounds = false)
+                pendingHandoffs.add(key)
+                sampledHandoffs.remove(key)
+            }
+        }
+    }
 }
 internal val LocalArtworkPreviewHandoff = staticCompositionLocalOf<ArtworkPreviewHandoff?> { null }
 
@@ -105,10 +117,14 @@ private fun Modifier.captureArtworkPreview(key: String): Modifier {
     val preview = LocalNavigationGestureInProgress.current
     val visible = LocalNavigationSharedElementVisible.current
     val coordinates = remember(key) { arrayOfNulls<LayoutCoordinates>(1) }
-    return onGloballyPositioned { coordinates[0] = it }.drawWithContent {
+    return onGloballyPositioned {
+        coordinates[0] = it
+        if (preview && visible) handoff.previewSources[key] = it
+    }.drawWithContent {
         val root = handoff.root
         val image = coordinates[0]
         if (preview && visible && root?.isAttached == true && image?.isAttached == true) {
+            handoff.previewSources[key] = image
             handoff.bounds[key] = root.localBoundingBoxOf(image, clipBounds = false)
             handoff.pendingHandoffs.add(key)
             handoff.sampledHandoffs.remove(key)
