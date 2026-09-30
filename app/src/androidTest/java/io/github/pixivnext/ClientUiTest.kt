@@ -23,6 +23,17 @@ class ClientUiTest {
     }
 
     @Test
+    fun statusBarDoesNotEnforceContrastScrim() {
+        ui.activityRule.scenario.onActivity {
+            org.junit.Assert.assertFalse(it.window.isStatusBarContrastEnforced)
+        }
+        ui.activityRule.scenario.recreate()
+        ui.activityRule.scenario.onActivity {
+            org.junit.Assert.assertFalse(it.window.isStatusBarContrastEnforced)
+        }
+    }
+
+    @Test
     fun opensArtworkBookmarksAndReadsOriginal() {
         preview()
         ui.onNodeWithText("海风经过的午后").performClick()
