@@ -35,6 +35,7 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                 listOf("public" to "公开关注", "private" to "非公开关注"),
                 { restrict = it },
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                alignment = Alignment.CenterHorizontally,
             )
         PullToRefreshBox(
             people.loadState.refresh is LoadState.Loading && people.itemCount > 0,
