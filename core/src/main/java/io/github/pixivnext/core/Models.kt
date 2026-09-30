@@ -20,6 +20,20 @@ data class User(
     val comment: String = "",
 )
 
+@Serializable
+data class AuthorProfile(
+    val background_image_url: String? = null,
+    val region: String? = null,
+    val webpage: String? = null,
+    val total_illusts: Int = 0,
+    val total_manga: Int = 0,
+    val total_novels: Int = 0,
+    val total_follow_users: Int = 0,
+)
+
+@Serializable
+data class AuthorDetails(val user: User = User(), val profile: AuthorProfile = AuthorProfile())
+
 @Serializable data class Tag(val name: String = "", val translated_name: String? = null)
 
 data class TrendingTag(val tag: Tag, val cover: Work)

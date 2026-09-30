@@ -198,6 +198,9 @@ constructor(
         return user.copy(is_followed = !user.is_followed)
     }
 
+    suspend fun authorDetails(account: Long, id: Long): AuthorDetails =
+        AppJson.decodeFromJsonElement(api.get(account, "v1/user/detail", mapOf("user_id" to id.toString())))
+
     suspend fun user(account: Long, id: Long): Pair<User, String> {
         val j = api.get(account, "v1/user/detail", mapOf("user_id" to id.toString()))
         return AppJson.decodeFromJsonElement<User>(j.getValue("user")) to

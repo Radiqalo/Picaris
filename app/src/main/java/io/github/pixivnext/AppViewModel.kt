@@ -226,6 +226,9 @@ constructor(
 
     fun downloadAction(id: Long, status: String) = run { downloads.action(id, status) }
 
+    suspend fun authorDetails(initial: User): AuthorDetails =
+        if (demo.value) AuthorDetails(initial) else repo.authorDetails(accountId, initial.id)
+
     suspend fun user(initial: User): User =
         if (demo.value) initial else repo.user(accountId, initial.id).first
 
