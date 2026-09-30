@@ -85,7 +85,9 @@ internal val LocalArtworkPreviewHandoff = staticCompositionLocalOf<ArtworkPrevie
 
 private class PreviewBoundsAnimationSpec(
     private val previewBounds: Rect,
+    private val destinationBounds: Rect,
     private val animationSpec: FiniteAnimationSpec<Rect>,
+    private val isActive: () -> Boolean,
     private val onSample: (Rect) -> Unit,
 ) : FiniteAnimationSpec<Rect> {
     override fun <Vector : AnimationVector> vectorize(
@@ -94,25 +96,34 @@ private class PreviewBoundsAnimationSpec(
         val animation = animationSpec.vectorize(converter)
         val preview = converter.convertToVector(previewBounds)
         return object : VectorizedFiniteAnimationSpec<Vector> by animation {
+            private fun initialBounds(initialValue: Vector, targetValue: Vector): Vector =
+                if (isActive() && converter.convertFromVector(targetValue) == destinationBounds) preview
+                else initialValue
+
             override fun getValueFromNanos(
                 playTimeNanos: Long, initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
             ): Vector {
-                val value = animation.getValueFromNanos(playTimeNanos, preview, targetValue, initialVelocity)
-                onSample(converter.convertFromVector(value))
+                val value = animation.getValueFromNanos(
+                    playTimeNanos, initialBounds(initialValue, targetValue), targetValue, initialVelocity,
+                )
+                if (isActive() && converter.convertFromVector(targetValue) == destinationBounds)
+                    onSample(converter.convertFromVector(value))
                 return value
             }
 
             override fun getVelocityFromNanos(
                 playTimeNanos: Long, initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
-            ): Vector = animation.getVelocityFromNanos(playTimeNanos, preview, targetValue, initialVelocity)
+            ): Vector = animation.getVelocityFromNanos(
+                playTimeNanos, initialBounds(initialValue, targetValue), targetValue, initialVelocity,
+            )
 
             override fun getDurationNanos(
                 initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
-            ): Long = animation.getDurationNanos(preview, targetValue, initialVelocity)
+            ): Long = animation.getDurationNanos(initialBounds(initialValue, targetValue), targetValue, initialVelocity)
 
             override fun getEndVelocity(
                 initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
-            ): Vector = animation.getEndVelocity(preview, targetValue, initialVelocity)
+            ): Vector = animation.getEndVelocity(initialBounds(initialValue, targetValue), targetValue, initialVelocity)
         }
     }
 }
@@ -156,12 +167,15 @@ private fun Modifier.captureArtworkPreview(key: String, pageTopCorners: Boolean 
 private fun artworkHandoffMotion(key: String): (Rect) -> FiniteAnimationSpec<Rect> {
     val motion = artworkBoundsMotion()
     val handoff = LocalArtworkPreviewHandoff.current
-    val returningFromPreview = LocalNavigationGestureActive.current && !LocalNavigationGestureInProgress.current
+    val returningFromPreview = LocalNavigationGestureActive.current && LocalArtworkPreviewReturning.current
+    val returning = rememberUpdatedState(returningFromPreview)
     return { target ->
-        val bounds = if (returningFromPreview) handoff?.bounds?.get(key) else null
+        val bounds = if (returning.value) handoff?.bounds?.get(key) else null
         if (bounds != null) {
             handoff?.targetBounds?.set(key, target)
-            PreviewBoundsAnimationSpec(bounds, motion) { handoff?.animatedBounds?.set(key, it) }
+            PreviewBoundsAnimationSpec(bounds, target, motion, { returning.value }) {
+                handoff?.animatedBounds?.set(key, it)
+            }
         } else motion
     }
 }
@@ -170,7 +184,7 @@ private fun artworkHandoffMotion(key: String): (Rect) -> FiniteAnimationSpec<Rec
 private fun Modifier.guardArtworkHandoff(key: String): Modifier {
     val handoff = LocalArtworkPreviewHandoff.current ?: return this
     val visible = LocalNavigationSharedElementVisible.current
-    val returning = LocalNavigationGestureActive.current && !LocalNavigationGestureInProgress.current
+    val returning = LocalNavigationGestureActive.current && LocalArtworkPreviewReturning.current
     val coordinates = remember(key) { arrayOfNulls<LayoutCoordinates>(1) }
     return onGloballyPositioned { coordinates[0] = it }.drawWithContent {
         val expected = handoff.animatedBounds[key] ?: handoff.bounds[key]
@@ -404,7 +418,7 @@ fun WorkImage(
         val boundsAnimation = artworkHandoffMotion(sharedKey)
         val shape = MaterialTheme.shapes.small
         val handoff = LocalArtworkPreviewHandoff.current
-        val returning = LocalNavigationGestureActive.current && !gestureActive
+        val returning = LocalNavigationGestureActive.current && LocalArtworkPreviewReturning.current
         val cornerMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
         val rounding by navigationScope.transition.animateFloat(
             transitionSpec = { cornerMotion }, label = "artwork corners",

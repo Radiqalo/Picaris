@@ -53,6 +53,8 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 
 internal val LocalNavigationGestureActive = staticCompositionLocalOf { false }
 internal val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
+private val LocalNavigationGestureCompletionAllowed = staticCompositionLocalOf { false }
+internal val LocalArtworkPreviewReturning = staticCompositionLocalOf { false }
 private val LocalNavigationCurrentSceneKey = staticCompositionLocalOf<Any?> { null }
 internal val LocalNavigationSharedElementVisible = staticCompositionLocalOf { true }
 
@@ -82,29 +84,42 @@ internal fun NavigationPageDisplay(
         backInfo = sceneState.previousScenes.map { SceneInfo(it) },
     )
     val handoff = remember { ArtworkPreviewHandoff() }
+    var gestureBackStack by remember { mutableStateOf<List<NavKey>?>(null) }
+    var releasedBackStack by remember { mutableStateOf<List<NavKey>?>(null) }
     NavigationBackHandler(
         state = navigationEventState,
         isBackEnabled = scene.previousEntries.isNotEmpty(),
         onBackCompleted = {
-            handoff.captureReleasedBounds()
+            val completingPreview = releasedBackStack == null && gestureBackStack == backStack
+            if (completingPreview) handoff.captureReleasedBounds()
             repeat(entries.size - scene.previousEntries.size) { onBack() }
+            if (completingPreview) releasedBackStack = backStack.toList()
         },
     )
     val gestureInProgress = navigationEventState.transitionState is NavigationEventTransitionState.InProgress
     var previousGestureInProgress by remember { mutableStateOf(false) }
     SideEffect {
         if (gestureInProgress && !previousGestureInProgress) {
+            gestureBackStack = backStack.toList()
+            releasedBackStack = null
             handoff.bounds.clear()
             handoff.animatedBounds.clear()
             handoff.targetBounds.clear()
             handoff.sourceCorners.clear()
             handoff.previewCorners.clear()
             handoff.previewSources.clear()
+        } else if (!gestureInProgress && releasedBackStack != null && backStack != releasedBackStack) {
+            gestureBackStack = null
+            releasedBackStack = null
         }
         previousGestureInProgress = gestureInProgress
     }
     CompositionLocalProvider(
         LocalNavigationGestureInProgress provides gestureInProgress,
+        LocalNavigationGestureCompletionAllowed provides
+            (backStack == (releasedBackStack ?: gestureBackStack)),
+        LocalArtworkPreviewReturning provides
+            (!gestureInProgress && releasedBackStack != null && backStack == releasedBackStack),
         LocalNavigationCurrentSceneKey provides scene.key,
         LocalArtworkPreviewHandoff provides handoff,
     ) {
@@ -242,7 +257,7 @@ internal fun NavigationPage(onSettled: () -> Unit, content: @Composable () -> Un
             onSettled()
         }
     }
-    val gestureActive = seeking || completingGesture
+    val gestureActive = seeking || (completingGesture && LocalNavigationGestureCompletionAllowed.current)
     val shapeMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val corners by navigation.animateFloat(
         transitionSpec = { shapeMotion }, label = "navigation page corners",
