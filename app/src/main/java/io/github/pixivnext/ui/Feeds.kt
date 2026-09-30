@@ -203,8 +203,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
-    val trendResult by produceState<List<TrendingTag>?>(null, vm.accountId, demo, settings.contentKind) {
-        value = null
+    val trendResult by produceState<List<TrendingTag>?>(vm.cachedTrendingTags(), vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
+        value = vm.cachedTrendingTags()
         if (settings.contentKind == "novel") {
             value = emptyList()
             return@produceState
@@ -217,8 +217,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             emptyList()
         }
     }
-    val authorResult by produceState<List<UserPreview>?>(null, vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
-        value = null
+    val authorResult by produceState<List<UserPreview>?>(vm.cachedRecommendedAuthors(), vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
+        value = vm.cachedRecommendedAuthors()
         value = if (settings.contentKind == "novel") emptyList() else try {
             vm.recommendedAuthors()
         } catch (e: kotlinx.coroutines.CancellationException) { throw e }

@@ -199,15 +199,37 @@ constructor(
 
     suspend fun tags(): List<Tag> = repo.tags(accountId)
 
-    suspend fun trendingTags(): List<TrendingTag> =
-        if (demo.value) Demo.works.flatMap { work -> work.tags.map { TrendingTag(it, work) } }
-            .distinctBy { it.tag.name }
-        else repo.trendingTags(accountId)
+    private val discoveryTrends = mutableMapOf<FeedSession, Deferred<List<TrendingTag>>>()
+    private val discoveryAuthors = mutableMapOf<FeedSession, Deferred<List<UserPreview>>>()
+    private val authorProfiles = mutableMapOf<Pair<Long, Long>, Deferred<AuthorDetails>>()
+    private fun discoveryKey() = FeedSession(accountId, demo.value,
+        FeedSpec(kind = settings.value.contentKind), settings.value.contentFilter())
+    fun cachedTrendingTags(): List<TrendingTag>? = discoveryTrends[discoveryKey()]?.let {
+        if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
+    }
+    fun cachedRecommendedAuthors(): List<UserPreview>? = discoveryAuthors[discoveryKey()]?.let {
+        if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
+    }
 
-    suspend fun recommendedAuthors(): List<UserPreview> =
-        if (demo.value) Demo.works.filterNot { it.isNovel }.groupBy { it.user.id }
+    suspend fun trendingTags(): List<TrendingTag> {
+        val key = discoveryKey()
+        if (discoveryTrends[key]?.isCancelled == true) discoveryTrends.remove(key)
+        return discoveryTrends.getOrPut(key) { viewModelScope.async {
+        if (key.demo) Demo.works.flatMap { work -> work.tags.map { TrendingTag(it, work) } }
+            .distinctBy { it.tag.name }
+        else repo.trendingTags(key.account)
+        } }.await()
+    }
+
+    suspend fun recommendedAuthors(): List<UserPreview> {
+        val key = discoveryKey()
+        if (discoveryAuthors[key]?.isCancelled == true) discoveryAuthors.remove(key)
+        return discoveryAuthors.getOrPut(key) { viewModelScope.async {
+        if (key.demo) Demo.works.filterNot { it.isNovel }.groupBy { it.user.id }
             .values.map { UserPreview(it.first().user, it.take(3)) }
-        else repo.recommendedAuthors(accountId)
+        else repo.recommendedAuthors(key.account)
+        } }.await()
+    }
 
     suspend fun searchUsers(word: String): List<User> =
         if (demo.value) Demo.works.map { it.user } else repo.searchUsers(accountId, word)
@@ -226,8 +248,14 @@ constructor(
 
     fun downloadAction(id: Long, status: String) = run { downloads.action(id, status) }
 
-    suspend fun authorDetails(initial: User): AuthorDetails =
-        if (demo.value) AuthorDetails(initial) else repo.authorDetails(accountId, initial.id)
+    suspend fun authorDetails(initial: User): AuthorDetails {
+        val account = accountId
+        if (authorProfiles[account to initial.id]?.isCancelled == true)
+            authorProfiles.remove(account to initial.id)
+        return authorProfiles.getOrPut(account to initial.id) { viewModelScope.async {
+            if (account == -1L) AuthorDetails(initial) else repo.authorDetails(account, initial.id)
+        } }.await()
+    }
 
     suspend fun user(initial: User): User =
         if (demo.value) initial else repo.user(accountId, initial.id).first
