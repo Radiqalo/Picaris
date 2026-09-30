@@ -37,7 +37,7 @@ val LocalAppBarScrollBehavior = staticCompositionLocalOf<TopAppBarScrollBehavior
 
 @Composable
 fun ScrollingScreen(content: @Composable () -> Unit) {
-    val behavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     CompositionLocalProvider(LocalAppBarScrollBehavior provides behavior) {
         Box(Modifier.fillMaxSize().nestedScroll(behavior.nestedScrollConnection)) { content() }
     }
@@ -51,15 +51,26 @@ fun ScreenBar(
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
-    TopAppBar(
-        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        scrollBehavior = LocalAppBarScrollBehavior.current,
-        navigationIcon = {
-            if (back != null)
-                IconButton(back) { AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540)) }
-        },
-        actions = actions,
-    )
+    val titleContent: @Composable () -> Unit = {
+        Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+    val navigationContent: @Composable () -> Unit = {
+        if (back != null)
+            IconButton(back) { AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540)) }
+    }
+    if (back == null)
+        MediumFlexibleTopAppBar(
+            title = titleContent,
+            scrollBehavior = LocalAppBarScrollBehavior.current,
+            actions = actions,
+        )
+    else
+        TopAppBar(
+            title = titleContent,
+            scrollBehavior = LocalAppBarScrollBehavior.current,
+            navigationIcon = navigationContent,
+            actions = actions,
+        )
 }
 
 @Composable
@@ -111,7 +122,8 @@ fun ChoiceChips(
                         onCheckedChange = { onSelect(key) },
                         shapes =
                             when {
-                                options.size == 1 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                options.size == 1 ->
+                                    ButtonGroupDefaults.connectedLeadingButtonShapes()
                                 index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                                 index == options.lastIndex ->
                                     ButtonGroupDefaults.connectedTrailingButtonShapes()
@@ -158,56 +170,16 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> U
                 }
             },
         )
-        Row(
-            Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        FilledTonalButton(
+            onClick = {
+                navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking", kind))
+            },
+            modifier = Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
+            shapes = ButtonDefaults.shapes(),
         ) {
-            Surface(
-                onClick = {
-                    navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking", kind))
-                },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Row(
-                    Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    AppIcon(Glyph.Rank, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Column {
-                        Text(
-                            strings.getString(R.string.ui_d00981d6ce),
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                    }
-                }
-            }
-            Surface(
-                onClick = search,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.tertiaryContainer,
-            ) {
-                Row(
-                    Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    AppIcon(
-                        Glyph.Discover,
-                        null,
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                    )
-                    Column {
-                        Text(
-                            strings.getString(R.string.ui_5f16d9ef91),
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                    }
-                }
-            }
+            AppIcon(Glyph.Rank, null)
+            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+            Text(strings.getString(R.string.ui_d00981d6ce))
         }
         KindTabs(kind, { kind = it })
         FeedGrid(FeedSpec(kind = kind), vm, navigate, Modifier.weight(1f))

@@ -189,15 +189,20 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 androidx.compose.ui.platform.LocalDensity.current.density >= 840f
         Row(Modifier.fillMaxSize()) {
             if (wide)
-                NavigationRail(Modifier.fillMaxHeight().width(96.dp).padding(top = 16.dp)) {
-                    Text(
-                        "p",
-                        style = MaterialTheme.typography.headlineLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 28.dp),
-                    )
+                WideNavigationRail(
+                    modifier = Modifier.fillMaxHeight(),
+                    state = rememberWideNavigationRailState(WideNavigationRailValue.Expanded),
+                    header = {
+                        Text(
+                            "PixivNext",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.padding(PixivSpacing.content),
+                        )
+                    },
+                ) {
                     tabs.forEachIndexed { index, title ->
-                        NavigationRailItem(
+                        WideNavigationRailItem(
+                            railExpanded = true,
                             selected = tab == index,
                             onClick = {
                                 tab = index
@@ -213,9 +218,11 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
                     if (!wide)
-                        NavigationBar(containerColor = MaterialTheme.colorScheme.background) {
+                        ShortNavigationBar(
+                            arrangement = ShortNavigationBarArrangement.EqualWeight
+                        ) {
                             tabs.forEachIndexed { index, title ->
-                                NavigationBarItem(
+                                ShortNavigationBarItem(
                                     selected = tab == index,
                                     onClick = {
                                         tab = index
