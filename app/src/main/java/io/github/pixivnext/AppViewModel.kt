@@ -94,10 +94,26 @@ constructor(
         val account = accountId
         val key = work.identity(account)
         if (key in bookmarkBusy.value) return bookmarkStates.value[key]?.apply(work) ?: work
+        val previous = bookmarkStates.value[key]
+        val current = previous?.apply(work) ?: work
         bookmarkBusy.update { it + key }
+        bookmarkStates.update {
+            it +
+                (key to BookmarkState(
+                    !current.is_bookmarked,
+                    (current.total_bookmarks + if (current.is_bookmarked) -1 else 1)
+                        .coerceAtLeast(0),
+                ))
+        }
         try {
-            val current = bookmarkStates.value[key]?.apply(work) ?: work
-            val result = repo.bookmark(account, current, public)
+            val result = try {
+                repo.bookmark(account, current, public)
+            } catch (e: Exception) {
+                bookmarkStates.update {
+                    if (previous == null) it - key else it + (key to previous)
+                }
+                throw e
+            }
             bookmarkStates.update {
                 it + (key to BookmarkState(result.is_bookmarked, result.total_bookmarks))
             }
