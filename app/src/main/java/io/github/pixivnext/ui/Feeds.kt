@@ -179,9 +179,10 @@ fun RecommendedHomeScreen(
         FeedSpec(kind = settings.contentKind),
         vm,
         navigate,
-        Modifier.fillMaxSize().statusBarsPadding(),
+        Modifier.fillMaxSize(),
         gridState = gridState,
         listState = listState,
+        topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + PixivSpacing.content,
     )
 }
 
@@ -238,7 +239,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         FeedSpec(kind = settings.contentKind),
         vm,
         navigate,
-        Modifier.fillMaxSize().statusBarsPadding(),
+        Modifier.fillMaxSize(),
+        topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + PixivSpacing.content,
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
                 FilledTonalButton(
@@ -442,7 +444,8 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         FeedSpec(section = "follow", kind = settings.contentKind),
         vm,
         navigate,
-        Modifier.fillMaxSize().statusBarsPadding(),
+        Modifier.fillMaxSize(),
+        topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + PixivSpacing.content,
     )
 }
 
