@@ -142,7 +142,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     ) {
         item(key = "title") {
             ScreenBar(
-                strings.getString(R.string.ui_a82c993d73),
+                "",
                 scrollBehavior = null,
                 actions = { ContentKindAction(vm) },
             )

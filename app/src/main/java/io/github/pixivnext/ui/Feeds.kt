@@ -105,6 +105,14 @@ fun ContentKindAction(vm: AppViewModel) {
 }
 
 @Composable
+fun SearchAction(onClick: () -> Unit) {
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    IconButton(onClick) {
+        AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
+    }
+}
+
+@Composable
 fun ChoiceChips(
     selected: String,
     options: List<Pair<String, String>>,
@@ -175,9 +183,7 @@ fun RecommendedHomeScreen(
     listState: LazyListState,
     search: () -> Unit,
 ) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val demo by vm.demo.collectAsStateWithLifecycle()
     FeedGrid(
         FeedSpec(kind = settings.contentKind),
         vm,
@@ -190,14 +196,10 @@ fun RecommendedHomeScreen(
             Column {
                 Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding()))
                 ScreenBar(
-                    strings.getString(R.string.tab_home) + if (demo) " · 演示" else "",
+                    "",
                     windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                     scrollBehavior = null,
-                    actions = {
-                        IconButton(search) {
-                            AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
-                        }
-                    },
+                    actions = { SearchAction(search) },
                 )
                 Spacer(Modifier.height(PixivSpacing.content))
             }
@@ -262,7 +264,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         topPadding = 0.dp,
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
-                ScreenBar(strings.getString(R.string.ui_523e40a074), scrollBehavior = null)
+                ScreenBar("", scrollBehavior = null,
+                    actions = { SearchAction { navigate(Search) } })
                 FilledTonalButton(
                     onClick = {
                         navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking"))
@@ -459,7 +462,6 @@ private fun DiscoveryPlaceholders() {
 
 @Composable
 fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     FeedGrid(
         FeedSpec(section = "follow", kind = settings.contentKind),
@@ -469,7 +471,8 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         topPadding = 0.dp,
         header = {
             Column {
-                ScreenBar(strings.getString(R.string.ui_753ccc8e2e), scrollBehavior = null)
+                ScreenBar("", scrollBehavior = null,
+                    actions = { SearchAction { navigate(Search) } })
                 Spacer(Modifier.height(PixivSpacing.content))
             }
         },
