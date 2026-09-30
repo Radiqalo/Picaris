@@ -179,21 +179,9 @@ fun RecommendedHomeScreen(
         FeedSpec(kind = settings.contentKind),
         vm,
         navigate,
-        Modifier.fillMaxSize(),
+        Modifier.fillMaxSize().statusBarsPadding(),
         gridState = gridState,
         listState = listState,
-        topPadding = 0.dp,
-        header = {
-            Column {
-                Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding()))
-                ScreenBar(
-                    "",
-                    windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
-                    scrollBehavior = null,
-                )
-                Spacer(Modifier.height(PixivSpacing.content))
-            }
-        },
     )
 }
 
@@ -250,11 +238,9 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         FeedSpec(kind = settings.contentKind),
         vm,
         navigate,
-        Modifier.fillMaxSize(),
-        topPadding = 0.dp,
+        Modifier.fillMaxSize().statusBarsPadding(),
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
-                ScreenBar("", scrollBehavior = null)
                 FilledTonalButton(
                     onClick = {
                         navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking"))
@@ -456,14 +442,7 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         FeedSpec(section = "follow", kind = settings.contentKind),
         vm,
         navigate,
-        Modifier.fillMaxSize(),
-        topPadding = 0.dp,
-        header = {
-            Column {
-                ScreenBar("", scrollBehavior = null)
-                Spacer(Modifier.height(PixivSpacing.content))
-            }
-        },
+        Modifier.fillMaxSize().statusBarsPadding(),
     )
 }
 
@@ -1208,9 +1187,9 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
             }
         }
     }
-    Column {
-        ScreenBar(
-            if (initialQuery == null) strings.getString(R.string.ui_f04090805c) else "搜索结果",
+    Column(if (back == null) Modifier.statusBarsPadding() else Modifier) {
+        if (back != null) ScreenBar(
+            if (initialQuery == null) "" else "搜索结果",
             back = back,
             actions = {
                 if (initialQuery != null) IconButton({ filter = true }) {

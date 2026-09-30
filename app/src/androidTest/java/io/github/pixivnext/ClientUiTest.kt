@@ -55,6 +55,7 @@ class ClientUiTest {
         ui.onNodeWithContentDescription("搜索").assertDoesNotExist()
         ui.onNodeWithText("搜索", useUnmergedTree = true).performClick()
         ui.onNodeWithContentDescription("返回").assertDoesNotExist()
+        ui.onAllNodesWithText("搜索", useUnmergedTree = true).assertCountEquals(1)
         ui.onNodeWithText("作品、标签或创作者").performTextInput("海风")
         ui.onNodeWithText("海风").performImeAction()
         ui.onNodeWithText("海风经过的午后").assertExists()
