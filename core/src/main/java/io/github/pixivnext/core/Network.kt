@@ -5,6 +5,7 @@ import android.util.Base64
 import coil3.ImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.request.crossfade
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -29,6 +30,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
+import okhttp3.Dispatcher
 
 class PixivException(val code: Int, message: String) : Exception(message)
 
@@ -37,6 +39,12 @@ class Network @Inject constructor(private val settings: SettingsStore) {
     private var last: Settings? = null
     private var engine: HttpClient? = null
     private var http: OkHttpClient? = null
+    private var imageHttp: OkHttpClient? = null
+    // Keep image requests queued independently of API calls and downloads.
+    private val imageDispatcher = Dispatcher().apply {
+        maxRequests = 1
+        maxRequestsPerHost = 1
+    }
     private val lock = Mutex()
 
     suspend fun okHttp(): OkHttpClient = lock.withLock {
@@ -47,6 +55,11 @@ class Network @Inject constructor(private val settings: SettingsStore) {
     suspend fun client(): HttpClient = lock.withLock {
         configure(settings.flow.first())
         engine!!
+    }
+
+    private suspend fun imageClient(): OkHttpClient = lock.withLock {
+        configure(settings.flow.first())
+        imageHttp!!
     }
 
     private fun configure(s: Settings) {
@@ -83,6 +96,7 @@ class Network @Inject constructor(private val settings: SettingsStore) {
             )
         engine?.close()
         http = builder.build()
+        imageHttp = http!!.newBuilder().dispatcher(imageDispatcher).build()
         engine =
             HttpClient(OkHttp) {
                 engine { preconfigured = http }
@@ -94,8 +108,9 @@ class Network @Inject constructor(private val settings: SettingsStore) {
 
     fun imageLoader(context: Context) =
         ImageLoader.Builder(context)
+            .crossfade(200)
             .components {
-                add(OkHttpNetworkFetcherFactory(callFactory = { runBlocking { okHttp() } }))
+                add(OkHttpNetworkFetcherFactory(callFactory = { runBlocking { imageClient() } }))
                 add(AnimatedImageDecoder.Factory())
             }
             .build()
