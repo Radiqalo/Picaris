@@ -534,10 +534,9 @@ fun FeedGrid(
                 LazyVerticalStaggeredGrid(
                     columns = StaggeredGridCells.Adaptive(160.dp),
                     state = grid,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalItemSpacing = if (showFeedMetadata) 8.dp else 16.dp,
-                    contentPadding =
-                        PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+                    verticalItemSpacing = PixivSpacing.compact,
+                    contentPadding = PaddingValues(PixivSpacing.content),
                     modifier = Modifier.fillMaxSize().testTag("feedGrid"),
                 ) {
                     if (header != null)
@@ -627,7 +626,7 @@ fun WorkCard(
             )
             if (rank != null)
                 Surface(
-                    Modifier.align(Alignment.TopStart).padding(8.dp),
+                    Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset),
                     shape = CircleShape,
                     color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
@@ -639,7 +638,7 @@ fun WorkCard(
                 }
             if (work.page_count > 1 || work.type == "ugoira" || work.isNovel)
                 Surface(
-                    Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset),
+                    Modifier.align(Alignment.TopStart).padding(WorkImageBadgeInset),
                     shape = badgeShape,
                     color = Color.Black.copy(alpha = .52f),
                     contentColor = Color.White,
@@ -648,37 +647,36 @@ fun WorkCard(
                         if (work.isNovel) strings.getString(R.string.ui_6eb705b4ce)
                         else if (work.type == "ugoira") strings.getString(R.string.ui_de9dcfdf88)
                         else "${work.page_count}P",
-                        Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        Modifier.heightIn(min = 32.dp).wrapContentHeight()
+                            .padding(horizontal = PixivSpacing.compact),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-            Surface(
-                onClick = onLike,
-                enabled = !likedBusy,
-                modifier = Modifier.align(Alignment.BottomEnd)
-                    .padding(WorkImageBadgeInset)
-                    .testTag("like_${work.type}_${work.id}")
-                    .semantics {
-                        contentDescription =
-                            if (work.is_bookmarked) "取消喜欢 ${work.title}" else "喜欢 ${work.title}"
-                        stateDescription = if (work.is_bookmarked) "已喜欢" else "未喜欢"
-                    },
-                shape = badgeShape,
-                color = Color.Black.copy(alpha = .48f),
-                contentColor = Color.White,
-            ) {
-                Row(
-                    Modifier.heightIn(min = 28.dp).padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                Surface(
+                    onClick = onLike,
+                    enabled = !likedBusy,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                        .padding(WorkImageBadgeInset)
+                        .size(32.dp)
+                        .testTag("like_${work.type}_${work.id}")
+                        .semantics {
+                            contentDescription =
+                                if (work.is_bookmarked) "取消喜欢 ${work.title}" else "喜欢 ${work.title}"
+                            stateDescription = if (work.is_bookmarked) "已喜欢" else "未喜欢"
+                        },
+                    shape = badgeShape,
+                    color = Color.Black.copy(alpha = .48f),
+                    contentColor = Color.White,
                 ) {
-                    AppIcon(
-                        if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
-                        null,
-                        Modifier.size(16.dp),
-                        tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
-                    )
-                    Text(compact(work.total_bookmarks), style = MaterialTheme.typography.labelSmall)
+                    Box(contentAlignment = Alignment.Center) {
+                        AppIcon(
+                            if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                            null,
+                            Modifier.size(20.dp),
+                            tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
+                        )
+                    }
                 }
             }
         }
