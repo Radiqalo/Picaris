@@ -67,7 +67,12 @@ class TransitionTapRouter {
 
 @Composable
 fun Modifier.forwardReturningDetailTaps(): Modifier {
-    val returning = LocalNavAnimatedContentScope.current.transition.targetState != EnterExitState.Visible
+    val navigationTransition = LocalNavAnimatedContentScope.current.transition
+    // Predictive system-back can keep the target at Visible while its progress is running.
+    // Treat that interval as a return too, so a tap immediately after the edge gesture is
+    // forwarded to the feed underneath instead of being swallowed by the outgoing detail.
+    val returning = navigationTransition.targetState != EnterExitState.Visible ||
+        (navigationTransition.isRunning && navigationTransition.currentState == EnterExitState.Visible)
     val router = LocalTransitionTapRouter.current
     val density = androidx.compose.ui.platform.LocalDensity.current
     val topGuard = with(density) { 100.dp.toPx() }
