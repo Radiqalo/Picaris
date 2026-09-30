@@ -14,24 +14,88 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.github.pixivnext.core.Work
 import kotlin.math.*
 
 val LocalWorkTransition = staticCompositionLocalOf<SharedTransitionScope?> { null }
 val LocalImageTransitionEnabled = staticCompositionLocalOf { true }
+val LocalTransitionTapRouter = staticCompositionLocalOf<TransitionTapRouter?> { null }
+val LocalFeedTapTargetsEnabled = staticCompositionLocalOf { false }
+
+class TransitionTapRouter {
+    private data class Target(val bounds: Rect, val onClick: () -> Unit)
+    private val targets = linkedMapOf<Any, Target>()
+
+    fun update(key: Any, bounds: Rect, onClick: () -> Unit) {
+        targets[key] = Target(bounds, onClick)
+    }
+
+    fun remove(key: Any) {
+        targets.remove(key)
+    }
+
+    fun dispatch(positionInWindow: Offset) {
+        targets.values.lastOrNull { it.bounds.contains(positionInWindow) }?.onClick?.invoke()
+    }
+}
+
+@Composable
+fun Modifier.forwardReturningDetailTaps(): Modifier {
+    val returning = LocalNavAnimatedContentScope.current.transition.targetState != EnterExitState.Visible
+    val router = LocalTransitionTapRouter.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val topGuard = with(density) { 100.dp.toPx() }
+    val bottomGuard = with(density) { 104.dp.toPx() }
+    val origin = remember { mutableStateOf(Offset.Zero) }
+    val size = remember { mutableStateOf(IntSize.Zero) }
+    return this
+        .onGloballyPositioned { origin.value = it.positionInWindow() }
+        .onSizeChanged { size.value = it }
+        .pointerInput(returning, router, origin.value, size.value, topGuard, bottomGuard) {
+            if (returning && router != null) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    var moved = false
+                    var released = false
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop)
+                            moved = true
+                        if (!change.pressed) released = true
+                    } while (change.pressed)
+                    if (released && !moved && down.position.y in topGuard..(size.value.height.toFloat() - bottomGuard))
+                        router.dispatch(origin.value + down.position)
+                }
+            }
+        }
+}
 
 @Composable
 private fun artworkBoundsMotion(): FiniteAnimationSpec<Rect> {

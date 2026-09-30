@@ -18,6 +18,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -841,11 +843,22 @@ fun WorkCard(
     val strings = androidx.compose.ui.platform.LocalResources.current
     val imageShape = MaterialTheme.shapes.small
     val badgeShape = MaterialTheme.shapes.extraSmall
+    val tapRouter = LocalTransitionTapRouter.current
+    val registerTapTarget = LocalFeedTapTargetsEnabled.current
+    val tapTargetKey = remember(work.id) { Any() }
+    val currentOnClick by rememberUpdatedState(onClick)
+    DisposableEffect(tapRouter, tapTargetKey, registerTapTarget) {
+        onDispose { if (registerTapTarget) tapRouter?.remove(tapTargetKey) }
+    }
     val likeInteraction = remember { MutableInteractionSource() }
     val feedback = toggleFeedback()
 
     Column(
         Modifier.clip(imageShape)
+            .onGloballyPositioned {
+                if (registerTapTarget)
+                    tapRouter?.update(tapTargetKey, it.boundsInWindow()) { currentOnClick() }
+            }
             .clickable(onClick = onClick)
             .semantics {
                 if (!showMetadata) contentDescription = "${work.title}，${work.user.name}"

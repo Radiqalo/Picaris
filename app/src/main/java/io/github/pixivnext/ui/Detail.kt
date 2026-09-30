@@ -91,7 +91,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { if (!actionBusy) bookmark() },
+                onClick = { if (canOpenReader && !actionBusy) bookmark() },
                 modifier = Modifier.navigationBarsPadding().expressivePress(bookmarkInteraction),
                 interactionSource = bookmarkInteraction,
             ) {

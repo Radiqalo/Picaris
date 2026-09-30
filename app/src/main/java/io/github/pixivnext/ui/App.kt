@@ -133,8 +133,11 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                     key(account?.user?.id, revision) {
                         val strategy = rememberListDetailSceneStrategy<NavKey>()
                         SharedTransitionLayout {
-                            CompositionLocalProvider(LocalWorkTransition provides this,
-                                LocalImageTransitionEnabled provides !authorNavigation) {
+                            CompositionLocalProvider(
+                                LocalWorkTransition provides this,
+                                LocalImageTransitionEnabled provides !authorNavigation,
+                                LocalTransitionTapRouter provides remember { TransitionTapRouter() },
+                            ) {
                                 val navigationEffects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
                                 NavDisplay(
                                     backStack = backStack,
@@ -142,11 +145,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                         fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)
                                     },
                                     popTransitionSpec = {
-                                        (fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)).apply {
-                                            // The shared image stays in its overlay; the returning page
-                                            // must receive input ahead of the departing detail surface.
-                                            targetContentZIndex = 1f
-                                        }
+                                        fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)
                                     },
                                     entryDecorators =
                                         listOf(rememberSaveableStateHolderNavEntryDecorator()),
@@ -157,7 +156,9 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                     entryProvider =
                                         entryProvider {
                                             entry<Home>(metadata = ListDetailSceneStrategy.listPane()) {
-                                                HomeScreen(vm, navigate)
+                                                CompositionLocalProvider(LocalFeedTapTargetsEnabled provides true) {
+                                                    HomeScreen(vm, navigate)
+                                                }
                                             }
                                             entry<Search>(metadata = ListDetailSceneStrategy.listPane()) {
                                                 ScrollingScreen { SearchScreen(vm, navigate, back) }
@@ -177,7 +178,9 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                 }
                                             }
                                             entry<Detail>(metadata = ListDetailSceneStrategy.detailPane()) {
-                                                DetailScreen(it.work, vm, navigate, back)
+                                                Box(Modifier.fillMaxSize().forwardReturningDetailTaps()) {
+                                                    DetailScreen(it.work, vm, navigate, back)
+                                                }
                                             }
                                             entry<Reader> {
                                                 ScrollingScreen { ReaderScreen(it.work, vm, back) }
