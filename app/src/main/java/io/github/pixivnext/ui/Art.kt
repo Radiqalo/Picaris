@@ -57,11 +57,14 @@ val LocalTransitionTapRouter = staticCompositionLocalOf<TransitionTapRouter?> { 
 val LocalFeedTapTargetsEnabled = staticCompositionLocalOf { false }
 internal class ArtworkReturnFeedback(val type: String, val id: Long)
 internal val LocalArtworkReturnFeedback = staticCompositionLocalOf<ArtworkReturnFeedback?> { null }
+internal data class ArtworkPreviewCorners(val topStart: Float, val topEnd: Float)
 internal class ArtworkPreviewHandoff {
     var root: LayoutCoordinates? = null
     val bounds = mutableMapOf<String, Rect>()
-    val pendingHandoffs = mutableSetOf<String>()
-    val sampledHandoffs = mutableSetOf<String>()
+    val animatedBounds = mutableMapOf<String, Rect>()
+    val targetBounds = mutableMapOf<String, Rect>()
+    val sourceCorners = mutableMapOf<String, ArtworkPreviewCorners>()
+    val previewCorners = mutableMapOf<String, ArtworkPreviewCorners>()
     val previewSources = mutableMapOf<String, LayoutCoordinates>()
 
     fun captureReleasedBounds() {
@@ -69,8 +72,11 @@ internal class ArtworkPreviewHandoff {
         previewSources.forEach { (key, image) ->
             if (image.isAttached) {
                 bounds[key] = previewRoot.localBoundingBoxOf(image, clipBounds = false)
-                pendingHandoffs.add(key)
-                sampledHandoffs.remove(key)
+                animatedBounds[key] = bounds.getValue(key)
+                sourceCorners[key]?.let { corners ->
+                    val scale = bounds.getValue(key).width / image.size.width
+                    previewCorners[key] = ArtworkPreviewCorners(corners.topStart * scale, corners.topEnd * scale)
+                }
             }
         }
     }
@@ -80,7 +86,7 @@ internal val LocalArtworkPreviewHandoff = staticCompositionLocalOf<ArtworkPrevie
 private class PreviewBoundsAnimationSpec(
     private val previewBounds: Rect,
     private val animationSpec: FiniteAnimationSpec<Rect>,
-    private val onSample: () -> Unit,
+    private val onSample: (Rect) -> Unit,
 ) : FiniteAnimationSpec<Rect> {
     override fun <Vector : AnimationVector> vectorize(
         converter: TwoWayConverter<Rect, Vector>,
@@ -92,7 +98,7 @@ private class PreviewBoundsAnimationSpec(
                 playTimeNanos: Long, initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
             ): Vector {
                 val value = animation.getValueFromNanos(playTimeNanos, preview, targetValue, initialVelocity)
-                if (playTimeNanos > 0) onSample()
+                onSample(converter.convertFromVector(value))
                 return value
             }
 
@@ -112,36 +118,50 @@ private class PreviewBoundsAnimationSpec(
 }
 
 @Composable
-private fun Modifier.captureArtworkPreview(key: String): Modifier {
+private fun Modifier.captureArtworkPreview(key: String, pageTopCorners: Boolean = false): Modifier {
     val handoff = LocalArtworkPreviewHandoff.current ?: return this
     val preview = LocalNavigationGestureInProgress.current
     val visible = LocalNavigationSharedElementVisible.current
     val coordinates = remember(key) { arrayOfNulls<LayoutCoordinates>(1) }
+    val shape = MaterialTheme.shapes.extraLarge
+    val density = androidx.compose.ui.platform.LocalDensity.current
     return onGloballyPositioned {
         coordinates[0] = it
-        if (preview && visible) handoff.previewSources[key] = it
+        if (preview && visible) {
+            handoff.previewSources[key] = it
+            if (pageTopCorners) {
+                val imageSize = Size(it.size.width.toFloat(), it.size.height.toFloat())
+                handoff.sourceCorners[key] = ArtworkPreviewCorners(
+                    shape.topStart.toPx(imageSize, density), shape.topEnd.toPx(imageSize, density),
+                )
+            }
+        }
     }.drawWithContent {
         val root = handoff.root
         val image = coordinates[0]
         if (preview && visible && root?.isAttached == true && image?.isAttached == true) {
             handoff.previewSources[key] = image
             handoff.bounds[key] = root.localBoundingBoxOf(image, clipBounds = false)
-            handoff.pendingHandoffs.add(key)
-            handoff.sampledHandoffs.remove(key)
+            if (pageTopCorners) {
+                handoff.sourceCorners[key] = ArtworkPreviewCorners(
+                    shape.topStart.toPx(size, density), shape.topEnd.toPx(size, density),
+                )
+            }
         }
         drawContent()
     }
 }
 
 @Composable
-private fun artworkHandoffMotion(key: String): () -> FiniteAnimationSpec<Rect> {
+private fun artworkHandoffMotion(key: String): (Rect) -> FiniteAnimationSpec<Rect> {
     val motion = artworkBoundsMotion()
     val handoff = LocalArtworkPreviewHandoff.current
     val returningFromPreview = LocalNavigationGestureActive.current && !LocalNavigationGestureInProgress.current
-    return {
+    return { target ->
         val bounds = if (returningFromPreview) handoff?.bounds?.get(key) else null
-        if (bounds != null) PreviewBoundsAnimationSpec(bounds, motion) {
-            handoff?.sampledHandoffs?.add(key)
+        if (bounds != null) {
+            handoff?.targetBounds?.set(key, target)
+            PreviewBoundsAnimationSpec(bounds, motion) { handoff?.animatedBounds?.set(key, it) }
         } else motion
     }
 }
@@ -153,23 +173,26 @@ private fun Modifier.guardArtworkHandoff(key: String): Modifier {
     val returning = LocalNavigationGestureActive.current && !LocalNavigationGestureInProgress.current
     val coordinates = remember(key) { arrayOfNulls<LayoutCoordinates>(1) }
     return onGloballyPositioned { coordinates[0] = it }.drawWithContent {
-        val preview = handoff.bounds[key]
+        val expected = handoff.animatedBounds[key] ?: handoff.bounds[key]
         val root = handoff.root
         val image = coordinates[0]
-        if (key in handoff.sampledHandoffs) handoff.pendingHandoffs.remove(key)
-        if (returning && visible && key in handoff.pendingHandoffs && preview != null &&
+        if (returning && visible && expected != null &&
             root?.isAttached == true && image?.isAttached == true
         ) {
             val current = root.localBoundingBoxOf(image, clipBounds = false)
-            if (current.width > preview.width + 1f || current.height > preview.height + 1f) {
+            if (current.width > 0f && current.height > 0f &&
+                (kotlin.math.abs(current.left - expected.left) > 1f ||
+                    kotlin.math.abs(current.top - expected.top) > 1f ||
+                    kotlin.math.abs(current.right - expected.right) > 1f ||
+                    kotlin.math.abs(current.bottom - expected.bottom) > 1f)
+            ) {
                 withTransform({
-                    translate(preview.left - current.left, preview.top - current.top)
-                    scale(preview.width / current.width, preview.height / current.height, Offset.Zero)
+                    translate(expected.left - current.left, expected.top - current.top)
+                    scale(expected.width / current.width, expected.height / current.height, Offset.Zero)
                 }) {
                     this@drawWithContent.drawContent()
                 }
             } else {
-                handoff.pendingHandoffs.remove(key)
                 drawContent()
             }
         } else drawContent()
@@ -347,7 +370,7 @@ fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier
         val key = rememberSharedContentState(sharedKey, config)
         this@authorAvatarTransition.captureArtworkPreview(sharedKey)
             .sharedElementWithCallerManagedVisibility(key, visible,
-            boundsTransform = { _, _ -> motion() },
+            boundsTransform = { _, target -> motion(target) },
             renderInOverlayDuringTransition = !gestureActive,
             clipInOverlayDuringTransition = OverlayClip(CircleShape))
             .guardArtworkHandoff(sharedKey)
@@ -380,6 +403,8 @@ fun WorkImage(
         val sharedKey = "work-image:${work.type}:${work.id}"
         val boundsAnimation = artworkHandoffMotion(sharedKey)
         val shape = MaterialTheme.shapes.small
+        val handoff = LocalArtworkPreviewHandoff.current
+        val returning = LocalNavigationGestureActive.current && !gestureActive
         val cornerMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
         val rounding by navigationScope.transition.animateFloat(
             transitionSpec = { cornerMotion }, label = "artwork corners",
@@ -389,6 +414,38 @@ fun WorkImage(
         val animatedShape = object : Shape {
             override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
                 val progress = rounding.coerceIn(0f, 1f)
+                val start = if (returning) handoff?.bounds?.get(sharedKey) else null
+                val target = handoff?.targetBounds?.get(sharedKey)
+                val current = handoff?.animatedBounds?.get(sharedKey) ?: start
+                val previewCorners = if (returning) handoff?.previewCorners?.get(sharedKey) else null
+                if (start != null && current != null && previewCorners != null) {
+                    val destination = target ?: start
+                    val initialEdges = listOf(start.left, start.top, start.right, start.bottom)
+                    val targetEdges = listOf(destination.left, destination.top, destination.right, destination.bottom)
+                    val currentEdges = listOf(current.left, current.top, current.right, current.bottom)
+                    val distance = initialEdges.indices.sumOf { index ->
+                        val delta = targetEdges[index] - initialEdges[index]
+                        (delta * delta).toDouble()
+                    }
+                    val traveled = initialEdges.indices.sumOf { index ->
+                        ((currentEdges[index] - initialEdges[index]) *
+                            (targetEdges[index] - initialEdges[index])).toDouble()
+                    }
+                    val handoffProgress = when {
+                        target == null -> 0f
+                        distance > 0.0 -> (traveled / distance).toFloat().coerceIn(0f, 1f)
+                        else -> 1f
+                    }
+                    fun targetCorner(corner: CornerSize) = if (rounded) corner.toPx(size, density) else 0f
+                    return shape.copy(
+                        topStart = CornerSize(previewCorners.topStart +
+                            (targetCorner(shape.topStart) - previewCorners.topStart) * handoffProgress),
+                        topEnd = CornerSize(previewCorners.topEnd +
+                            (targetCorner(shape.topEnd) - previewCorners.topEnd) * handoffProgress),
+                        bottomStart = CornerSize(targetCorner(shape.bottomStart) * handoffProgress),
+                        bottomEnd = CornerSize(targetCorner(shape.bottomEnd) * handoffProgress),
+                    ).createOutline(size, layoutDirection, density)
+                }
                 return shape.copy(
                     topStart = CornerSize(shape.topStart.toPx(size, density) * progress),
                     topEnd = CornerSize(shape.topEnd.toPx(size, density) * progress),
@@ -398,10 +455,10 @@ fun WorkImage(
             }
         }
         with(transition) {
-            modifier.captureArtworkPreview(sharedKey).sharedElementWithCallerManagedVisibility(
+            modifier.captureArtworkPreview(sharedKey, pageTopCorners = !rounded).sharedElementWithCallerManagedVisibility(
                 sharedContentState = rememberSharedContentState(sharedKey, config),
                 visible = visible,
-                boundsTransform = { _, _ -> boundsAnimation() },
+                boundsTransform = { _, target -> boundsAnimation(target) },
                 renderInOverlayDuringTransition = !gestureActive,
                 clipInOverlayDuringTransition = OverlayClip(animatedShape),
             ).guardArtworkHandoff(sharedKey).clip(animatedShape)

@@ -95,8 +95,10 @@ internal fun NavigationPageDisplay(
     SideEffect {
         if (gestureInProgress && !previousGestureInProgress) {
             handoff.bounds.clear()
-            handoff.pendingHandoffs.clear()
-            handoff.sampledHandoffs.clear()
+            handoff.animatedBounds.clear()
+            handoff.targetBounds.clear()
+            handoff.sourceCorners.clear()
+            handoff.previewCorners.clear()
             handoff.previewSources.clear()
         }
         previousGestureInProgress = gestureInProgress
