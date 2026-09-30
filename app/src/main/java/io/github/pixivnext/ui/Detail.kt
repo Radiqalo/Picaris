@@ -47,11 +47,14 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     var moreMenu by remember { mutableStateOf(false) }
     var followBusy by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val bookmarkFeedback = toggleFeedback()
+    val bookmarkInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val permission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
             vm.download(work)
         }
     fun bookmark(public: Boolean = true) {
+        bookmarkFeedback(!current.is_bookmarked)
         vm.run {
             work = vm.bookmark(current, public)
         }
@@ -77,11 +80,13 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { if (!actionBusy) bookmark() },
-                modifier = Modifier.navigationBarsPadding(),
+                modifier = Modifier.navigationBarsPadding().expressivePress(bookmarkInteraction),
+                interactionSource = bookmarkInteraction,
             ) {
-                AppIcon(
+                FeedbackIcon(
                     if (current.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
                     if (current.is_bookmarked) "取消收藏" else "收藏",
+                    selected = current.is_bookmarked,
                 )
             }
         },

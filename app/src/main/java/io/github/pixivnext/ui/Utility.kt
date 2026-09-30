@@ -310,8 +310,9 @@ fun SettingRow(
             SettingsRowPosition.Last -> 2 to 3
             SettingsRowPosition.Only -> 0 to 1
         }
+    val feedback = selectionFeedback()
     SegmentedListItem(
-        onClick = onClick,
+        onClick = { feedback(); onClick() },
         shapes = ListItemDefaults.segmentedShapes(index, count),
         content = { Text(title, style = MaterialTheme.typography.titleMedium) },
         supportingContent = { Text(summary, style = MaterialTheme.typography.bodyMedium) },
@@ -409,7 +410,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_d80ba66133),
                         icon = materialSymbol(MaterialSymbol.Wallpaper),
                         action = {
-                            Switch(s.dynamicColor, { v -> vm.update { it.copy(dynamicColor = v) } })
+                            FeedbackSwitch(s.dynamicColor, { v -> vm.update { it.copy(dynamicColor = v) } })
                         },
                     ) {
                         vm.update { it.copy(dynamicColor = !it.dynamicColor) }
@@ -439,7 +440,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         "在图片流中显示作者与作品名",
                         icon = materialSymbol(MaterialSymbol.Image),
                         action = {
-                            Switch(
+                            FeedbackSwitch(
                                 s.showHomeMetadata,
                                 { v ->
                                     vm.update { it.copy(showHomeMetadata = v) }
@@ -455,7 +456,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_5b34213640),
                         materialSymbol(MaterialSymbol.Contrast),
                         action = {
-                            Switch(s.blackReader, { v -> vm.update { it.copy(blackReader = v) } })
+                            FeedbackSwitch(s.blackReader, { v -> vm.update { it.copy(blackReader = v) } })
                         },
                         position = SettingsRowPosition.Middle,
                     ) {
@@ -466,7 +467,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_9cc2ab8295),
                         icon = materialSymbol(MaterialSymbol.Adult),
                         action = {
-                            Switch(s.showAdult, { v -> vm.update { it.copy(showAdult = v) } })
+                            FeedbackSwitch(s.showAdult, { v -> vm.update { it.copy(showAdult = v) } })
                         },
                     ) {
                         vm.update { it.copy(showAdult = !it.showAdult) }
@@ -475,7 +476,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_b7f564e542),
                         strings.getString(R.string.ui_2b1cc7450b),
                         icon = materialSymbol(MaterialSymbol.Ai),
-                        action = { Switch(s.hideAi, { v -> vm.update { it.copy(hideAi = v) } }) },
+                        action = { FeedbackSwitch(s.hideAi, { v -> vm.update { it.copy(hideAi = v) } }) },
                     ) {
                         vm.update { it.copy(hideAi = !it.hideAi) }
                     }

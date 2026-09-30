@@ -84,12 +84,15 @@ fun ScreenBar(
 fun ContentKindAction(vm: AppViewModel) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val selected = if (settings.contentKind == "novel") "novel" else "illust"
+    val feedback = selectionFeedback()
     IconButton(onClick = {
+        feedback()
         vm.selectContentKind(if (selected == "novel") "illust" else "novel")
     }) {
-        AppIcon(
+        FeedbackIcon(
             materialSymbol(if (selected == "novel") MaterialSymbol.Book else MaterialSymbol.Image),
             if (selected == "novel") "当前小说，切换到图片" else "当前图片，切换到小说",
+            selected = selected == "novel",
         )
     }
 }
@@ -104,6 +107,8 @@ fun ChoiceChips(
     alignment: Alignment.Horizontal = Alignment.Start,
 ) {
     val sources = remember(options) { List(options.size) { MutableInteractionSource() } }
+    val feedback = selectionFeedback()
+    val select: (String) -> Unit = { key -> if (selected != key) { feedback(); onSelect(key) } }
     ButtonGroup(
         overflowIndicator = { menu -> ButtonGroupDefaults.OverflowIndicator(menuState = menu) },
         modifier = modifier,
@@ -117,7 +122,7 @@ fun ChoiceChips(
                     val padding = ButtonDefaults.ContentPadding
                     ToggleButton(
                         checked = selected == key,
-                        onCheckedChange = { onSelect(key) },
+                        onCheckedChange = { select(key) },
                         shapes =
                             when {
                                 options.size == 1 ->
@@ -143,7 +148,7 @@ fun ChoiceChips(
                     }
                 },
                 menuContent = {
-                    DropdownMenuItem(text = { Text(label) }, onClick = { onSelect(key) })
+                    DropdownMenuItem(text = { Text(label) }, onClick = { select(key) })
                 },
             )
         }
@@ -827,6 +832,8 @@ fun WorkCard(
     val strings = androidx.compose.ui.platform.LocalResources.current
     val imageShape = MaterialTheme.shapes.small
     val badgeShape = MaterialTheme.shapes.extraSmall
+    val likeInteraction = remember { MutableInteractionSource() }
+    val feedback = toggleFeedback()
 
     Column(
         Modifier.clip(imageShape)
@@ -885,11 +892,13 @@ fun WorkCard(
                 }
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                 Surface(
-                    onClick = onLike,
+                    onClick = { feedback(!work.is_bookmarked); onLike() },
+                    interactionSource = likeInteraction,
                     enabled = !likedBusy,
                     modifier = Modifier.align(Alignment.BottomEnd)
                         .padding(WorkImageBadgeInset)
                         .size(32.dp)
+                        .expressivePress(likeInteraction)
                         .testTag("like_${work.type}_${work.id}")
                         .semantics {
                             contentDescription =
@@ -901,10 +910,11 @@ fun WorkCard(
                     contentColor = Color.White,
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        AppIcon(
+                        FeedbackIcon(
                             if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
                             null,
-                            Modifier.size(20.dp),
+                            selected = work.is_bookmarked,
+                            modifier = Modifier.size(20.dp),
                             tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
                         )
                     }
