@@ -443,7 +443,9 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
             .setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/users/${user.id}"), "分享作者"))
     }
     Box(Modifier.fillMaxSize()) {
-        HorizontalPager(pager, Modifier.fillMaxSize(), key = { it }) { page ->
+        // Keep the scrolling viewport below system status icons so a collapsed profile header
+        // cannot carry its tab row underneath them.
+        HorizontalPager(pager, Modifier.fillMaxSize().statusBarsPadding(), key = { it }) { page ->
             FeedGrid(
                 FeedSpec(section = if (page == 2) "bookmarks" else "user",
                     kind = if (page == 1) "manga" else "illust", userId = user.id),
