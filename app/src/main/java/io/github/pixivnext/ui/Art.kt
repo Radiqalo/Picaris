@@ -32,7 +32,7 @@ val LocalImageTransitionEnabled = staticCompositionLocalOf { true }
 @Composable
 fun Modifier.workTransitionControls(): Modifier {
     val navigation = LocalNavAnimatedContentScope.current
-    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val effects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     val opacity by navigation.transition.animateFloat(
         transitionSpec = { effects }, label = "artwork controls opacity",
     ) { if (it == EnterExitState.Visible) 1f else 0f }
@@ -62,7 +62,7 @@ fun Modifier.authorTransition(id: Long, part: String, enabled: Boolean = true): 
     val transition = LocalWorkTransition.current
     if (!enabled || transition == null || id == 0L) return this
     val navigation = LocalNavAnimatedContentScope.current
-    val motion = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.geometry.Rect>()
+    val motion = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.geometry.Rect>()
     return with(transition) {
         val key = rememberSharedContentState("author:$id:$part")
         if (part == "avatar") this@authorTransition.sharedElement(key, navigation,
@@ -86,9 +86,9 @@ fun WorkImage(
     val transition = LocalWorkTransition.current
     val imageModifier = if (sharedTransition && LocalImageTransitionEnabled.current && transition != null) {
         val navigationScope = LocalNavAnimatedContentScope.current
-        val boundsAnimation = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.geometry.Rect>()
+        val boundsAnimation = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.geometry.Rect>()
         val shape = MaterialTheme.shapes.small
-        val cornerMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+        val cornerMotion = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
         val rounding by navigationScope.transition.animateFloat(
             transitionSpec = { cornerMotion }, label = "artwork corners",
         ) { visibility ->

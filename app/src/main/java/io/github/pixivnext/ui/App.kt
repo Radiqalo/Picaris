@@ -137,8 +137,15 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                         SharedTransitionLayout {
                             CompositionLocalProvider(LocalWorkTransition provides this,
                                 LocalImageTransitionEnabled provides !authorNavigation) {
+                                val navigationEffects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                                 NavDisplay(
                                     backStack = backStack,
+                                    transitionSpec = {
+                                        fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)
+                                    },
+                                    popTransitionSpec = {
+                                        fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)
+                                    },
                                     entryDecorators =
                                         listOf(rememberSaveableStateHolderNavEntryDecorator()),
                                     onBack = back,
