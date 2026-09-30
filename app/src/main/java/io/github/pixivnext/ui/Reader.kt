@@ -141,49 +141,43 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                             navigationIconContentColor = text,
                             actionIconContentColor = text,
                         ),
-                    actions = {
-                        if (count > 1)
-                            IconButton({ vertical = !vertical }) {
-                                AppIcon(
-                                    Glyph.Book,
-                                    if (vertical) strings.getString(R.string.ui_86380149bb)
-                                    else strings.getString(R.string.ui_4a58070031),
-                                )
-                            }
-                    },
                 )
             }
             if (count > 1)
                 AnimatedVisibility(chrome, Modifier.align(Alignment.BottomCenter)) {
-                    Surface(color = bg.copy(alpha = .8f), contentColor = text) {
-                        Column(Modifier.navigationBarsPadding().padding(20.dp)) {
-                            val page by
-                                remember(vertical) {
-                                    derivedStateOf {
-                                        if (vertical) list.firstVisibleItemIndex
-                                        else pager.currentPage
-                                    }
-                                }
-                            Text(
-                                "${page+1} / $count",
-                                Modifier.fillMaxWidth(),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            )
-                            Slider(
-                                rememberSliderState(
-                                        page.toFloat(),
-                                        steps = (count - 2).coerceAtLeast(0),
-                                        trackRange = 0f..(count - 1).toFloat(),
-                                    )
-                                    .also { it.value = page.toFloat() },
-                                onValueChange = {
-                                    scope.launch {
-                                        if (vertical) list.scrollToItem(it.toInt())
-                                        else pager.scrollToPage(it.toInt())
-                                    }
-                                },
+                    val page by
+                        remember(vertical) {
+                            derivedStateOf {
+                                if (vertical) list.firstVisibleItemIndex else pager.currentPage
+                            }
+                        }
+                    HorizontalFloatingToolbar(
+                        expanded = true,
+                        modifier = Modifier.navigationBarsPadding().padding(bottom = 16.dp),
+                    ) {
+                        IconButton({ vertical = !vertical }) {
+                            AppIcon(
+                                Glyph.Book,
+                                if (vertical) strings.getString(R.string.ui_86380149bb)
+                                else strings.getString(R.string.ui_4a58070031),
                             )
                         }
+                        Text("${page + 1} / $count", style = MaterialTheme.typography.labelLarge)
+                        Slider(
+                            rememberSliderState(
+                                    page.toFloat(),
+                                    steps = (count - 2).coerceAtLeast(0),
+                                    trackRange = 0f..(count - 1).toFloat(),
+                                )
+                                .also { it.value = page.toFloat() },
+                            onValueChange = {
+                                scope.launch {
+                                    if (vertical) list.scrollToItem(it.toInt())
+                                    else pager.scrollToPage(it.toInt())
+                                }
+                            },
+                            modifier = Modifier.width(160.dp),
+                        )
                     }
                 }
         }
