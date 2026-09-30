@@ -286,9 +286,9 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                     .statusBarsPadding().padding(12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                FilledTonalIconButton(onClick = back) { AppIcon(Glyph.Back, "返回") }
+                IconButton(onClick = back) { AppIcon(Glyph.Back, "返回") }
                 Box {
-                    FilledTonalIconButton(onClick = { moreMenu = true }) {
+                    IconButton(onClick = { moreMenu = true }) {
                         AppIcon(Glyph.More, "更多操作")
                     }
                     DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
