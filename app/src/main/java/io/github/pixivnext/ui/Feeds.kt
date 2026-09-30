@@ -443,7 +443,6 @@ private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier:
                 vm,
                 navigate,
                 Modifier.fillMaxSize(),
-                rank = true,
             )
         }
     }
@@ -482,9 +481,10 @@ fun FeedGrid(
     val refreshing = items.loadState.refresh is LoadState.Loading
     val error = items.loadState.refresh as? LoadState.Error
     val showFeedMetadata =
-        (spec.section != "recommended" &&
-            spec.section != "follow" &&
-            spec.section != "bookmarks") || settings.showHomeMetadata
+        spec.section != "ranking" &&
+            ((spec.section != "recommended" &&
+                spec.section != "follow" &&
+                spec.section != "bookmarks") || settings.showHomeMetadata)
     PullToRefreshBox(
         isRefreshing = refreshing && items.itemCount > 0,
         onRefresh = { items.refresh() },
