@@ -726,17 +726,30 @@ fun WorkCard(
                 work,
                 Modifier.fillMaxWidth().aspectRatio(if (work.isNovel) .9f else work.aspect),
             )
-            if (rank != null)
-                Surface(
+            val labels = buildList {
+                if (rank != null) add("${rank + 1}")
+                if (work.illust_ai_type == 2) add("AI")
+                if (work.x_restrict > 0) add(if (work.x_restrict == 2) "R18G" else "R18")
+            }
+            if (labels.isNotEmpty())
+                Row(
                     Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
+                    horizontalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
                 ) {
-                    Text(
-                        "${rank+1}",
-                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                    )
+                    labels.forEach { label ->
+                        Surface(
+                            shape = badgeShape,
+                            color = Color.Black.copy(alpha = .52f),
+                            contentColor = Color.White,
+                        ) {
+                            Text(
+                                label,
+                                Modifier.heightIn(min = 32.dp).wrapContentHeight()
+                                    .padding(horizontal = PixivSpacing.compact),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
                 }
             if (work.page_count > 1 || work.type == "ugoira" || work.isNovel)
                 Surface(
