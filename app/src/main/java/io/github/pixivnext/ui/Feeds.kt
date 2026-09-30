@@ -725,6 +725,7 @@ fun WorkCard(
             WorkImage(
                 work,
                 Modifier.fillMaxWidth().aspectRatio(if (work.isNovel) .9f else work.aspect),
+                sharedTransition = true,
             )
             val labels = buildList {
                 if (rank != null) add("${rank + 1}")

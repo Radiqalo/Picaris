@@ -1,5 +1,8 @@
 package io.github.pixivnext.ui
 
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,19 +17,34 @@ import coil3.compose.AsyncImage
 import io.github.pixivnext.core.Work
 import kotlin.math.*
 
+val LocalWorkTransition = staticCompositionLocalOf<SharedTransitionScope?> { null }
+
 @Composable
 fun WorkImage(
     work: Work,
     modifier: Modifier = Modifier,
     scale: ContentScale = ContentScale.Crop,
     url: String = work.cover,
+    sharedTransition: Boolean = false,
 ) {
-    if (work.demo >= 0) DemoArt(work.demo, modifier)
+    val transition = LocalWorkTransition.current
+    val imageModifier = if (sharedTransition && transition != null) {
+        val navigationScope = LocalNavAnimatedContentScope.current
+        val boundsAnimation = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.geometry.Rect>()
+        with(transition) {
+            modifier.sharedElement(
+                sharedContentState = rememberSharedContentState("work-image:${work.type}:${work.id}"),
+                animatedVisibilityScope = navigationScope,
+                boundsTransform = { _, _ -> boundsAnimation },
+            )
+        }
+    } else modifier
+    if (work.demo >= 0) DemoArt(work.demo, imageModifier)
     else
         AsyncImage(
             url,
             work.title,
-            modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            imageModifier.background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentScale = scale,
         )
 }

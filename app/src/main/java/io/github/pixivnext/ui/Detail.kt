@@ -92,6 +92,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                 .aspectRatio(work.aspect)
                                 .clickable { navigate(Reader(current)) }
                                 .testTag("detailImage"),
+                            sharedTransition = true,
                         )
                     }
                 LazyColumn(
@@ -115,6 +116,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                             .aspectRatio(work.aspect)
                                             .clickable { navigate(Reader(current)) }
                                             .testTag("detailImage"),
+                                        sharedTransition = true,
                                     )
                                 }
                             } else
@@ -124,6 +126,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                         .aspectRatio(work.aspect.coerceAtLeast(.85f))
                                         .clickable { navigate(Reader(current)) }
                                         .testTag("detailImage"),
+                                    sharedTransition = true,
                                 )
                         }
                     item {

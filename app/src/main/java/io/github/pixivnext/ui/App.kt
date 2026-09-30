@@ -1,5 +1,6 @@
 package io.github.pixivnext.ui
 
+import androidx.compose.animation.SharedTransitionLayout
 import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -109,56 +110,60 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                 else
                     key(account?.user?.id, revision) {
                         val strategy = rememberListDetailSceneStrategy<NavKey>()
-                        NavDisplay(
-                            backStack = backStack,
-                            entryDecorators =
-                                listOf(rememberSaveableStateHolderNavEntryDecorator()),
-                            onBack = back,
-                            sceneStrategies =
-                                if (backStack.lastOrNull() is Detail) listOf(strategy)
-                                else emptyList(),
-                            entryProvider =
-                                entryProvider {
-                                    entry<Home>(metadata = ListDetailSceneStrategy.listPane()) {
-                                        HomeScreen(vm, navigate)
-                                    }
-                                    entry<Search>(metadata = ListDetailSceneStrategy.listPane()) {
-                                        ScrollingScreen { SearchScreen(vm, navigate, back) }
-                                    }
-                                    entry<People> {
-                                        ScrollingScreen { PeopleScreen(it, vm, navigate, back) }
-                                    }
-                                    entry<Replies> {
-                                        ScrollingScreen { RepliesScreen(it, vm, navigate, back) }
-                                    }
-                                    entry<Comments> {
-                                        ScrollingScreen {
-                                            CommentsScreen(it.work, vm, navigate, back)
-                                        }
-                                    }
-                                    entry<Detail>(metadata = ListDetailSceneStrategy.detailPane()) {
-                                        DetailScreen(it.work, vm, navigate, back)
-                                    }
-                                    entry<Reader> {
-                                        ScrollingScreen { ReaderScreen(it.work, vm, back) }
-                                    }
-                                    entry<Author>(metadata = ListDetailSceneStrategy.listPane()) {
-                                        ScrollingScreen {
-                                            AuthorScreen(it.user, vm, navigate, back)
-                                        }
-                                    }
-                                    entry<Collection>(
-                                        metadata = ListDetailSceneStrategy.listPane()
-                                    ) {
-                                        ScrollingScreen { CollectionScreen(it, vm, navigate, back) }
-                                    }
-                                    entry<Utility> {
-                                        ScrollingScreen {
-                                            UtilityScreen(it.page, vm, navigate, back)
-                                        }
-                                    }
-                                },
-                        )
+                        SharedTransitionLayout {
+                            CompositionLocalProvider(LocalWorkTransition provides this) {
+                                NavDisplay(
+                                    backStack = backStack,
+                                    entryDecorators =
+                                        listOf(rememberSaveableStateHolderNavEntryDecorator()),
+                                    onBack = back,
+                                    sceneStrategies =
+                                        if (backStack.lastOrNull() is Detail) listOf(strategy)
+                                        else emptyList(),
+                                    entryProvider =
+                                        entryProvider {
+                                            entry<Home>(metadata = ListDetailSceneStrategy.listPane()) {
+                                                HomeScreen(vm, navigate)
+                                            }
+                                            entry<Search>(metadata = ListDetailSceneStrategy.listPane()) {
+                                                ScrollingScreen { SearchScreen(vm, navigate, back) }
+                                            }
+                                            entry<People> {
+                                                ScrollingScreen { PeopleScreen(it, vm, navigate, back) }
+                                            }
+                                            entry<Replies> {
+                                                ScrollingScreen { RepliesScreen(it, vm, navigate, back) }
+                                            }
+                                            entry<Comments> {
+                                                ScrollingScreen {
+                                                    CommentsScreen(it.work, vm, navigate, back)
+                                                }
+                                            }
+                                            entry<Detail>(metadata = ListDetailSceneStrategy.detailPane()) {
+                                                DetailScreen(it.work, vm, navigate, back)
+                                            }
+                                            entry<Reader> {
+                                                ScrollingScreen { ReaderScreen(it.work, vm, back) }
+                                            }
+                                            entry<Author>(metadata = ListDetailSceneStrategy.listPane()) {
+                                                ScrollingScreen {
+                                                    AuthorScreen(it.user, vm, navigate, back)
+                                                }
+                                            }
+                                            entry<Collection>(
+                                                metadata = ListDetailSceneStrategy.listPane()
+                                            ) {
+                                                ScrollingScreen { CollectionScreen(it, vm, navigate, back) }
+                                            }
+                                            entry<Utility> {
+                                                ScrollingScreen {
+                                                    UtilityScreen(it.page, vm, navigate, back)
+                                                }
+                                            }
+                                        },
+                                )
+                            }
+                        }
                     }
                 SnackbarHost(
                     snackbar,
