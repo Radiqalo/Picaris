@@ -232,7 +232,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         Row(Modifier.fillMaxSize()) {
             if (wide)
                 WideNavigationRail(
-                    modifier = Modifier.fillMaxHeight(),
+                    modifier = Modifier.fillMaxHeight().aboveWorkTransition(),
                     state = rememberWideNavigationRailState(WideNavigationRailValue.Expanded),
                     header = {
                         Text(
@@ -258,6 +258,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 bottomBar = {
                     if (!wide)
                         ShortNavigationBar(
+                            modifier = Modifier.aboveWorkTransition(),
                             arrangement = ShortNavigationBarArrangement.EqualWeight
                         ) {
                             tabs.forEachIndexed { index, title ->

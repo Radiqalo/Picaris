@@ -29,6 +29,14 @@ val LocalWorkTransition = staticCompositionLocalOf<SharedTransitionScope?> { nul
 val LocalImageTransitionEnabled = staticCompositionLocalOf { true }
 
 @Composable
+fun Modifier.aboveWorkTransition(): Modifier {
+    val transition = LocalWorkTransition.current ?: return this
+    return with(transition) {
+        this@aboveWorkTransition.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
+    }
+}
+
+@Composable
 fun Modifier.authorTransition(id: Long, part: String, enabled: Boolean = true): Modifier {
     val transition = LocalWorkTransition.current
     if (!enabled || transition == null || id == 0L) return this
