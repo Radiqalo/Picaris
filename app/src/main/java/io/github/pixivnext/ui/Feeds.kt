@@ -358,8 +358,19 @@ private fun DiscoveryTagWorks(tag: Tag, vm: AppViewModel, navigate: (NavKey) -> 
 private fun DiscoveryAuthorCard(preview: UserPreview, vm: AppViewModel, navigate: (NavKey) -> Unit) {
     var user by remember(preview.user) { mutableStateOf(preview.user) }
     var busy by remember { mutableStateOf(false) }
+    val background by produceState<String?>(null, preview.user.id, vm.accountId) {
+        value = try { vm.authorDetails(preview.user).profile.background_image_url }
+        catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { null }
+    }
     ElevatedCard(onClick = { navigate(Author(user)) }, modifier = Modifier.width(260.dp)) {
-        preview.illusts.firstOrNull()?.let { WorkImage(it, Modifier.fillMaxWidth().height(96.dp)) }
+        Box(Modifier.fillMaxWidth().height(96.dp)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+            background?.takeIf { it.isNotBlank() }?.let { url ->
+                coil3.compose.AsyncImage(url, null, Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+            }
+        }
         Column(Modifier.fillMaxWidth().padding(PixivSpacing.content),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {

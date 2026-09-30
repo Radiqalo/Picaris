@@ -361,7 +361,7 @@ private fun RelatedWorkStrip(work: Work, vm: AppViewModel, navigate: (NavKey) ->
         ) {
             if (related.itemCount == 0 && related.loadState.refresh is LoadState.Loading)
                 items(5) {
-                    Spacer(Modifier.width(144.dp).height(200.dp)
+                    Spacer(Modifier.width(144.dp).height(180.dp)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small))
                 }
             else items(minOf(5, related.itemCount), key = { index ->
@@ -370,7 +370,7 @@ private fun RelatedWorkStrip(work: Work, vm: AppViewModel, navigate: (NavKey) ->
                 related[index]?.let { artwork ->
                     val identity = artwork.identity(vm.accountId)
                     val current = bookmarks[identity]?.apply(artwork) ?: artwork
-                    Box(Modifier.width(144.dp)) {
+                    Box(Modifier.width(180.dp * current.aspect)) {
                         WorkCard(
                             current,
                             likedBusy = identity in busy,
