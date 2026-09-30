@@ -144,6 +144,9 @@ interface LibraryDao {
     @Query("SELECT * FROM CachedFeed WHERE accountId=:account AND `key`=:key")
     suspend fun cached(account: Long, key: String): CachedFeed?
 
+    @Query("SELECT COALESCE(SUM(LENGTH(CAST(json AS BLOB))), 0) FROM CachedFeed WHERE accountId=:account")
+    fun cachedFeedBytes(account: Long): Flow<Long>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun record(history: HistoryEntity)
 
     @Query("SELECT * FROM HistoryEntity WHERE accountId=:account ORDER BY viewedAt DESC LIMIT 300")

@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -385,8 +386,11 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     val s by vm.settings.collectAsStateWithLifecycle()
+    val cachedFeedBytes by vm.cachedFeedBytes.collectAsStateWithLifecycle()
+    val imageCacheBytes by vm.imageCacheBytes.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var dialog by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(vm) { vm.refreshImageCacheSize() }
     val tree =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri != null)
@@ -560,7 +564,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     }
                     SettingRow(
                         strings.getString(R.string.ui_92ec4c46d9),
-                        strings.getString(R.string.ui_698dc8c56e),
+                        "作品列表 ${formatCacheSize(cachedFeedBytes)} · 图片 ${formatCacheSize(imageCacheBytes)}",
                         icon = materialSymbol(MaterialSymbol.ClearCache),
                         position = SettingsRowPosition.Last,
                     ) {
@@ -671,7 +675,11 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 title = { Text(strings.getString(R.string.ui_21f227944e)) },
                 text = {
                     Text(
-                        "将清理当前账号的${if(dialog=="history") strings.getString(R.string.ui_29f6711704) else strings.getString(R.string.ui_47c1321036)}。"
+                        if (dialog == "history") {
+                            "将清理当前账号的${strings.getString(R.string.ui_29f6711704)}。"
+                        } else {
+                            "将清理当前账号的作品列表缓存和图片缓存。"
+                        }
                     )
                 },
                 confirmButton = {
@@ -690,6 +698,14 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 },
             )
     }
+}
+
+private fun formatCacheSize(bytes: Long): String {
+    if (bytes < 1024) return "$bytes B"
+    val kib = bytes / 1024.0
+    if (kib < 1024) return "${"%.1f".format(java.util.Locale.ROOT, kib)} KB"
+    val mib = kib / 1024.0
+    return "${"%.1f".format(java.util.Locale.ROOT, mib)} MB"
 }
 
 @Composable
@@ -952,6 +968,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         ScreenBar(
             strings.getString(R.string.ui_18df1a67a2),
             back,
+            scrollBehavior = null,
         )
         if (tasks.isEmpty())
             EmptyState(
@@ -1101,7 +1118,7 @@ fun AboutScreen(back: () -> Unit) {
     val context = LocalContext.current
     var notices by remember { mutableStateOf(false) }
     Column {
-        ScreenBar(strings.getString(R.string.ui_bed172efc9), back = back)
+        ScreenBar(strings.getString(R.string.ui_bed172efc9), back = back, scrollBehavior = null)
         Column(
             Modifier.padding(28.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(24.dp),

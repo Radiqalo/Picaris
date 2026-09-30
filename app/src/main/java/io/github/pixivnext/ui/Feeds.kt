@@ -546,9 +546,9 @@ fun CollectionScreen(
                             AppIcon(materialSymbol(MaterialSymbol.Calendar), "选择榜单日期")
                         }
                 },
-                scrollBehavior = LocalAppBarScrollBehavior.current,
+                scrollBehavior = if (route.section == "search") null else LocalAppBarScrollBehavior.current,
             )
-        else ScreenBar(route.title, back = back)
+        else ScreenBar(route.title, back = back, scrollBehavior = null)
         if (route.section == "ranking")
             RankingPages(vm, navigate, Modifier.weight(1f), rankingDate)
         else FeedGrid(

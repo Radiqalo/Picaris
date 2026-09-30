@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.net.toUri
 import androidx.lifecycle.*
 import androidx.paging.*
+import coil3.SingletonImageLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.pixivnext.core.*
@@ -67,6 +68,12 @@ constructor(
             .distinctUntilChanged()
             .flatMapLatest { dao.downloads(it) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val cachedFeedBytes =
+        combine(accounts, demo) { _, _ -> accountId }
+            .distinctUntilChanged()
+            .flatMapLatest { dao.cachedFeedBytes(it) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+    val imageCacheBytes = MutableStateFlow(0L)
 
     private val feeds =
         RetainedFeedStore(
@@ -258,8 +265,22 @@ constructor(
 
     suspend fun setDownloadTree(uri: String) = settingsStore.update { it.copy(downloadTree = uri) }
 
+    fun refreshImageCacheSize() = run {
+        imageCacheBytes.value = withContext(Dispatchers.IO) {
+            SingletonImageLoader.get(appContext).diskCache?.size ?: 0L
+        }
+    }
+
     fun clearLibrary(history: Boolean) = run {
-        if (history) dao.clearHistory(accountId) else dao.clearCache(accountId)
+        if (history) {
+            dao.clearHistory(accountId)
+        } else {
+            dao.clearCache(accountId)
+            withContext(Dispatchers.IO) {
+                SingletonImageLoader.get(appContext).diskCache?.clear()
+                imageCacheBytes.value = SingletonImageLoader.get(appContext).diskCache?.size ?: 0L
+            }
+        }
     }
 
     fun removeAccount(id: Long) = run { auth.remove(id) }
