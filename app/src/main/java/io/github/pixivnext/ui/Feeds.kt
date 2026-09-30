@@ -1472,6 +1472,7 @@ fun UserRow(
     user: User,
     onClick: () -> Unit,
     segment: Pair<Int, Int>? = null,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
     action: @Composable (() -> Unit)? = null,
 ) {
     val content: @Composable () -> Unit = { Text(user.name) }
@@ -1492,6 +1493,7 @@ fun UserRow(
     else
         ListItem(
             onClick = onClick,
+            colors = ListItemDefaults.colors(containerColor = containerColor),
             content = content,
             supportingContent = supporting,
             leadingContent = leading,

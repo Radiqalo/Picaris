@@ -203,7 +203,7 @@ fun DetailScreen(
                                         navigationTransition.targetState == androidx.compose.animation.EnterExitState.Visible &&
                                         imageTransition?.isTransitionActive != true
                                     ) navigate(Author(work.user))
-                                }) {
+                                }, containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
                                     FilledTonalButton(
                                         onClick = {
                                             vm.run {
@@ -471,11 +471,12 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND)
             .setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/users/${user.id}"), "分享作者"))
     }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         val viewportHeight = maxHeight
         LazyColumn(state = outerScroll, modifier = Modifier.fillMaxSize()) {
             item(key = "author_profile") {
-                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.fillMaxWidth().height(254.dp)) {
                         Box(Modifier.fillMaxWidth().height(210.dp)
                             .background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
@@ -521,7 +522,8 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                 }
             }
             item(key = "author_tabs") {
-                PrimaryTabRow(selectedTabIndex = pager.currentPage, modifier = Modifier.fillMaxWidth()) {
+                PrimaryTabRow(selectedTabIndex = pager.currentPage, modifier = Modifier.fillMaxWidth(),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
                     pageLabels.forEachIndexed { index, label ->
                         Tab(selected = pager.currentPage == index,
                             onClick = {
