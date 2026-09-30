@@ -8,6 +8,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -23,6 +25,7 @@ import io.github.pixivnext.AppViewModel
 import io.github.pixivnext.R
 import io.github.pixivnext.core.*
 import io.github.pixivnext.designsystem.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
@@ -400,7 +403,10 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     var user by remember(initial.id) { mutableStateOf(initial) }
     var profile by remember(initial.id) { mutableStateOf(AuthorProfile()) }
     var profileLoaded by remember(initial.id) { mutableStateOf(false) }
-    val settings by vm.settings.collectAsStateWithLifecycle()
+    val pager = rememberPagerState { 3 }
+    val scope = rememberCoroutineScope()
+    val feedback = selectionFeedback()
+    val pageLabels = listOf("插画", "漫画", "收藏")
     var busy by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -414,64 +420,88 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND)
             .setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/users/${user.id}"), "分享作者"))
     }
-    Column {
-        ScreenBar("", back = back, actions = {
-            IconButton(onClick = ::shareAuthor) { AppIcon(Glyph.Share, "分享作者") }
-        })
-        FeedGrid(
-            FeedSpec(section = "user", kind = settings.contentKind, userId = user.id),
-            vm, navigate, Modifier.weight(1f),
-            header = {
-                Column(Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(PixivSpacing.related)) {
-                    Box(Modifier.fillMaxWidth().height(if (profile.background_image_url.isNullOrBlank()) 88.dp else 184.dp)) {
-                        profile.background_image_url?.takeIf { it.isNotBlank() }?.let {
-                            coil3.compose.AsyncImage(it, null, Modifier.fillMaxWidth().height(144.dp),
-                                contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                        }
-                        Avatar(user, Modifier.align(Alignment.BottomCenter).size(88.dp))
-                    }
-                    Text(user.name, style = MaterialTheme.typography.headlineSmall)
-                    Button(
-                        onClick = {
-                            vm.run {
-                                busy = true
-                                try { user = vm.follow(user) } finally { busy = false }
+    Box(Modifier.fillMaxSize()) {
+        HorizontalPager(pager, Modifier.fillMaxSize(), key = { it }) { page ->
+            FeedGrid(
+                FeedSpec(section = if (page == 2) "bookmarks" else "user",
+                    kind = if (page == 1) "manga" else "illust", userId = user.id),
+                vm, navigate, Modifier.fillMaxSize(),
+                topPadding = 0.dp,
+                header = {
+                    Column(Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(PixivSpacing.related)) {
+                        BoxWithConstraints(Modifier.fillMaxWidth().height(244.dp)) {
+                            Box(Modifier.align(Alignment.TopCenter)
+                                .requiredWidth(maxWidth + PixivSpacing.content * 2).height(200.dp)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                                profile.background_image_url?.takeIf { it.isNotBlank() }?.let {
+                                    coil3.compose.AsyncImage(it, null, Modifier.fillMaxSize(),
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                                }
                             }
-                        },
-                        enabled = !busy,
-                        modifier = Modifier.fillMaxWidth(.75f).height(ButtonDefaults.MediumContainerHeight),
-                        shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-                    ) { Text(if (user.is_followed) "已关注" else "关注") }
-                    Row(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
-                        if (profileLoaded) Text("${profile.total_follow_users} 关注", style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        profile.region?.takeIf { it.isNotBlank() }?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall,
+                            Avatar(user, Modifier.align(Alignment.BottomCenter).size(88.dp))
+                        }
+                        Text(user.name, style = MaterialTheme.typography.headlineSmall)
+                        Button(
+                            onClick = {
+                                vm.run {
+                                    busy = true
+                                    try { user = vm.follow(user) } finally { busy = false }
+                                }
+                            },
+                            enabled = !busy,
+                            modifier = Modifier.fillMaxWidth(.75f).height(ButtonDefaults.MediumContainerHeight),
+                            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                        ) { Text(if (user.is_followed) "已关注" else "关注") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
+                            if (profileLoaded) Text("${profile.total_follow_users} 关注", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            profile.region?.takeIf { it.isNotBlank() }?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            if (user.comment.isNotBlank()) Text(user.comment,
+                                Modifier.weight(1f), maxLines = 3,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium)
+                            else Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { showProfile = true }) { Text("查看资料") }
+                        }
+                        PrimaryTabRow(selectedTabIndex = pager.currentPage) {
+                            pageLabels.forEachIndexed { index, label ->
+                                Tab(selected = pager.currentPage == index,
+                                    onClick = {
+                                        if (pager.currentPage != index) {
+                                            feedback()
+                                            scope.launch { pager.animateScrollToPage(index) }
+                                        }
+                                    }, text = { Text(label) })
+                            }
+                        }
+                        val count = when (page) {
+                            0 -> profile.total_illusts
+                            1 -> profile.total_manga
+                            else -> 0
+                        }
+                        Row(Modifier.fillMaxWidth().padding(top = PixivSpacing.compact),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text(pageLabels[page],
+                                Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
+                            if (count > 0) Text(count.toString(), style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        if (user.comment.isNotBlank()) Text(user.comment,
-                            Modifier.weight(1f), maxLines = 3,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodyMedium)
-                        else Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { showProfile = true }) { Text("查看资料") }
-                    }
-                    val count = if (settings.contentKind == "novel") profile.total_novels
-                        else profile.total_illusts + profile.total_manga
-                    Row(Modifier.fillMaxWidth().padding(top = PixivSpacing.compact),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (settings.contentKind == "novel") "小说" else "插画 · 漫画",
-                            Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
-                        if (count > 0) Text(count.toString(), style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            },
-        )
+                },
+            )
+        }
+        Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            IconButton(onClick = back) { AppIcon(Glyph.Back, "返回") }
+            IconButton(onClick = ::shareAuthor) { AppIcon(Glyph.Share, "分享作者") }
+        }
     }
     if (showProfile) ModalBottomSheet(onDismissRequest = { showProfile = false }) {
         Column(Modifier.fillMaxWidth().padding(PixivSpacing.section),

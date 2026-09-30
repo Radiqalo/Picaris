@@ -32,7 +32,9 @@ constructor(
                             if (demo)
                                 LoadResult.Page(
                                     Demo.works.filter {
-                                        (if (spec.kind == "novel") it.isNovel else !it.isNovel) &&
+                                            (if (spec.kind == "novel") it.isNovel else !it.isNovel) &&
+                                            (spec.section != "user" || spec.kind == "novel" ||
+                                                if (spec.kind == "manga") it.type == "manga" else it.type != "manga") &&
                                             (spec.word.isEmpty() ||
                                                 it.title.contains(spec.word, true) ||
                                                 it.tags.any { t ->
@@ -115,6 +117,7 @@ constructor(
                 }
                 "user" -> {
                     q["user_id"] = s.userId.toString()
+                    if (kind == "illust") q["type"] = if (s.kind == "manga") "manga" else "illust"
                     "v1/user/${if(kind=="novel") "novels" else "illusts"}"
                 }
                 "series" -> {

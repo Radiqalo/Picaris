@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import androidx.paging.LoadState
@@ -633,6 +634,7 @@ fun FeedGrid(
     header: (@Composable () -> Unit)? = null,
     gridState: LazyStaggeredGridState? = null,
     listState: LazyListState? = null,
+    topPadding: Dp = PixivSpacing.content,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
@@ -686,7 +688,8 @@ fun FeedGrid(
             spec.kind == "novel" ->
                 LazyColumn(
                     state = list,
-                    contentPadding = PaddingValues(PixivSpacing.content),
+                    contentPadding = PaddingValues(start = PixivSpacing.content, end = PixivSpacing.content,
+                        top = topPadding, bottom = PixivSpacing.content),
                     verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
                     modifier = Modifier.fillMaxSize().testTag("novelList"),
                 ) {
@@ -715,7 +718,8 @@ fun FeedGrid(
                     state = grid,
                     horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
                     verticalItemSpacing = PixivSpacing.compact,
-                    contentPadding = PaddingValues(PixivSpacing.content),
+                    contentPadding = PaddingValues(start = PixivSpacing.content, end = PixivSpacing.content,
+                        top = topPadding, bottom = PixivSpacing.content),
                     modifier = Modifier.fillMaxSize().testTag("feedGrid"),
                 ) {
                     if (header != null)
