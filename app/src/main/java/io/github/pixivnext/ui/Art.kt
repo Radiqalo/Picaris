@@ -208,13 +208,22 @@ fun Modifier.aboveWorkTransition(): Modifier {
 fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier {
     val gestureActive = LocalNavigationGestureInProgress.current
     val transition = LocalWorkTransition.current
-    if (!enabled || gestureActive || transition == null || id == 0L) return this
-    val navigation = LocalNavAnimatedContentScope.current
+    if (!enabled || transition == null || id == 0L) return this
+    val visible = LocalNavigationSharedElementVisible.current
+    val preview = rememberUpdatedState(gestureActive)
+    val config = remember {
+        object : SharedTransitionScope.SharedContentConfig {
+            override val SharedTransitionScope.SharedContentState.isEnabled: Boolean
+                get() = !preview.value
+            override val shouldKeepEnabledForOngoingAnimation: Boolean = false
+        }
+    }
     val motion = artworkBoundsMotion()
     return with(transition) {
-        val key = rememberSharedContentState("author:$id:avatar")
-        this@authorAvatarTransition.sharedElement(key, navigation,
+        val key = rememberSharedContentState("author:$id:avatar", config)
+        this@authorAvatarTransition.sharedElementWithCallerManagedVisibility(key, visible,
             boundsTransform = { _, _ -> motion },
+            renderInOverlayDuringTransition = !gestureActive,
             clipInOverlayDuringTransition = OverlayClip(CircleShape))
     }
 }
@@ -231,7 +240,16 @@ fun WorkImage(
 ) {
     val transition = LocalWorkTransition.current
     val gestureActive = LocalNavigationGestureInProgress.current
-    val imageModifier = if (sharedTransition && !gestureActive && LocalImageTransitionEnabled.current && transition != null) {
+    val visible = LocalNavigationSharedElementVisible.current
+    val imageModifier = if (sharedTransition && LocalImageTransitionEnabled.current && transition != null) {
+        val preview = rememberUpdatedState(gestureActive)
+        val config = remember {
+            object : SharedTransitionScope.SharedContentConfig {
+                override val SharedTransitionScope.SharedContentState.isEnabled: Boolean
+                    get() = !preview.value
+                override val shouldKeepEnabledForOngoingAnimation: Boolean = false
+            }
+        }
         val navigationScope = LocalNavAnimatedContentScope.current
         val boundsAnimation = artworkBoundsMotion()
         val shape = MaterialTheme.shapes.small
@@ -253,10 +271,11 @@ fun WorkImage(
             }
         }
         with(transition) {
-            modifier.sharedElement(
-                sharedContentState = rememberSharedContentState("work-image:${work.type}:${work.id}"),
-                animatedVisibilityScope = navigationScope,
+            modifier.sharedElementWithCallerManagedVisibility(
+                sharedContentState = rememberSharedContentState("work-image:${work.type}:${work.id}", config),
+                visible = visible,
                 boundsTransform = { _, _ -> boundsAnimation },
+                renderInOverlayDuringTransition = !gestureActive,
                 clipInOverlayDuringTransition = OverlayClip(animatedShape),
             ).clip(animatedShape)
         }

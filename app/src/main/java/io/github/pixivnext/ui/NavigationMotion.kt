@@ -3,7 +3,6 @@ package io.github.pixivnext.ui
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterExitState
-import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -53,6 +52,8 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 
 internal val LocalNavigationGestureActive = staticCompositionLocalOf { false }
 internal val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
+private val LocalNavigationCurrentSceneKey = staticCompositionLocalOf<Any?> { null }
+internal val LocalNavigationSharedElementVisible = staticCompositionLocalOf { true }
 
 @Composable
 internal fun NavigationPageDisplay(
@@ -87,15 +88,18 @@ internal fun NavigationPageDisplay(
         },
     )
     val gestureInProgress = navigationEventState.transitionState is NavigationEventTransitionState.InProgress
-    CompositionLocalProvider(LocalNavigationGestureInProgress provides gestureInProgress) {
+    CompositionLocalProvider(
+        LocalNavigationGestureInProgress provides gestureInProgress,
+        LocalNavigationCurrentSceneKey provides scene.key,
+    ) {
         NavDisplay(
             sceneState = sceneState,
             navigationEventState = navigationEventState,
             modifier = modifier,
             transitionSpec = { motion.forward(this) },
-            popTransitionSpec = { motion.back() },
+            popTransitionSpec = { motion.back(this) },
             predictivePopTransitionSpec = { swipeEdge ->
-                motion.predictiveBack(if (swipeEdge == NavigationEvent.EDGE_RIGHT) -1 else 1)
+                motion.predictiveBack(this, if (swipeEdge == NavigationEvent.EDGE_RIGHT) -1 else 1)
             },
         )
     }
@@ -114,7 +118,11 @@ private data class NavigationPageScene(
 ) : Scene<NavKey> by scene {
     override val key: Any = scene::class to scene.key
     override val content: @Composable () -> Unit = {
-        NavigationPage(onSettled) { scene.content() }
+        CompositionLocalProvider(
+            LocalNavigationSharedElementVisible provides (key == LocalNavigationCurrentSceneKey.current),
+        ) {
+            NavigationPage(onSettled) { scene.content() }
+        }
     }
 }
 
@@ -127,12 +135,16 @@ internal class NavigationMotion(
     private val direction: Int,
 ) {
     private var predictiveDirection: Int? = null
+    private var predictiveScenes: Pair<Any, Any>? = null
+
+    private fun matchesPreview(scope: AnimatedContentTransitionScope<*>): Boolean =
+        predictiveScenes == ((scope.initialState as Scene<*>).key to (scope.targetState as Scene<*>).key)
 
     fun forward(
         scope: AnimatedContentTransitionScope<*>,
         style: NavigationMotionStyle = NavigationMotionStyle.Slide,
     ): ContentTransform = with(scope) {
-        predictiveDirection?.let { return@with backPreview(it) }
+        if (matchesPreview(scope)) predictiveDirection?.let { return@with backPreview(it) }
         when (style) {
             NavigationMotionStyle.Slide ->
                 slideInHorizontally(position) { direction * it } togetherWith (
@@ -146,42 +158,48 @@ internal class NavigationMotion(
         }
     }
 
-    fun back(style: NavigationMotionStyle = NavigationMotionStyle.Slide): ContentTransform {
-        predictiveDirection?.let { return backPreview(it, committed = true) }
+    fun back(
+        scope: AnimatedContentTransitionScope<*>,
+        style: NavigationMotionStyle = NavigationMotionStyle.Slide,
+    ): ContentTransform {
+        if (matchesPreview(scope)) predictiveDirection?.let { return backPreview(it, committed = true) }
         return when (style) {
             NavigationMotionStyle.Slide ->
-                EnterTransition.None togetherWith
+                fadeIn(effects, initialAlpha = 1f) togetherWith
                     slideOutHorizontally(position) { direction * it }
             NavigationMotionStyle.Zoom ->
-                EnterTransition.None togetherWith (
+                fadeIn(effects, initialAlpha = 1f) togetherWith (
                     scaleOut(scale, targetScale = 0.92f) + fadeOut(effects)
                 )
         }
     }
 
-    fun predictiveBack(swipeDirection: Int): ContentTransform {
+    fun predictiveBack(scope: AnimatedContentTransitionScope<*>, swipeDirection: Int): ContentTransform {
         predictiveDirection = swipeDirection
+        predictiveScenes = (scope.initialState as Scene<*>).key to (scope.targetState as Scene<*>).key
         return backPreview(swipeDirection)
     }
 
     private fun backPreview(swipeDirection: Int, committed: Boolean = false): ContentTransform {
         val previewExit = scaleOut(scale, targetScale = 0.90f) +
             slideOutHorizontally(position) { swipeDirection * it / 32 }
-        return EnterTransition.None togetherWith
+        return fadeIn(effects, initialAlpha = 1f) togetherWith
             if (committed) previewExit + fadeOut(effects) else previewExit
     }
 
     fun metadata(style: NavigationMotionStyle): Map<String, Any> =
         NavDisplay.transitionSpec { forward(this, style) } +
-            NavDisplay.popTransitionSpec { back(style) } +
+            NavDisplay.popTransitionSpec { back(this, style) } +
             NavDisplay.predictivePopTransitionSpec { swipeEdge ->
                 predictiveBack(
+                    this,
                     if (swipeEdge == androidx.navigationevent.NavigationEvent.EDGE_RIGHT) -1 else 1,
                 )
             }
 
     fun settled() {
         predictiveDirection = null
+        predictiveScenes = null
     }
 }
 
