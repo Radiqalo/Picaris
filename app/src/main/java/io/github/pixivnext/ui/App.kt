@@ -311,7 +311,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 val exitSpatial = MaterialTheme.motionScheme.fastSpatialSpec<IntOffset>()
                 val enterSpatial = remember(exitSpatial) {
                     if (exitSpatial is SpringSpec) spring(
-                        dampingRatio = exitSpatial.dampingRatio * 0.8f,
+                        dampingRatio = exitSpatial.dampingRatio * 0.9f,
                         stiffness = exitSpatial.stiffness,
                         visibilityThreshold = exitSpatial.visibilityThreshold,
                     ) else exitSpatial
@@ -325,35 +325,37 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     transitionSpec = {
                         val tabDirection = if (targetState > initialState) 1 else -1
                         val direction = tabDirection * if (layoutDirection == LayoutDirection.Ltr) 1 else -1
-                        ((slideInHorizontally(enterSpatial) { direction * it / 3 } + fadeIn(effects)) togetherWith
+                        ((slideInHorizontally(enterSpatial) { direction * it / 4 } + fadeIn(effects)) togetherWith
                             (slideOutHorizontally(exitSpatial) { -direction * it / 6 } + fadeOut(exitEffects)))
                             .apply { targetContentZIndex = 1f }
                             .using(null)
                     },
                     label = "bottom navigation page",
                 ) { currentTab ->
-                    holder.SaveableStateProvider(currentTab) {
-                        val homeGrid = rememberLazyStaggeredGridState()
-                        val homeList = rememberLazyListState()
-                        ScrollingScreen(
-                            scrollBehaviorEnabled = false
-                        ) {
-                            if (currentTab == 0) {
-                                LaunchedEffect(settings.contentKind) {
-                                    homeReselection.collectLatest {
-                                        if (settings.contentKind == "novel")
-                                            homeList.animateScrollToItem(0)
-                                        else homeGrid.animateScrollToItem(0)
+                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                        holder.SaveableStateProvider(currentTab) {
+                            val homeGrid = rememberLazyStaggeredGridState()
+                            val homeList = rememberLazyListState()
+                            ScrollingScreen(
+                                scrollBehaviorEnabled = false
+                            ) {
+                                if (currentTab == 0) {
+                                    LaunchedEffect(settings.contentKind) {
+                                        homeReselection.collectLatest {
+                                            if (settings.contentKind == "novel")
+                                                homeList.animateScrollToItem(0)
+                                            else homeGrid.animateScrollToItem(0)
+                                        }
                                     }
                                 }
-                            }
-                            when (currentTab) {
-                                0 ->
-                                    RecommendedHomeScreen(vm, navigate, homeGrid, homeList)
-                                1 -> DiscoverScreen(vm, navigate)
-                                2 -> FollowScreen(vm, navigate)
-                                3 -> SearchScreen(vm, navigate, back = null)
-                                else -> ProfileScreen(vm, navigate)
+                                when (currentTab) {
+                                    0 ->
+                                        RecommendedHomeScreen(vm, navigate, homeGrid, homeList)
+                                    1 -> DiscoverScreen(vm, navigate)
+                                    2 -> FollowScreen(vm, navigate)
+                                    3 -> SearchScreen(vm, navigate, back = null)
+                                    else -> ProfileScreen(vm, navigate)
+                                }
                             }
                         }
                     }
