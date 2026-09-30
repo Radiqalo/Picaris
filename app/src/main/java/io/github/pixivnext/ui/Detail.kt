@@ -6,9 +6,6 @@ import android.text.Html
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.pager.HorizontalPager
@@ -454,11 +451,6 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     var headerHeight by remember(initial.id) { mutableFloatStateOf(0f) }
     var headerOffset by remember(initial.id) { mutableFloatStateOf(0f) }
     val density = LocalDensity.current
-    val profileScroll = rememberScrollableState { delta ->
-        val previous = headerOffset
-        headerOffset = (headerOffset - delta).coerceIn(0f, headerHeight)
-        previous - headerOffset
-    }
     val headerScroll = remember(initial.id) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -477,7 +469,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().nestedScroll(headerScroll)) {
-            Box(Modifier.fillMaxWidth().clipToBounds().scrollable(profileScroll, Orientation.Vertical).then(
+            Box(Modifier.fillMaxWidth().clipToBounds().then(
                 if (headerHeight > 0f) Modifier.height(with(density) { (headerHeight - headerOffset).coerceAtLeast(0f).toDp() })
                 else Modifier
             )) {
@@ -553,6 +545,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                         kind = if (page == 1) "manga" else "illust", userId = user.id),
                     vm, navigate, Modifier.fillMaxSize(),
                     topPadding = 0.dp,
+                    pullToRefreshEnabled = headerOffset <= 0f,
                     header = {
                         val count = when (page) {
                             0 -> profile.total_illusts

@@ -52,7 +52,7 @@ fun ScrollingScreen(
     val behavior =
         if (scrollableState != null)
             TopAppBarDefaults.enterAlwaysScrollBehavior(scrollableState = scrollableState)
-        else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+        else TopAppBarDefaults.enterAlwaysScrollBehavior()
     CompositionLocalProvider(LocalAppBarScrollBehavior provides behavior) {
         Box(Modifier.fillMaxSize().nestedScroll(behavior.nestedScrollConnection)) { content() }
     }
@@ -77,6 +77,10 @@ fun ScreenBar(
     TopAppBar(
         title = titleContent,
         scrollBehavior = LocalAppBarScrollBehavior.current,
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background,
+            scrolledContainerColor = MaterialTheme.colorScheme.background,
+        ),
         navigationIcon = navigationContent,
         actions = actions,
         windowInsets = windowInsets,
@@ -217,6 +221,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
+    val pullRefreshEnabled =
+        LocalAppBarScrollBehavior.current?.state?.heightOffset?.let { it >= -0.5f } ?: true
     val trendResult by produceState<List<TrendingTag>?>(vm.cachedTrendingTags(), vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
         value = vm.cachedTrendingTags()
         if (settings.contentKind == "novel") {
@@ -338,6 +344,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 )
             }
         },
+        pullToRefreshEnabled = pullRefreshEnabled,
     )
 }
 
@@ -460,6 +467,8 @@ private fun DiscoveryPlaceholders() {
 fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
+    val pullRefreshEnabled =
+        LocalAppBarScrollBehavior.current?.state?.heightOffset?.let { it >= -0.5f } ?: true
     Column {
         ScreenBar(strings.getString(R.string.ui_753ccc8e2e))
         FeedGrid(
@@ -467,6 +476,7 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             vm,
             navigate,
             Modifier.weight(1f),
+            pullToRefreshEnabled = pullRefreshEnabled,
         )
     }
 }
@@ -650,6 +660,7 @@ fun FeedGrid(
     gridState: LazyStaggeredGridState? = null,
     listState: LazyListState? = null,
     topPadding: Dp = PixivSpacing.content,
+    pullToRefreshEnabled: Boolean = true,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
@@ -673,11 +684,7 @@ fun FeedGrid(
     val refreshing = items.loadState.refresh is LoadState.Loading
     val error = items.loadState.refresh as? LoadState.Error
     val showFeedMetadata = spec.section != "ranking" && settings.showHomeMetadata
-    PullToRefreshBox(
-        isRefreshing = refreshing && items.itemCount > 0,
-        onRefresh = { items.refresh() },
-        modifier = modifier.fillMaxWidth(),
-    ) {
+    val feedContent: @Composable () -> Unit = {
         when {
             refreshing && items.itemCount == 0 -> FeedGridStatus(header) { LoadingState() }
             error != null && items.itemCount == 0 ->
@@ -762,6 +769,15 @@ fun FeedGrid(
                     }
                 }
         }
+    }
+    if (pullToRefreshEnabled) {
+        PullToRefreshBox(
+            isRefreshing = refreshing && items.itemCount > 0,
+            onRefresh = { items.refresh() },
+            modifier = modifier.fillMaxWidth(),
+        ) { feedContent() }
+    } else {
+        Box(modifier.fillMaxWidth()) { feedContent() }
     }
 }
 
