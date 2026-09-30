@@ -84,7 +84,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                 uri.pathSegments.firstOrNull() == "artworks" &&
                 account != null -> {
                 val id = uri.lastPathSegment?.toLongOrNull()
-                if (id != null) vm.run { navigate(Detail(vm.repo.detail(vm.accountId, id))) }
+                if (id != null) vm.run { navigate(Detail(vm.detail(Work(id = id)))) }
                 handled()
             }
         }

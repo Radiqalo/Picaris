@@ -60,9 +60,7 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         )
     }
     LaunchedEffect(initial.id) {
-        if (initial.demo < 0)
-            runCatching { vm.repo.detail(vm.accountId, initial.id, initial.isNovel) }
-                .onSuccess { work = it }
+        runCatching { vm.detail(initial) }.onSuccess { work = it }
     }
     Scaffold(
         topBar = {
@@ -372,7 +370,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     var busy by remember { mutableStateOf(false) }
     val demo by vm.demo.collectAsStateWithLifecycle()
     LaunchedEffect(user.id) {
-        if (!demo) runCatching { vm.repo.user(vm.accountId, user.id) }.onSuccess { user = it.first }
+        if (!demo) runCatching { vm.user(user) }.onSuccess { user = it }
     }
     Column {
         ScreenBar(user.name, back = back)
@@ -400,9 +398,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                             vm.run {
                                 busy = true
                                 try {
-                                    user =
-                                        if (demo) user.copy(is_followed = !user.is_followed)
-                                        else vm.repo.follow(vm.accountId, user)
+                                    user = vm.follow(user)
                                 } finally {
                                     busy = false
                                 }

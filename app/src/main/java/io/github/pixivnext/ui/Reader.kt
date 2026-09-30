@@ -1,6 +1,5 @@
 package io.github.pixivnext.ui
 
-import android.graphics.BitmapFactory
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -13,25 +12,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.pixivnext.AppViewModel
 import io.github.pixivnext.R
 import io.github.pixivnext.core.*
 import io.github.pixivnext.designsystem.*
-import java.io.File
-import java.util.zip.ZipFile
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
 import me.saket.telephoto.zoomable.rememberZoomableState
 import me.saket.telephoto.zoomable.zoomable
-import okhttp3.Request
 
 @Composable
 fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
@@ -47,8 +41,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
     var localPages by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     LaunchedEffect(work.id) {
         localPages =
-            vm.dao
-                .completed(vm.accountId, work.id)
+            vm.completed(work)
                 .filter { it.kind in listOf("illust", "manga") }
                 .associate { it.page to it.uri }
     }
@@ -57,25 +50,20 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
     val list = rememberLazyListState()
     val bg = if (s.blackReader) Color.Black else MaterialTheme.colorScheme.background
     val text = if (s.blackReader) Color.White else MaterialTheme.colorScheme.onBackground
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var restored by remember { mutableStateOf(false) }
     LaunchedEffect(work.id) {
-        vm.dao
-            .historyItem(vm.accountId, work.id, work.type)
-            ?.progress
-            ?.coerceIn(0, (count - 1).coerceAtLeast(0))
-            ?.let {
-                pager.scrollToPage(it)
-                list.scrollToItem(it)
-            }
+        vm.readingProgress(work)?.coerceIn(0, (count - 1).coerceAtLeast(0))?.let {
+            pager.scrollToPage(it)
+            list.scrollToItem(it)
+        }
         restored = true
     }
     LaunchedEffect(vertical, restored) {
         if (restored)
             snapshotFlow { if (vertical) list.firstVisibleItemIndex else pager.currentPage }
                 .distinctUntilChanged()
-                .collect { vm.repo.record(vm.accountId, work, it) }
+                .collect { vm.recordProgress(work, it) }
     }
     Surface(Modifier.fillMaxSize(), color = bg, contentColor = text) {
         Box {
@@ -228,7 +216,6 @@ fun UgoiraPlayer(work: Work, vm: AppViewModel, toggle: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var ready by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
-    val context = LocalContext.current
     val lifecycleState by
         androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateFlow
             .collectAsStateWithLifecycle()
@@ -237,107 +224,11 @@ fun UgoiraPlayer(work: Work, vm: AppViewModel, toggle: () -> Unit) {
     LaunchedEffect(work.id, retry) {
         error = null
         try {
-            val downloads = vm.dao.completed(vm.accountId, work.id)
-            val metadata =
-                downloads
-                    .firstOrNull { it.kind == "frames" }
-                    ?.let { task ->
-                        withContext(Dispatchers.IO) {
-                            runCatching {
-                                context.contentResolver
-                                    .openInputStream(task.uri.toUri())
-                                    ?.bufferedReader()
-                                    ?.use { AppJson.decodeFromString<Ugoira>(it.readText()) }
-                            }
-                                .getOrNull()
-                        }
-                    } ?: vm.repo.ugoira(vm.accountId, work.id)
-            require(metadata.frames.isNotEmpty() && metadata.frames.size <= 10000) { "动图帧信息无效" }
-            val file = File(context.cacheDir, "ugoira_${vm.accountId}_${work.id}.zip")
-            if (retry > 0) file.delete()
-            withContext(Dispatchers.IO) {
-                if (!file.exists()) {
-                    val saved = downloads.firstOrNull { it.kind == "ugoira" }
-                    if (saved != null)
-                        runCatching {
-                            context.contentResolver.openInputStream(saved.uri.toUri())?.use { input
-                                ->
-                                file.outputStream().use { input.copyTo(it) }
-                            }
-                        }
-                            .onFailure { file.delete() }
-                }
-                if (!file.exists()) {
-                    val partial = File(context.cacheDir, "ugoira_${work.id}.part")
-                    val call =
-                        vm.downloadsNetwork()
-                            .newCall(Request.Builder().url(metadata.zip_urls.medium).build())
-                    val cancellation =
-                        launch(start = CoroutineStart.UNDISPATCHED) {
-                            try {
-                                awaitCancellation()
-                            } finally {
-                                call.cancel()
-                            }
-                        }
-                    try {
-                        call.execute().use { response ->
-                            check(response.isSuccessful) { "动图下载失败（${response.code}）" }
-                            response.body.byteStream().use { input ->
-                                partial.outputStream().use { out ->
-                                    val buffer = ByteArray(65536)
-                                    var bytes = 0L
-                                    while (true) {
-                                        ensureActive()
-                                        val n = input.read(buffer)
-                                        if (n < 0) break
-                                        bytes += n
-                                        check(bytes < 256 * 1024 * 1024) {
-                                            strings.getString(R.string.ui_074bfabad3)
-                                        }
-                                        out.write(buffer, 0, n)
-                                    }
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        ensureActive()
-                        throw e
-                    } finally {
-                        cancellation.cancel()
-                    }
-                    ensureActive()
-                    check(partial.renameTo(file)) { strings.getString(R.string.ui_53c753e091) }
-                }
-            }
-            withContext(Dispatchers.IO) {
-                ZipFile(file).use { zip ->
+            vm.ugoiraFrames(work, retry) { playing && foreground }
+                .collect { frame ->
+                    image = frame
                     ready = true
-                    while (isActive) {
-                        for (frame in metadata.frames) {
-                            while (!playing || !foreground) delay(100)
-                            val entry =
-                                zip.getEntry(frame.file)
-                                    ?: error(strings.getString(R.string.ui_b26a82da6c))
-                            check(entry.size in 1..32 * 1024 * 1024) {
-                                strings.getString(R.string.ui_34a2b4c275)
-                            }
-                            val bytes = zip.getInputStream(entry).use { it.readBytes() }
-                            val options =
-                                BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-                            options.inJustDecodeBounds = false
-                            options.inSampleSize =
-                                (maxOf(options.outWidth, options.outHeight) / 1600).coerceAtLeast(1)
-                            val bitmap =
-                                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-                                    ?: error(strings.getString(R.string.ui_e868abf5f4))
-                            withContext(Dispatchers.Main) { image = bitmap.asImageBitmap() }
-                            delay(frame.delay.toLong().coerceAtLeast(16))
-                        }
-                    }
                 }
-            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -382,33 +273,13 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var controls by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
-    val context = LocalContext.current
     val list = rememberLazyListState()
     var restored by remember { mutableStateOf(false) }
     LaunchedEffect(work.id, retry) {
         error = null
         try {
-            body =
-                if (work.demo >= 0) NovelBody(Demo.novel)
-                else {
-                    val downloaded =
-                        vm.dao.completed(vm.accountId, work.id).firstOrNull {
-                            it.kind == "novel" && it.uri.isNotEmpty()
-                        }
-                    val local = downloaded?.let {
-                        withContext(Dispatchers.IO) {
-                            runCatching {
-                                context.contentResolver
-                                    .openInputStream(it.uri.toUri())
-                                    ?.bufferedReader()
-                                    ?.use { r -> r.readText() }
-                            }
-                                .getOrNull()
-                        }
-                    }
-                    if (local != null) NovelBody(local) else vm.repo.novel(vm.accountId, work.id)
-                }
-            vm.dao.historyItem(vm.accountId, work.id, work.type)?.progress?.let {
+            body = vm.novelBody(work)
+            vm.readingProgress(work)?.let {
                 list.scrollToItem(it.coerceAtMost(body!!.text.split('\n').size))
             }
             restored = true
@@ -422,7 +293,7 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
         if (body != null && restored)
             snapshotFlow { list.firstVisibleItemIndex }
                 .distinctUntilChanged()
-                .collect { vm.repo.record(vm.accountId, work, it) }
+                .collect { vm.recordProgress(work, it) }
     }
     Scaffold(
         topBar = {

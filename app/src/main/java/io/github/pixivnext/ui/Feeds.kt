@@ -603,16 +603,14 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                     Tag(strings.getString(R.string.ui_0b5c557e9d)),
                     Tag(strings.getString(R.string.ui_6a0b30d361)),
                 )
-        else runCatching { vm.repo.tags(vm.accountId) }.onSuccess { tags = it }
+        else runCatching { vm.tags() }.onSuccess { tags = it }
     }
     LaunchedEffect(submitted, kind) {
         if (kind == "user" && submitted.isNotBlank()) {
             userLoading = true
             error = null
             try {
-                users =
-                    if (demo) Demo.works.map { it.user }
-                    else vm.repo.searchUsers(vm.accountId, submitted)
+                users = vm.searchUsers(submitted)
             } catch (e: Exception) {
                 error = e.message
             }
@@ -710,7 +708,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                                 style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.weight(1f),
                             )
-                            TextButton({ vm.run { vm.dao.clearSearch(vm.accountId) } }) {
+                            TextButton({ vm.clearSearch() }) {
                                 Text(strings.getString(R.string.ui_7b15e5e8e7))
                             }
                         }

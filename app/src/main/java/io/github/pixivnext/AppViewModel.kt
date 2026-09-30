@@ -1,13 +1,22 @@
 package io.github.pixivnext
 
+import android.content.Context
+import android.graphics.BitmapFactory
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.net.toUri
 import androidx.lifecycle.*
 import androidx.paging.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.pixivnext.core.*
 import io.github.pixivnext.download.DownloadManager
+import java.io.File
+import java.util.zip.ZipFile
 import javax.inject.Inject
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import okhttp3.Request
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -21,6 +30,7 @@ constructor(
     val downloads: DownloadManager,
     val dao: LibraryDao,
     val network: Network,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
     val settings = settingsStore.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Settings())
     val accounts = auth.data.stateIn(viewModelScope, SharingStarted.Eagerly, auth.data.value)
@@ -162,6 +172,153 @@ constructor(
         if (word.isNotBlank())
             run { dao.search(SearchEntity(accountId, word.trim(), System.currentTimeMillis())) }
     }
+
+    suspend fun detail(initial: Work): Work =
+        if (initial.demo >= 0) initial else repo.detail(accountId, initial.id, initial.isNovel)
+
+    suspend fun tags(): List<Tag> = repo.tags(accountId)
+
+    suspend fun searchUsers(word: String): List<User> =
+        if (demo.value) Demo.works.map { it.user } else repo.searchUsers(accountId, word)
+
+    fun clearSearch() = run { dao.clearSearch(accountId) }
+
+    suspend fun user(initial: User): User =
+        if (demo.value) initial else repo.user(accountId, initial.id).first
+
+    suspend fun follow(user: User): User =
+        if (demo.value) user.copy(is_followed = !user.is_followed) else repo.follow(accountId, user)
+
+    suspend fun completed(work: Work) = dao.completed(accountId, work.id)
+
+    suspend fun readingProgress(work: Work): Int? =
+        dao.historyItem(accountId, work.id, work.type)?.progress
+
+    suspend fun recordProgress(work: Work, page: Int) = repo.record(accountId, work, page)
+
+    suspend fun novelBody(work: Work): NovelBody {
+        if (work.demo >= 0) return NovelBody(Demo.novel)
+        val downloaded = completed(work).firstOrNull { it.kind == "novel" && it.uri.isNotEmpty() }
+        val local = downloaded?.let { task ->
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    appContext.contentResolver
+                        .openInputStream(task.uri.toUri())
+                        ?.bufferedReader()
+                        ?.use { it.readText() }
+                }
+                    .getOrNull()
+            }
+        }
+        return if (local != null) NovelBody(local) else repo.novel(accountId, work.id)
+    }
+
+    fun ugoiraFrames(work: Work, retry: Int, playing: () -> Boolean): Flow<ImageBitmap> = flow {
+        val (metadata, file) = ugoiraArchive(work, retry)
+        ZipFile(file).use { zip ->
+            while (currentCoroutineContext().isActive) {
+                for (frame in metadata.frames) {
+                    while (!playing()) delay(100)
+                    emit(decodeUgoiraFrame(zip, frame))
+                    delay(frame.delay.toLong().coerceAtLeast(16))
+                }
+            }
+        }
+    }
+        .flowOn(Dispatchers.IO)
+
+    private suspend fun ugoiraArchive(work: Work, retry: Int): Pair<Ugoira, File> {
+        val account = accountId
+        val completed = dao.completed(account, work.id)
+        val metadata =
+            completed
+                .firstOrNull { it.kind == "frames" }
+                ?.let { task ->
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            appContext.contentResolver
+                                .openInputStream(task.uri.toUri())
+                                ?.bufferedReader()
+                                ?.use { AppJson.decodeFromString<Ugoira>(it.readText()) }
+                        }
+                            .getOrNull()
+                    }
+                } ?: repo.ugoira(account, work.id)
+        require(metadata.frames.isNotEmpty() && metadata.frames.size <= 10000) { "动图帧信息无效" }
+        val file = File(appContext.cacheDir, "ugoira_${account}_${work.id}.zip")
+        withContext(Dispatchers.IO) {
+            if (retry > 0) file.delete()
+            if (!file.exists()) {
+                completed
+                    .firstOrNull { it.kind == "ugoira" }
+                    ?.let { saved ->
+                        runCatching {
+                            appContext.contentResolver.openInputStream(saved.uri.toUri())?.use {
+                                input ->
+                                file.outputStream().use { input.copyTo(it) }
+                            }
+                        }
+                            .onFailure { file.delete() }
+                    }
+            }
+            if (!file.exists()) {
+                val partial = File(appContext.cacheDir, "ugoira_${work.id}.part")
+                val call =
+                    network
+                        .okHttp()
+                        .newCall(Request.Builder().url(metadata.zip_urls.medium).build())
+                val cancellation =
+                    launch(start = CoroutineStart.UNDISPATCHED) {
+                        try {
+                            awaitCancellation()
+                        } finally {
+                            call.cancel()
+                        }
+                    }
+                try {
+                    call.execute().use { response ->
+                        check(response.isSuccessful) { "动图下载失败（${response.code}）" }
+                        response.body.byteStream().use { input ->
+                            partial.outputStream().use { out ->
+                                val buffer = ByteArray(65536)
+                                var bytes = 0L
+                                while (true) {
+                                    ensureActive()
+                                    val n = input.read(buffer)
+                                    if (n < 0) break
+                                    bytes += n
+                                    check(bytes < 256 * 1024 * 1024) { "动图文件过大" }
+                                    out.write(buffer, 0, n)
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    ensureActive()
+                    throw e
+                } finally {
+                    cancellation.cancel()
+                }
+                ensureActive()
+                check(partial.renameTo(file)) { "动图文件保存失败" }
+            }
+        }
+        return metadata to file
+    }
+
+    private suspend fun decodeUgoiraFrame(zip: ZipFile, frame: Frame): ImageBitmap =
+        withContext(Dispatchers.IO) {
+            val entry = zip.getEntry(frame.file) ?: error("动图帧缺失")
+            check(entry.size in 1..32 * 1024 * 1024) { "动图帧大小无效" }
+            val bytes = zip.getInputStream(entry).use { it.readBytes() }
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+            options.inJustDecodeBounds = false
+            options.inSampleSize =
+                (maxOf(options.outWidth, options.outHeight) / 1600).coerceAtLeast(1)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)?.asImageBitmap()
+                ?: error("动图帧解码失败")
+        }
 
     fun record(work: Work) {
         run { repo.record(accountId, work) }
