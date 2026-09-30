@@ -684,9 +684,13 @@ fun FeedGrid(
     val showFeedMetadata = spec.section != "ranking" && settings.showHomeMetadata
     val feedContent: @Composable () -> Unit = {
         when {
-            refreshing && items.itemCount == 0 -> FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty) { LoadingState() }
+            refreshing && items.itemCount == 0 -> FeedGridStatus(
+                header, afterHeader, scrollHeaderWhileEmpty, grid, list, topPadding,
+                gridLayout = spec.kind != "novel",
+            ) { LoadingState() }
             error != null && items.itemCount == 0 ->
-                FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty) {
+                FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty, grid, list, topPadding,
+                    gridLayout = spec.kind != "novel") {
                     EmptyState(
                         strings.getString(R.string.ui_590a4df471),
                         error.error.message ?: strings.getString(R.string.ui_73a13d2b99),
@@ -697,7 +701,8 @@ fun FeedGrid(
                     }
                 }
             items.itemCount == 0 ->
-                FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty) {
+                FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty, grid, list, topPadding,
+                    gridLayout = spec.kind != "novel") {
                     EmptyState(
                         strings.getString(R.string.ui_37ce9e3518),
                         if (spec.section == "bookmarks") strings.getString(R.string.ui_408822a29e)
@@ -856,11 +861,43 @@ private fun FeedGridStatus(
     header: (@Composable () -> Unit)?,
     afterHeader: (@Composable () -> Unit)?,
     scrollHeader: Boolean,
+    gridState: LazyStaggeredGridState,
+    listState: LazyListState,
+    topPadding: Dp,
+    gridLayout: Boolean,
     content: @Composable () -> Unit,
 ) {
-    if (header == null) content()
-    else if (scrollHeader)
-        LazyColumn(Modifier.fillMaxSize()) {
+    if (scrollHeader && gridLayout) {
+        LazyVerticalStaggeredGrid(
+            columns = StaggeredGridCells.Adaptive(160.dp),
+            state = gridState,
+            horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+            verticalItemSpacing = PixivSpacing.compact,
+            contentPadding = PaddingValues(
+                start = PixivSpacing.content,
+                end = PixivSpacing.content,
+                top = topPadding,
+                bottom = PixivSpacing.content,
+            ),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            if (header != null) item(span = StaggeredGridItemSpan.FullLine, key = "feed_header") { header() }
+            if (afterHeader != null) item(span = StaggeredGridItemSpan.FullLine, key = "feed_after_header") { afterHeader() }
+            item(span = StaggeredGridItemSpan.FullLine, key = "feed_status") {
+                Box(Modifier.fillMaxWidth().heightIn(min = 240.dp), contentAlignment = Alignment.Center) { content() }
+            }
+        }
+    } else if (scrollHeader)
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(
+                start = PixivSpacing.content,
+                end = PixivSpacing.content,
+                top = topPadding,
+                bottom = PixivSpacing.content,
+            ),
+            modifier = Modifier.fillMaxSize(),
+        ) {
             if (header != null) item(key = "feed_header") { header() }
             if (afterHeader != null) item(key = "feed_after_header") { afterHeader() }
             item(key = "feed_status") {
@@ -871,7 +908,8 @@ private fun FeedGridStatus(
         Column(Modifier.fillMaxSize()) {
             if (header != null) Box(Modifier.padding(horizontal = PixivSpacing.content)) { header() }
             if (afterHeader != null) Box(Modifier.padding(horizontal = PixivSpacing.content)) { afterHeader() }
-            Box(Modifier.weight(1f)) { content() }
+            Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                contentAlignment = Alignment.Center) { content() }
         }
 }
 

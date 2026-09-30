@@ -567,7 +567,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                 style = MaterialTheme.typography.headlineSmall)
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                                 Text(
-                                    user.comment.ifBlank { "Pixiv 创作者" },
+                                    user.comment,
                                     Modifier.weight(1f).heightIn(min = 40.dp),
                                     maxLines = 2,
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
