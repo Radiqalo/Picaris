@@ -1,5 +1,8 @@
 package io.github.pixivnext.ui
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -36,6 +39,9 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
         return
     }
     val s by vm.settings.collectAsStateWithLifecycle()
+    val downloadPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { vm.download(work) }
     var chrome by rememberSaveable { mutableStateOf(true) }
     var vertical by rememberSaveable { mutableStateOf(false) }
     var localPages by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
@@ -120,6 +126,13 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                     navigationIcon = {
                         IconButton(back) {
                             AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540))
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            downloadPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }) {
+                            AppIcon(Glyph.Download, strings.getString(R.string.ui_255d6cabdc))
                         }
                     },
                     colors =
