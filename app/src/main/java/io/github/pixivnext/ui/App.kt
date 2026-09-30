@@ -181,7 +181,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             strings.getString(R.string.ui_d07cee786a),
             strings.getString(R.string.ui_a82c993d73),
         )
-    val icons = listOf(Glyph.Feed, Glyph.Discover, Glyph.Heart, Glyph.Person)
+    val icons = listOf(materialSymbol(MaterialSymbol.Home), Glyph.Discover, Glyph.Heart, Glyph.Person)
     val holder = rememberSaveableStateHolder()
     Box(Modifier.fillMaxSize()) {
         val wide =

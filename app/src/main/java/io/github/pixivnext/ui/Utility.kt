@@ -245,16 +245,9 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         strings.getString(R.string.ui_18df1a67a2),
                         strings.getString(R.string.ui_582c4d5fb8),
                         Glyph.Download,
-                    ) {
-                        navigate(Utility("downloads"))
-                    }
-                    SettingRow(
-                        strings.getString(R.string.ui_9d4ca7f307),
-                        strings.getString(R.string.ui_23fee3cacc),
-                        Glyph.Person,
                         position = SettingsRowPosition.Last,
                     ) {
-                        navigate(Utility("accounts"))
+                        navigate(Utility("downloads"))
                     }
                 }
             }

@@ -79,37 +79,15 @@ fun ScreenBar(
 
 @Composable
 fun ContentKindAction(vm: AppViewModel) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val selected = if (settings.contentKind == "novel") "novel" else "illust"
-    var menu by remember { mutableStateOf(false) }
-    Box {
-        TextButton(onClick = { menu = true }) {
-            Text(
-                if (selected == "novel") strings.getString(R.string.content_novel)
-                else strings.getString(R.string.content_illust)
-            )
-        }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            listOf(
-                "illust" to strings.getString(R.string.content_illust_detail),
-                "novel" to strings.getString(R.string.content_novel),
-            ).forEach { (kind, title) ->
-                DropdownMenuItem(
-                    text = { Text(title) },
-                    onClick = {
-                        menu = false
-                        vm.selectContentKind(kind)
-                    },
-                    leadingIcon = {
-                        AppIcon(if (kind == "novel") Glyph.Book else Glyph.Feed, null)
-                    },
-                    trailingIcon = {
-                        if (selected == kind) AppIcon(Glyph.Check, null)
-                    },
-                )
-            }
-        }
+    IconButton(onClick = {
+        vm.selectContentKind(if (selected == "novel") "illust" else "novel")
+    }) {
+        AppIcon(
+            materialSymbol(if (selected == "novel") MaterialSymbol.Book else MaterialSymbol.Image),
+            if (selected == "novel") "当前小说，切换到图片" else "当前图片，切换到小说",
+        )
     }
 }
 
@@ -369,7 +347,17 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     var private by rememberSaveable { mutableStateOf(false) }
     Column {
-        ScreenBar(strings.getString(R.string.ui_d07cee786a))
+        ScreenBar(
+            strings.getString(R.string.ui_d07cee786a),
+            actions = {
+                IconButton(onClick = { private = !private }) {
+                    AppIcon(
+                        materialSymbol(if (private) MaterialSymbol.Lock else MaterialSymbol.LockOpen),
+                        if (private) "当前私人收藏，切换到公开收藏" else "当前公开收藏，切换到私人收藏",
+                    )
+                }
+            },
+        )
         FeedGrid(
             FeedSpec(
                 section = "bookmarks",
@@ -379,17 +367,6 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             vm,
             navigate,
             Modifier.weight(1f),
-            header = {
-                ChoiceChips(
-                    if (private) "private" else "public",
-                    listOf(
-                        "public" to strings.getString(R.string.ui_dfe5a318ab),
-                        "private" to strings.getString(R.string.ui_82b464fc64),
-                    ),
-                    { private = it == "private" },
-                    Modifier.fillMaxWidth(),
-                )
-            },
         )
     }
 }
@@ -751,28 +728,27 @@ fun LoadingState() {
 fun EmptyState(
     title: String,
     description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector = Glyph.Discover,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     action: String? = null,
     onAction: () -> Unit = {},
 ) {
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Surface(
-                shape = MaterialTheme.shapes.extraLarge,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                AppIcon(icon, null, Modifier.padding(24.dp).size(40.dp))
-            }
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            Text(
-                description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            AppIcon(
+                if (action != null && icon != null) icon else materialSymbol(MaterialSymbol.Inbox),
+                null,
+                Modifier.size(32.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(title, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (action != null)
+                Text(description, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             if (action != null) Button(onAction) { Text(action) }
         }
     }
