@@ -159,6 +159,7 @@ fun RecommendedHomeScreen(
     vm: AppViewModel,
     navigate: (NavKey) -> Unit,
     gridState: LazyStaggeredGridState,
+    listState: LazyListState,
     search: () -> Unit,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
@@ -179,6 +180,7 @@ fun RecommendedHomeScreen(
             navigate,
             Modifier.weight(1f),
             gridState = gridState,
+            listState = listState,
         )
     }
 }
@@ -489,6 +491,7 @@ fun FeedGrid(
     rank: Boolean = false,
     header: (@Composable () -> Unit)? = null,
     gridState: LazyStaggeredGridState? = null,
+    listState: LazyListState? = null,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
@@ -508,6 +511,7 @@ fun FeedGrid(
     val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
     val busy by vm.bookmarkBusy.collectAsStateWithLifecycle()
     val grid = gridState ?: key(spec) { rememberLazyStaggeredGridState() }
+    val list = listState ?: key(spec) { rememberLazyListState() }
     val refreshing = items.loadState.refresh is LoadState.Loading
     val error = items.loadState.refresh as? LoadState.Error
     val showFeedMetadata =
@@ -541,6 +545,32 @@ fun FeedGrid(
                         Glyph.Book,
                     )
                 }
+            spec.kind == "novel" ->
+                LazyColumn(
+                    state = list,
+                    contentPadding = PaddingValues(PixivSpacing.content),
+                    verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+                    modifier = Modifier.fillMaxSize().testTag("novelList"),
+                ) {
+                    if (header != null) item(key = "feed_header") { header() }
+                    items(items.itemCount, key = items.itemKey { "${it.type}_${it.id}" }) { index ->
+                        items[index]?.let { work ->
+                            val identity = work.identity(vm.accountId)
+                            val current = bookmarks[identity]?.apply(work) ?: work
+                            NovelListItem(
+                                work = current,
+                                rank = index.takeIf { rank },
+                                likedBusy = identity in busy,
+                                onLike = { vm.run { vm.bookmark(current) } },
+                                onClick = {
+                                    vm.record(current)
+                                    navigate(Detail(current))
+                                },
+                            )
+                        }
+                    }
+                    item { FeedAppendState(items.loadState.append, items.itemCount, items::retry) }
+                }
             else ->
                 LazyVerticalStaggeredGrid(
                     columns = StaggeredGridCells.Adaptive(160.dp),
@@ -571,31 +601,73 @@ fun FeedGrid(
                         }
                     }
                     item(span = StaggeredGridItemSpan.FullLine) {
-                        when (val append = items.loadState.append) {
-                            is LoadState.Loading ->
-                                Box(
-                                    Modifier.fillMaxWidth().padding(20.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CircularWavyProgressIndicator(Modifier.size(32.dp))
-                                }
-                            is LoadState.Error ->
-                                TextButton({ items.retry() }, Modifier.fillMaxWidth()) {
-                                    Text(strings.getString(R.string.ui_0aa214d301))
-                                }
-                            else ->
-                                if (items.itemCount > 0)
-                                    Text(
-                                        strings.getString(R.string.ui_5f3621612f),
-                                        Modifier.fillMaxWidth().padding(16.dp),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    )
-                        }
+                        FeedAppendState(items.loadState.append, items.itemCount, items::retry)
                     }
                 }
         }
+    }
+}
+
+@Composable
+private fun NovelListItem(
+    work: Work,
+    rank: Int?,
+    likedBusy: Boolean,
+    onLike: () -> Unit,
+    onClick: () -> Unit,
+) {
+    ListItem(
+        onClick = onClick,
+        leadingContent = {
+            WorkImage(
+                work,
+                Modifier.size(width = 72.dp, height = 100.dp).clip(MaterialTheme.shapes.small),
+                scale = androidx.compose.ui.layout.ContentScale.Fit,
+            )
+        },
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight)) {
+                if (rank != null)
+                    Text("#${rank + 1}", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary)
+                Text(work.title, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleMedium)
+            }
+        },
+        supportingContent = {
+            Text(work.user.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        trailingContent = {
+            IconButton(onClick = onLike, enabled = !likedBusy,
+                modifier = Modifier.testTag("like_${work.type}_${work.id}")) {
+                AppIcon(
+                    if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                    if (work.is_bookmarked) "取消喜欢 ${work.title}" else "喜欢 ${work.title}",
+                    tint = if (work.is_bookmarked) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun FeedAppendState(state: LoadState, count: Int, retry: () -> Unit) {
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    when (state) {
+        is LoadState.Loading ->
+            Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
+                CircularWavyProgressIndicator(Modifier.size(32.dp))
+            }
+        is LoadState.Error -> TextButton(retry, Modifier.fillMaxWidth()) {
+            Text(strings.getString(R.string.ui_0aa214d301))
+        }
+        else -> if (count > 0)
+            Text(strings.getString(R.string.ui_5f3621612f),
+                Modifier.fillMaxWidth().padding(16.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 

@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
@@ -173,6 +174,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
 @Composable
 fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
+    val settings by vm.settings.collectAsStateWithLifecycle()
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
     val tabs =
@@ -239,10 +241,15 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 Box(Modifier.padding(padding)) {
                     holder.SaveableStateProvider(tab) {
                         val homeGrid = rememberLazyStaggeredGridState()
-                        ScrollingScreen(scrollableState = homeGrid.takeIf { tab == 0 }) {
+                        val homeList = rememberLazyListState()
+                        ScrollingScreen(
+                            scrollableState =
+                                if (tab != 0) null
+                                else if (settings.contentKind == "novel") homeList else homeGrid
+                        ) {
                             when (tab) {
                                 0 ->
-                                    RecommendedHomeScreen(vm, navigate, homeGrid) {
+                                    RecommendedHomeScreen(vm, navigate, homeGrid, homeList) {
                                         navigate(Search)
                                     }
                                 1 -> DiscoverScreen(vm, navigate)
