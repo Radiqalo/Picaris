@@ -8,12 +8,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -35,7 +32,8 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     val current = bookmarks[identity]?.apply(work) ?: work
     val actionBusy = identity in busy
     var privateDialog by remember { mutableStateOf(false) }
-    var fabMenu by remember { mutableStateOf(false) }
+    var moreMenu by remember { mutableStateOf(false) }
+    var followBusy by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val permission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -63,96 +61,16 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         runCatching { vm.detail(initial) }.onSuccess { work = it }
     }
     Scaffold(
-        topBar = {
-            TopAppBar(
-                scrollBehavior = LocalAppBarScrollBehavior.current,
-                title = {
-                    Text(
-                        if (work.isNovel) strings.getString(R.string.ui_094616a53c)
-                        else strings.getString(R.string.ui_4dad196a35)
-                    )
-                },
-                navigationIcon = {
-                    IconButton(back) {
-                        AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540))
-                    }
-                },
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            FloatingActionButtonMenu(
-                expanded = fabMenu,
-                button = {
-                    ToggleFloatingActionButton(
-                        checked = fabMenu,
-                        onCheckedChange = { fabMenu = it },
-                    ) {
-                        AppIcon(if (fabMenu) Glyph.Close else Glyph.More, "更多操作")
-                    }
-                },
+            FloatingActionButton(
+                onClick = { if (!actionBusy) bookmark() },
+                modifier = Modifier.navigationBarsPadding(),
             ) {
-                FloatingActionButtonMenuItem(
-                    onClick = {
-                        fabMenu = false
-                        navigate(Reader(current))
-                    },
-                    text = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
-                    icon = { AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null) },
+                AppIcon(
+                    if (current.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                    if (current.is_bookmarked) "取消收藏" else "收藏",
                 )
-                FloatingActionButtonMenuItem(
-                    onClick = {
-                        fabMenu = false
-                        share()
-                    },
-                    text = { Text(strings.getString(R.string.ui_7a92434114)) },
-                    icon = { AppIcon(Glyph.Share, null) },
-                )
-                FloatingActionButtonMenuItem(
-                    onClick = {
-                        fabMenu = false
-                        permission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    },
-                    text = { Text(strings.getString(R.string.ui_255d6cabdc)) },
-                    icon = { AppIcon(Glyph.Download, null) },
-                )
-                if (!current.is_bookmarked && !actionBusy)
-                    FloatingActionButtonMenuItem(
-                        onClick = {
-                            fabMenu = false
-                            privateDialog = true
-                        },
-                        text = { Text("非公开收藏") },
-                        icon = { AppIcon(Glyph.Heart, null) },
-                    )
-            }
-        },
-        bottomBar = {
-            Surface(shadowElevation = 2.dp, color = MaterialTheme.colorScheme.surfaceContainer) {
-                Row(
-                    Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp, 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Button(
-                        { bookmark() },
-                        enabled = !actionBusy,
-                        modifier = Modifier.weight(1f).height(52.dp),
-                    ) {
-                        AppIcon(
-                            if (current.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
-                            null,
-                            Modifier.size(20.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            if (current.is_bookmarked) strings.getString(R.string.ui_2d2cdabf29)
-                            else strings.getString(R.string.ui_7355147b10)
-                        )
-                    }
-                    IconButton({ navigate(Comments(current)) }) {
-                        AppIcon(Glyph.Comment, "评论区")
-                    }
-                }
             }
         },
     ) { padding ->
@@ -165,21 +83,23 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
             Row {
                 if (wide)
                     Box(
-                        Modifier.weight(1f).fillMaxHeight().padding(24.dp),
+                        Modifier.weight(1f).fillMaxHeight(),
                         contentAlignment = Alignment.Center,
                     ) {
                         WorkImage(
                             work,
                             Modifier.fillMaxWidth()
                                 .aspectRatio(work.aspect)
-                                .clip(MaterialTheme.shapes.large)
                                 .clickable { navigate(Reader(current)) }
                                 .testTag("detailImage"),
                         )
                     }
                 LazyColumn(
                     Modifier.weight(1f).testTag("detailList"),
-                    contentPadding = PaddingValues(20.dp),
+                    contentPadding = PaddingValues(
+                        top = if (wide) WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp else 0.dp,
+                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 96.dp,
+                    ),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
                     if (!wide)
@@ -193,7 +113,6 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                         work,
                                         Modifier.fillMaxHeight()
                                             .aspectRatio(work.aspect)
-                                            .clip(MaterialTheme.shapes.large)
                                             .clickable { navigate(Reader(current)) }
                                             .testTag("detailImage"),
                                     )
@@ -203,139 +122,201 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                     work,
                                     Modifier.fillMaxWidth()
                                         .aspectRatio(work.aspect.coerceAtLeast(.85f))
-                                        .clip(MaterialTheme.shapes.large)
                                         .clickable { navigate(Reader(current)) }
                                         .testTag("detailImage"),
                                 )
                         }
                     item {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            if (work.demo >= 0)
-                                SuggestionChip(
-                                    {},
-                                    label = { Text(strings.getString(R.string.ui_0ecf6f27ba)) },
-                                    icon = { AppIcon(Glyph.Discover, null, Modifier.size(16.dp)) },
-                                )
-                            Text(work.title, style = MaterialTheme.typography.headlineMedium)
-                            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                                Text(
-                                    "${compact(work.total_view)} 浏览",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    "${compact(current.total_bookmarks)} 收藏",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                if (work.page_count > 1)
-                                    Text(
-                                        "${work.page_count} 页",
-                                        style = MaterialTheme.typography.labelLarge,
+                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                if (work.demo >= 0)
+                                    SuggestionChip(
+                                        {},
+                                        label = { Text(strings.getString(R.string.ui_0ecf6f27ba)) },
+                                        icon = { AppIcon(Glyph.Discover, null, Modifier.size(16.dp)) },
                                     )
+                                Text(work.title, style = MaterialTheme.typography.headlineMedium)
+                                Text(
+                                    "ID ${work.id}  ·  ${work.create_date.take(10)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                                    Text(
+                                        "${compact(work.total_view)} 浏览",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        "${compact(current.total_bookmarks)} 收藏",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    if (work.page_count > 1)
+                                        Text(
+                                            "${work.page_count} 页",
+                                            style = MaterialTheme.typography.labelLarge,
+                                        )
+                                }
                             }
                         }
                     }
                     item {
-                        Surface(
-                            shape = MaterialTheme.shapes.large,
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ) {
-                            UserRow(work.user, { navigate(Author(work.user)) }) {
-                                AppIcon(Glyph.Arrow, strings.getString(R.string.ui_2184c031c9))
+                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                            Surface(
+                                shape = MaterialTheme.shapes.large,
+                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            ) {
+                                UserRow(work.user, { navigate(Author(work.user)) }) {
+                                    FilledTonalButton(
+                                        onClick = {
+                                            vm.run {
+                                                followBusy = true
+                                                try {
+                                                    work = work.copy(user = vm.follow(work.user))
+                                                } finally {
+                                                    followBusy = false
+                                                }
+                                            }
+                                        },
+                                        enabled = !followBusy,
+                                    ) {
+                                        Text(if (work.user.is_followed) "已关注" else "关注")
+                                    }
+                                }
                             }
                         }
                     }
                     if (work.isNovel)
                         item {
-                            FilledTonalButton(
-                                { navigate(Reader(current)) },
-                                Modifier.fillMaxWidth().height(52.dp),
-                            ) {
-                                AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    if (work.isNovel) strings.getString(R.string.ui_f3be3e4b09)
-                                    else if (work.type == "ugoira")
-                                        strings.getString(R.string.ui_d3657fb0a3)
-                                    else strings.getString(R.string.ui_a0217cd1e4)
-                                )
+                            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                                FilledTonalButton(
+                                    { navigate(Reader(current)) },
+                                    Modifier.fillMaxWidth().height(52.dp),
+                                ) {
+                                    AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        if (work.isNovel) strings.getString(R.string.ui_f3be3e4b09)
+                                        else if (work.type == "ugoira")
+                                            strings.getString(R.string.ui_d3657fb0a3)
+                                        else strings.getString(R.string.ui_a0217cd1e4)
+                                    )
+                                }
                             }
                         }
                     if (work.tags.isNotEmpty())
                         item {
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                work.tags.forEach { tag ->
-                                    AssistChip(
-                                        {
-                                            navigate(
-                                                Collection(
-                                                    tag.translated_name ?: tag.name,
-                                                    "search",
-                                                    if (work.isNovel) "novel" else "illust",
-                                                    word = tag.name,
+                            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    work.tags.forEach { tag ->
+                                        AssistChip(
+                                            {
+                                                navigate(
+                                                    Collection(
+                                                        tag.translated_name ?: tag.name,
+                                                        "search",
+                                                        if (work.isNovel) "novel" else "illust",
+                                                        word = tag.name,
+                                                    )
                                                 )
-                                            )
-                                        },
-                                        label = { Text("#${tag.translated_name ?: tag.name}") },
-                                    )
+                                            },
+                                            label = { Text("#${tag.translated_name ?: tag.name}") },
+                                        )
+                                    }
                                 }
                             }
                         }
                     if (work.caption.isNotBlank())
                         item {
-                            Text(
-                                Html.fromHtml(work.caption, Html.FROM_HTML_MODE_COMPACT).toString(),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                                Text(
+                                    Html.fromHtml(work.caption, Html.FROM_HTML_MODE_COMPACT).toString(),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     if (work.series != null)
                         item {
                             OutlinedButton(
-                                {
-                                    navigate(
-                                        Collection(
-                                            work.series!!.title,
-                                            "series",
-                                            "novel",
-                                            work.series!!.id,
-                                        )
-                                    )
+                                onClick = {
+                                    navigate(Collection(work.series!!.title, "series", "novel", work.series!!.id))
                                 },
-                                Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                             ) {
                                 Text("系列 · ${work.series!!.title}")
                             }
                         }
-                    item {
-                        Text(
-                            if (work.demo >= 0) strings.getString(R.string.ui_950b103464)
-                            else "ID ${work.id}  ·  ${work.create_date.take(10)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    item(key = "comments") {
+                        OutlinedButton(
+                            onClick = { navigate(Comments(current)) },
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        ) {
+                            AppIcon(Glyph.Comment, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("查看评论")
+                        }
                     }
                     if (!work.isNovel)
                         item {
-                            OutlinedButton(
-                                {
-                                    navigate(
-                                        Collection(
-                                            strings.getString(R.string.ui_29ffbeb614),
-                                            "related",
-                                            userId = work.id,
+                            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                                OutlinedButton(
+                                    {
+                                        navigate(
+                                            Collection(
+                                                strings.getString(R.string.ui_29ffbeb614),
+                                                "related",
+                                                userId = work.id,
+                                            )
                                         )
-                                    )
-                                },
-                                Modifier.fillMaxWidth(),
-                            ) {
-                                Text(strings.getString(R.string.ui_7c1af69922))
-                                Spacer(Modifier.width(8.dp))
-                                AppIcon(Glyph.Arrow, null)
+                                    },
+                                    Modifier.fillMaxWidth(),
+                                ) {
+                                    Text(strings.getString(R.string.ui_7c1af69922))
+                                    Spacer(Modifier.width(8.dp))
+                                    AppIcon(Glyph.Arrow, null)
+                                }
                             }
                         }
-                    item(key = "comments") { CommentPreview(current, vm, navigate) }
+                }
+            }
+            Row(
+                Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    .statusBarsPadding().padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                FilledTonalIconButton(onClick = back) { AppIcon(Glyph.Back, "返回") }
+                Box {
+                    FilledTonalIconButton(onClick = { moreMenu = true }) {
+                        AppIcon(Glyph.More, "更多操作")
+                    }
+                    DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
+                            leadingIcon = { AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null) },
+                            onClick = { moreMenu = false; navigate(Reader(current)) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(strings.getString(R.string.ui_7a92434114)) },
+                            leadingIcon = { AppIcon(Glyph.Share, null) },
+                            onClick = { moreMenu = false; share() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(strings.getString(R.string.ui_255d6cabdc)) },
+                            leadingIcon = { AppIcon(Glyph.Download, null) },
+                            onClick = {
+                                moreMenu = false
+                                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            },
+                        )
+                        if (!current.is_bookmarked && !actionBusy)
+                            DropdownMenuItem(
+                                text = { Text("非公开收藏") },
+                                leadingIcon = { AppIcon(Glyph.Heart, null) },
+                                onClick = { moreMenu = false; privateDialog = true },
+                            )
+                    }
                 }
             }
         }
