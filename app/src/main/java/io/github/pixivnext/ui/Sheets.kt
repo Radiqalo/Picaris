@@ -22,7 +22,10 @@ fun ActionSheet(
 ) {
     val height = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
     ModalBottomSheet(onDismissRequest = onDismissRequest,
-        sheetState = rememberBottomSheetState(SheetValue.Hidden, setOf(SheetValue.PartiallyExpanded))) {
+        sheetState = rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        )) {
         Column(Modifier.fillMaxWidth().heightIn(max = height * .85f)
             .imePadding().padding(horizontal = PixivSpacing.content),
             verticalArrangement = Arrangement.spacedBy(PixivSpacing.related)) {
