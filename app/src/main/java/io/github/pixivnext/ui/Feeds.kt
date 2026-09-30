@@ -6,6 +6,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -369,7 +371,6 @@ fun CollectionScreen(
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
 
-    var mode by rememberSaveable { mutableStateOf("day") }
     Column {
         if (route.section == "ranking" || route.section == "search")
             MediumFlexibleTopAppBar(
@@ -388,73 +389,63 @@ fun CollectionScreen(
                 scrollBehavior = LocalAppBarScrollBehavior.current,
             )
         else ScreenBar(route.title, back = back)
-        FeedGrid(
+        if (route.section == "ranking")
+            RankingPages(vm, navigate, Modifier.weight(1f))
+        else FeedGrid(
             FeedSpec(
                 section = route.section,
                 kind =
                     if (route.section == "series" || route.section == "related") route.kind
                     else settings.contentKind,
-                mode = mode,
                 userId = route.userId,
                 word = route.word,
             ),
             vm,
             navigate,
             Modifier.weight(1f),
-            route.section == "ranking",
-            header =
-                if (route.section == "ranking") {
-                    {
-                        RankingModePicker(mode, { mode = it })
-                    }
-                } else null,
         )
     }
 }
 
 @Composable
-fun RankingModePicker(selected: String, onSelect: (String) -> Unit) {
+private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier: Modifier) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-    val primary =
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val modes =
         listOf(
             "day" to strings.getString(R.string.ui_f8c9b6d5d8),
             "week" to strings.getString(R.string.ui_5e00476f4e),
             "month" to strings.getString(R.string.ui_0b554f5235),
-        )
-    val more =
-        listOf(
             "day_male" to strings.getString(R.string.ui_fbe010365d),
             "day_female" to strings.getString(R.string.ui_b57634d889),
             "week_rookie" to strings.getString(R.string.ui_8b7adaf587),
         )
-    var menu by remember { mutableStateOf(false) }
-    Column {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("榜单", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-            Box {
-                TextButton({ menu = true }) {
-                    Text(more.firstOrNull { it.first == selected }?.second ?: "更多模式")
-                }
-                DropdownMenu(menu, { menu = false }) {
-                    more.forEach { (key, label) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = {
-                                menu = false
-                                onSelect(key)
-                            },
-                        )
-                    }
-                }
+    val pager = rememberPagerState(pageCount = { modes.size })
+    val scope = rememberCoroutineScope()
+    Column(modifier) {
+        PrimaryScrollableTabRow(selectedTabIndex = pager.currentPage) {
+            modes.forEachIndexed { index, (_, title) ->
+                Tab(
+                    selected = pager.currentPage == index,
+                    onClick = { scope.launch { pager.animateScrollToPage(index) } },
+                    text = { Text(title) },
+                )
             }
         }
-        ChoiceChips(
-            selected,
-            primary,
-            onSelect,
-            Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
-            showCheck = true,
-        )
+        HorizontalPager(
+            state = pager,
+            modifier = Modifier.weight(1f),
+            beyondViewportPageCount = 0,
+            key = { modes[it].first },
+        ) { page ->
+            FeedGrid(
+                FeedSpec(section = "ranking", kind = settings.contentKind, mode = modes[page].first),
+                vm,
+                navigate,
+                Modifier.fillMaxSize(),
+                rank = true,
+            )
+        }
     }
 }
 
