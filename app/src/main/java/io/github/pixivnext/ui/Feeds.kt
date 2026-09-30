@@ -253,25 +253,33 @@ fun CollectionScreen(
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     var mode by rememberSaveable { mutableStateOf("day") }
+    val rankingModes =
+        listOf(
+            "day" to strings.getString(R.string.ui_f8c9b6d5d8),
+            "week" to strings.getString(R.string.ui_5e00476f4e),
+            "month" to strings.getString(R.string.ui_0b554f5235),
+            "day_male" to strings.getString(R.string.ui_fbe010365d),
+            "day_female" to strings.getString(R.string.ui_b57634d889),
+            "week_rookie" to strings.getString(R.string.ui_8b7adaf587),
+        )
     Column {
-        ScreenBar(route.title, back = back)
-        if (route.section == "ranking")
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf(
-                        "day" to strings.getString(R.string.ui_f8c9b6d5d8),
-                        "week" to strings.getString(R.string.ui_5e00476f4e),
-                        "month" to strings.getString(R.string.ui_0b554f5235),
-                        "day_male" to strings.getString(R.string.ui_fbe010365d),
-                        "day_female" to strings.getString(R.string.ui_b57634d889),
-                        "week_rookie" to strings.getString(R.string.ui_8b7adaf587),
+        if (route.section == "ranking" || route.section == "search")
+            MediumFlexibleTopAppBar(
+                title = {
+                    Text(
+                        if (route.section == "search") "#${route.title}" else route.title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    .forEach { (key, title) ->
-                        FilterChip(mode == key, { mode = key }, label = { Text(title) })
+                },
+                navigationIcon = {
+                    IconButton(back) {
+                        AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540))
                     }
-            }
+                },
+                scrollBehavior = LocalAppBarScrollBehavior.current,
+            )
+        else ScreenBar(route.title, back = back)
         FeedGrid(
             FeedSpec(
                 section = route.section,
@@ -284,6 +292,18 @@ fun CollectionScreen(
             navigate,
             Modifier.weight(1f),
             route.section == "ranking",
+            header =
+                if (route.section == "ranking") {
+                    {
+                        ChoiceChips(
+                            mode,
+                            rankingModes,
+                            { mode = it },
+                            Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
+                            showCheck = true,
+                        )
+                    }
+                } else null,
         )
     }
 }
@@ -295,6 +315,7 @@ fun FeedGrid(
     navigate: (NavKey) -> Unit,
     modifier: Modifier = Modifier,
     rank: Boolean = false,
+    header: (@Composable () -> Unit)? = null,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
@@ -326,23 +347,27 @@ fun FeedGrid(
         modifier = modifier.fillMaxWidth(),
     ) {
         when {
-            refreshing && items.itemCount == 0 -> LoadingState()
+            refreshing && items.itemCount == 0 -> FeedGridStatus(header) { LoadingState() }
             error != null && items.itemCount == 0 ->
-                EmptyState(
-                    strings.getString(R.string.ui_590a4df471),
-                    error.error.message ?: strings.getString(R.string.ui_73a13d2b99),
-                    Glyph.Discover,
-                    strings.getString(R.string.ui_e2d53a6d3a),
-                ) {
-                    items.retry()
+                FeedGridStatus(header) {
+                    EmptyState(
+                        strings.getString(R.string.ui_590a4df471),
+                        error.error.message ?: strings.getString(R.string.ui_73a13d2b99),
+                        Glyph.Discover,
+                        strings.getString(R.string.ui_e2d53a6d3a),
+                    ) {
+                        items.retry()
+                    }
                 }
             items.itemCount == 0 ->
-                EmptyState(
-                    strings.getString(R.string.ui_37ce9e3518),
-                    if (spec.section == "bookmarks") strings.getString(R.string.ui_408822a29e)
-                    else strings.getString(R.string.ui_a588489241),
-                    Glyph.Book,
-                )
+                FeedGridStatus(header) {
+                    EmptyState(
+                        strings.getString(R.string.ui_37ce9e3518),
+                        if (spec.section == "bookmarks") strings.getString(R.string.ui_408822a29e)
+                        else strings.getString(R.string.ui_a588489241),
+                        Glyph.Book,
+                    )
+                }
             else ->
                 LazyVerticalStaggeredGrid(
                     columns = StaggeredGridCells.Adaptive(160.dp),
@@ -353,6 +378,10 @@ fun FeedGrid(
                         PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
                     modifier = Modifier.fillMaxSize().testTag("feedGrid"),
                 ) {
+                    if (header != null)
+                        item(span = StaggeredGridItemSpan.FullLine, key = "feed_header") {
+                            header()
+                        }
                     items(items.itemCount, key = items.itemKey { "${it.type}_${it.id}" }) { index ->
                         items[index]?.let { work ->
                             val identity = work.identity(vm.accountId)
@@ -396,6 +425,16 @@ fun FeedGrid(
                 }
         }
     }
+}
+
+@Composable
+private fun FeedGridStatus(header: (@Composable () -> Unit)?, content: @Composable () -> Unit) {
+    if (header == null) content()
+    else
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.padding(horizontal = PixivSpacing.content)) { header() }
+            Box(Modifier.weight(1f)) { content() }
+        }
 }
 
 @Composable
