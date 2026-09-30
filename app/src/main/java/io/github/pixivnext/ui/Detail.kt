@@ -489,7 +489,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                     Column(Modifier.fillMaxWidth().padding(PixivSpacing.content),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
-                        Text(user.name, Modifier.authorTransition(user.id, "name"),
+                        Text(user.name,
                             style = MaterialTheme.typography.headlineSmall,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         Button(

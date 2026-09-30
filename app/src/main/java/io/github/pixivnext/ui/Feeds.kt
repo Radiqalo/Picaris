@@ -397,7 +397,7 @@ private fun DiscoveryAuthorCard(preview: UserPreview, vm: AppViewModel, navigate
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
             Avatar(user, Modifier.size(64.dp), sharedTransition = true)
-            Text(user.name, Modifier.authorTransition(user.id, "name"), style = MaterialTheme.typography.titleMedium, maxLines = 1,
+            Text(user.name, style = MaterialTheme.typography.titleMedium, maxLines = 1,
                 overflow = TextOverflow.Ellipsis)
             if (user.comment.isNotBlank()) Text(user.comment, maxLines = 2,
                 overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
@@ -1474,7 +1474,7 @@ fun UserRow(
     segment: Pair<Int, Int>? = null,
     action: @Composable (() -> Unit)? = null,
 ) {
-    val content: @Composable () -> Unit = { Text(user.name, Modifier.authorTransition(user.id, "name")) }
+    val content: @Composable () -> Unit = { Text(user.name) }
     val supporting: @Composable () -> Unit = {
         Text("@${user.account.ifEmpty {user.id.toString()}}")
     }
@@ -1501,7 +1501,7 @@ fun UserRow(
 
 @Composable
 fun Avatar(user: User, modifier: Modifier = Modifier, sharedTransition: Boolean = false) {
-    val avatarModifier = modifier.size(48.dp).authorTransition(user.id, "avatar", sharedTransition).clip(CircleShape)
+    val avatarModifier = modifier.size(48.dp).authorAvatarTransition(user.id, sharedTransition).clip(CircleShape)
     if (user.profile_image_urls.medium.isNotEmpty())
         AsyncImage(
             user.profile_image_urls.medium,

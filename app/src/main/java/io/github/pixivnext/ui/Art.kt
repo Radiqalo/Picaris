@@ -199,18 +199,16 @@ fun Modifier.aboveWorkTransition(): Modifier {
 }
 
 @Composable
-fun Modifier.authorTransition(id: Long, part: String, enabled: Boolean = true): Modifier {
+fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier {
     val transition = LocalWorkTransition.current
     if (!enabled || transition == null || id == 0L) return this
     val navigation = LocalNavAnimatedContentScope.current
     val motion = artworkBoundsMotion()
     return with(transition) {
-        val key = rememberSharedContentState("author:$id:$part")
-        if (part == "avatar") this@authorTransition.sharedElement(key, navigation,
+        val key = rememberSharedContentState("author:$id:avatar")
+        this@authorAvatarTransition.sharedElement(key, navigation,
             boundsTransform = { _, _ -> motion },
             clipInOverlayDuringTransition = OverlayClip(CircleShape))
-        else this@authorTransition.sharedBounds(key, navigation,
-            boundsTransform = { _, _ -> motion })
     }
 }
 

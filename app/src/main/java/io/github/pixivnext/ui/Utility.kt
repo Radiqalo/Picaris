@@ -161,7 +161,6 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             }, sharedTransition = true)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight)) {
                             Text(account?.user?.name ?: "PixivNext",
-                                Modifier.authorTransition(account?.user?.id ?: 0L, "name"),
                                 style = MaterialTheme.typography.headlineSmall,
                                 maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             Text(
