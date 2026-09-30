@@ -7,6 +7,8 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
@@ -31,46 +33,74 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import androidx.navigation3.ui.NavDisplay
 
 internal val LocalNavigationGestureActive = staticCompositionLocalOf { false }
+
+internal enum class NavigationMotionStyle { Slide, Zoom }
 
 internal class NavigationMotion(
     private val position: FiniteAnimationSpec<IntOffset>,
     private val scale: FiniteAnimationSpec<Float>,
+    private val effects: FiniteAnimationSpec<Float>,
     private val direction: Int,
 ) {
     private var predictiveDirection: Int? = null
+    private var predictiveStyle: NavigationMotionStyle? = null
 
-    fun forward(scope: AnimatedContentTransitionScope<*>): ContentTransform = with(scope) {
-        if (predictiveDirection != null) return@with back()
-        (
-            slideInHorizontally(position) { direction * it } +
-                scaleIn(scale, initialScale = 0.96f)
-        ) togetherWith (
-            slideOutHorizontally(position) { -direction * it / 12 } +
-                scaleOut(scale, targetScale = 0.96f) +
-                ExitTransition.KeepUntilTransitionsFinished
-        )
+    fun forward(
+        scope: AnimatedContentTransitionScope<*>,
+        style: NavigationMotionStyle = NavigationMotionStyle.Slide,
+    ): ContentTransform = with(scope) {
+        predictiveStyle?.let { return@with back(it) }
+        when (style) {
+            NavigationMotionStyle.Slide ->
+                slideInHorizontally(position) { direction * it } togetherWith (
+                    slideOutHorizontally(position) { -direction * it / 12 } +
+                        ExitTransition.KeepUntilTransitionsFinished
+                )
+            NavigationMotionStyle.Zoom ->
+                (scaleIn(scale, initialScale = 0.92f) + fadeIn(effects)) togetherWith (
+                    scaleOut(scale, targetScale = 0.98f) + ExitTransition.KeepUntilTransitionsFinished
+                )
+        }
     }
 
-    fun back(): ContentTransform {
+    fun back(style: NavigationMotionStyle = NavigationMotionStyle.Slide): ContentTransform {
         val swipeDirection = predictiveDirection ?: direction
-        return (
-            slideInHorizontally(position) { -swipeDirection * it / 12 } +
-                scaleIn(scale, initialScale = 0.96f)
-        ) togetherWith (
-            slideOutHorizontally(position) { swipeDirection * it } +
-                scaleOut(scale, targetScale = 0.96f)
-        )
+        return when (predictiveStyle ?: style) {
+            NavigationMotionStyle.Slide ->
+                slideInHorizontally(position) { -swipeDirection * it / 12 } togetherWith
+                    slideOutHorizontally(position) { swipeDirection * it }
+            NavigationMotionStyle.Zoom ->
+                scaleIn(scale, initialScale = 0.98f) togetherWith (
+                    scaleOut(scale, targetScale = 0.92f) + fadeOut(effects)
+                )
+        }
     }
 
-    fun predictiveBack(swipeDirection: Int): ContentTransform {
+    fun predictiveBack(
+        swipeDirection: Int,
+        style: NavigationMotionStyle = NavigationMotionStyle.Slide,
+    ): ContentTransform {
         predictiveDirection = swipeDirection
-        return back()
+        predictiveStyle = style
+        return back(style)
     }
+
+    fun metadata(style: NavigationMotionStyle): Map<String, Any> =
+        NavDisplay.transitionSpec { forward(this, style) } +
+            NavDisplay.popTransitionSpec { back(style) } +
+            NavDisplay.predictivePopTransitionSpec { swipeEdge ->
+                predictiveBack(
+                    if (swipeEdge == androidx.navigationevent.NavigationEvent.EDGE_RIGHT) -1 else 1,
+                    style,
+                )
+            }
 
     fun settled() {
         predictiveDirection = null
+        predictiveStyle = null
     }
 }
 
@@ -78,8 +108,9 @@ internal class NavigationMotion(
 internal fun rememberNavigationMotion(): NavigationMotion {
     val position = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
     val scale = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Ltr) 1 else -1
-    return remember(position, scale, direction) { NavigationMotion(position, scale, direction) }
+    return remember(position, scale, effects, direction) { NavigationMotion(position, scale, effects, direction) }
 }
 
 @Composable

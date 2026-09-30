@@ -141,6 +141,9 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                 LocalTransitionTapRouter provides remember { TransitionTapRouter() },
                             ) {
                                 val navigationMotion = rememberNavigationMotion()
+                                val imageNavigation = remember(navigationMotion) {
+                                    navigationMotion.metadata(NavigationMotionStyle.Zoom)
+                                }
                                 val pageDecorator = remember(navigationMotion) {
                                     NavEntryDecorator<NavKey> { entry ->
                                         NavigationPage(navigationMotion::settled) { entry.Content() }
@@ -191,7 +194,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                     CommentsScreen(it.work, vm, navigate, back)
                                                 }
                                             }
-                                            entry<Detail>(metadata = ListDetailSceneStrategy.detailPane()) {
+                                            entry<Detail>(metadata = ListDetailSceneStrategy.detailPane() + imageNavigation) {
                                                 val entry = it
                                                 val isInteractive = { backStack.lastOrNull() == entry }
                                                 NavigationExitContent(isInteractive) {
@@ -206,7 +209,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                     )
                                                 }
                                             }
-                                            entry<Reader> {
+                                            entry<Reader>(metadata = imageNavigation) {
                                                 ScrollingScreen { ReaderScreen(it.work, vm, back) }
                                             }
                                             entry<Author>(metadata = ListDetailSceneStrategy.listPane()) {
