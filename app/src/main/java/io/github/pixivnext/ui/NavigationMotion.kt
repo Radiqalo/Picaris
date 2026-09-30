@@ -52,7 +52,7 @@ import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 
 internal val LocalNavigationGestureActive = staticCompositionLocalOf { false }
-private val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
+internal val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
 
 @Composable
 internal fun NavigationPageDisplay(

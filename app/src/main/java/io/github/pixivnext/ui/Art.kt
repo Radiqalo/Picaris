@@ -173,7 +173,7 @@ private fun artworkBoundsMotion(): FiniteAnimationSpec<Rect> {
 
 @Composable
 fun Modifier.workTransitionControls(): Modifier {
-    val gestureActive = LocalNavigationGestureActive.current
+    val gestureActive = LocalNavigationGestureInProgress.current
     val navigation = LocalNavAnimatedContentScope.current
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val opacity by navigation.transition.animateFloat(
@@ -191,7 +191,7 @@ fun Modifier.workTransitionControls(): Modifier {
 
 @Composable
 fun Modifier.aboveWorkTransition(): Modifier {
-    val gestureActive = LocalNavigationGestureActive.current
+    val gestureActive = LocalNavigationGestureInProgress.current
     val transition = LocalWorkTransition.current ?: return this
     val navigation = LocalNavAnimatedContentScope.current
     return with(transition) {
@@ -206,7 +206,7 @@ fun Modifier.aboveWorkTransition(): Modifier {
 
 @Composable
 fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier {
-    val gestureActive = LocalNavigationGestureActive.current
+    val gestureActive = LocalNavigationGestureInProgress.current
     val transition = LocalWorkTransition.current
     if (!enabled || gestureActive || transition == null || id == 0L) return this
     val navigation = LocalNavAnimatedContentScope.current
@@ -230,7 +230,7 @@ fun WorkImage(
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val transition = LocalWorkTransition.current
-    val gestureActive = LocalNavigationGestureActive.current
+    val gestureActive = LocalNavigationGestureInProgress.current
     val imageModifier = if (sharedTransition && !gestureActive && LocalImageTransitionEnabled.current && transition != null) {
         val navigationScope = LocalNavAnimatedContentScope.current
         val boundsAnimation = artworkBoundsMotion()
