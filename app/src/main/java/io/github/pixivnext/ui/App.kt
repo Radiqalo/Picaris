@@ -144,7 +144,11 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                         fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)
                                     },
                                     popTransitionSpec = {
-                                        fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)
+                                        (fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)).apply {
+                                            // The shared image stays in its overlay; the returning page
+                                            // must receive input ahead of the departing detail surface.
+                                            targetContentZIndex = 1f
+                                        }
                                     },
                                     entryDecorators =
                                         listOf(rememberSaveableStateHolderNavEntryDecorator()),
