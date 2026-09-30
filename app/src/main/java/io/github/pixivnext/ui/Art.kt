@@ -206,14 +206,13 @@ fun Modifier.aboveWorkTransition(): Modifier {
 fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier {
     val gestureActive = LocalNavigationGestureActive.current
     val transition = LocalWorkTransition.current
-    if (!enabled || transition == null || id == 0L) return this
+    if (!enabled || gestureActive || transition == null || id == 0L) return this
     val navigation = LocalNavAnimatedContentScope.current
     val motion = artworkBoundsMotion()
     return with(transition) {
         val key = rememberSharedContentState("author:$id:avatar")
         this@authorAvatarTransition.sharedElement(key, navigation,
             boundsTransform = { _, _ -> motion },
-            renderInOverlayDuringTransition = !gestureActive,
             clipInOverlayDuringTransition = OverlayClip(CircleShape))
     }
 }
@@ -230,7 +229,7 @@ fun WorkImage(
 ) {
     val transition = LocalWorkTransition.current
     val gestureActive = LocalNavigationGestureActive.current
-    val imageModifier = if (sharedTransition && LocalImageTransitionEnabled.current && transition != null) {
+    val imageModifier = if (sharedTransition && !gestureActive && LocalImageTransitionEnabled.current && transition != null) {
         val navigationScope = LocalNavAnimatedContentScope.current
         val boundsAnimation = artworkBoundsMotion()
         val shape = MaterialTheme.shapes.small
@@ -256,7 +255,6 @@ fun WorkImage(
                 sharedContentState = rememberSharedContentState("work-image:${work.type}:${work.id}"),
                 animatedVisibilityScope = navigationScope,
                 boundsTransform = { _, _ -> boundsAnimation },
-                renderInOverlayDuringTransition = !gestureActive,
                 clipInOverlayDuringTransition = OverlayClip(animatedShape),
             ).clip(animatedShape)
         }

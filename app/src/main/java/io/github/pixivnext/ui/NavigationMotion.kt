@@ -46,13 +46,12 @@ internal class NavigationMotion(
     private val direction: Int,
 ) {
     private var predictiveDirection: Int? = null
-    private var predictiveStyle: NavigationMotionStyle? = null
 
     fun forward(
         scope: AnimatedContentTransitionScope<*>,
         style: NavigationMotionStyle = NavigationMotionStyle.Slide,
     ): ContentTransform = with(scope) {
-        predictiveStyle?.let { return@with back(it) }
+        predictiveDirection?.let { return@with backPreview(it) }
         when (style) {
             NavigationMotionStyle.Slide ->
                 slideInHorizontally(position) { direction * it } togetherWith (
@@ -67,11 +66,11 @@ internal class NavigationMotion(
     }
 
     fun back(style: NavigationMotionStyle = NavigationMotionStyle.Slide): ContentTransform {
-        val swipeDirection = predictiveDirection ?: direction
-        return when (predictiveStyle ?: style) {
+        predictiveDirection?.let { return backPreview(it, committed = true) }
+        return when (style) {
             NavigationMotionStyle.Slide ->
-                slideInHorizontally(position) { -swipeDirection * it / 12 } togetherWith
-                    slideOutHorizontally(position) { swipeDirection * it }
+                slideInHorizontally(position) { -direction * it / 12 } togetherWith
+                    slideOutHorizontally(position) { direction * it }
             NavigationMotionStyle.Zoom ->
                 scaleIn(scale, initialScale = 0.98f) togetherWith (
                     scaleOut(scale, targetScale = 0.92f) + fadeOut(effects)
@@ -79,13 +78,16 @@ internal class NavigationMotion(
         }
     }
 
-    fun predictiveBack(
-        swipeDirection: Int,
-        style: NavigationMotionStyle = NavigationMotionStyle.Slide,
-    ): ContentTransform {
+    fun predictiveBack(swipeDirection: Int): ContentTransform {
         predictiveDirection = swipeDirection
-        predictiveStyle = style
-        return back(style)
+        return backPreview(swipeDirection)
+    }
+
+    private fun backPreview(swipeDirection: Int, committed: Boolean = false): ContentTransform {
+        val previewExit = scaleOut(scale, targetScale = 0.90f) +
+            slideOutHorizontally(position) { swipeDirection * it / 32 }
+        return scaleIn(scale, initialScale = 0.98f) togetherWith
+            if (committed) previewExit + fadeOut(effects) else previewExit
     }
 
     fun metadata(style: NavigationMotionStyle): Map<String, Any> =
@@ -94,13 +96,11 @@ internal class NavigationMotion(
             NavDisplay.predictivePopTransitionSpec { swipeEdge ->
                 predictiveBack(
                     if (swipeEdge == androidx.navigationevent.NavigationEvent.EDGE_RIGHT) -1 else 1,
-                    style,
                 )
             }
 
     fun settled() {
         predictiveDirection = null
-        predictiveStyle = null
     }
 }
 
