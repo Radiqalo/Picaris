@@ -21,6 +21,8 @@ import io.github.pixivnext.R
 import io.github.pixivnext.core.*
 import io.github.pixivnext.designsystem.*
 import kotlinx.serialization.Serializable
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.collectLatest
 
 @Serializable data object Home : NavKey
 
@@ -186,6 +188,12 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         )
     val icons = listOf(materialSymbol(MaterialSymbol.Home), Glyph.Discover, Glyph.Heart, Glyph.Person)
     val holder = rememberSaveableStateHolder()
+    val homeReselection = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
+    val selectTab: (Int) -> Unit = { index ->
+        if (tab == 0 && index == 0) homeReselection.tryEmit(Unit)
+        tab = index
+        navigate(Home)
+    }
     Box(Modifier.fillMaxSize()) {
         val wide =
             androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width /
@@ -207,10 +215,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         WideNavigationRailItem(
                             railExpanded = true,
                             selected = tab == index,
-                            onClick = {
-                                tab = index
-                                navigate(Home)
-                            },
+                            onClick = { selectTab(index) },
                             icon = { AppIcon(icons[index], title) },
                             label = { Text(title) },
                         )
@@ -227,10 +232,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             tabs.forEachIndexed { index, title ->
                                 ShortNavigationBarItem(
                                     selected = tab == index,
-                                    onClick = {
-                                        tab = index
-                                        navigate(Home)
-                                    },
+                                    onClick = { selectTab(index) },
                                     icon = { AppIcon(icons[index], null) },
                                     label = { Text(title) },
                                 )
@@ -247,6 +249,18 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                 if (tab != 0) null
                                 else if (settings.contentKind == "novel") homeList else homeGrid
                         ) {
+                            if (tab == 0) {
+                                val appBar = LocalAppBarScrollBehavior.current
+                                LaunchedEffect(settings.contentKind) {
+                                    homeReselection.collectLatest {
+                                        if (settings.contentKind == "novel")
+                                            homeList.animateScrollToItem(0)
+                                        else homeGrid.animateScrollToItem(0)
+                                        appBar?.state?.heightOffset = 0f
+                                        appBar?.state?.contentOffset = 0f
+                                    }
+                                }
+                            }
                             when (tab) {
                                 0 ->
                                     RecommendedHomeScreen(vm, navigate, homeGrid, homeList) {
