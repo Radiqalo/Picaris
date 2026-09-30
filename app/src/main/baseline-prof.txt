@@ -20863,13 +20863,11 @@ SPLio/github/pixivnext/AppViewModel;->getAccountId()J
 SPLio/github/pixivnext/AppViewModel;->getActive()Lkotlinx/coroutines/flow/StateFlow;
 SPLio/github/pixivnext/AppViewModel;->getBusy()Lkotlinx/coroutines/flow/MutableStateFlow;
 SPLio/github/pixivnext/AppViewModel;->getDao()Lio/github/pixivnext/core/LibraryDao;
-SPLio/github/pixivnext/AppViewModel;->getDemo()Lkotlinx/coroutines/flow/StateFlow;
 PLio/github/pixivnext/AppViewModel;->getDownloadList()Lkotlinx/coroutines/flow/StateFlow;
 PLio/github/pixivnext/AppViewModel;->getHistory()Lkotlinx/coroutines/flow/StateFlow;
 SPLio/github/pixivnext/AppViewModel;->getMessage()Lkotlinx/coroutines/flow/MutableSharedFlow;
 SPLio/github/pixivnext/AppViewModel;->getRevision()Lkotlinx/coroutines/flow/MutableStateFlow;
 SPLio/github/pixivnext/AppViewModel;->getSettings()Lkotlinx/coroutines/flow/StateFlow;
-SPLio/github/pixivnext/AppViewModel;->preview()V
 Lio/github/pixivnext/AppViewModel$active$1;
 SPLio/github/pixivnext/AppViewModel$active$1;-><init>(Lkotlin/coroutines/Continuation;)V
 SPLio/github/pixivnext/AppViewModel$active$1;->invoke(Lio/github/pixivnext/core/VaultData;ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -21056,10 +21054,6 @@ SPLio/github/pixivnext/core/AuthRepository;-><init>(Lio/github/pixivnext/core/Cr
 SPLio/github/pixivnext/core/AuthRepository;->getActive()Lio/github/pixivnext/core/Account;
 SPLio/github/pixivnext/core/AuthRepository;->getData()Lkotlinx/coroutines/flow/StateFlow;
 Lio/github/pixivnext/core/CredentialStore;
-Lio/github/pixivnext/core/Demo;
-SPLio/github/pixivnext/core/Demo;-><clinit>()V
-SPLio/github/pixivnext/core/Demo;-><init>()V
-SPLio/github/pixivnext/core/Demo;->getWorks()Ljava/util/List;
 Lio/github/pixivnext/core/FeedSpec;
 SPLio/github/pixivnext/core/FeedSpec;-><init>(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 SPLio/github/pixivnext/core/FeedSpec;-><init>(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;JLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -21253,7 +21247,6 @@ SPLio/github/pixivnext/core/Work;-><init>(JLjava/lang/String;Ljava/lang/String;L
 SPLio/github/pixivnext/core/Work;-><init>(JLjava/lang/String;Ljava/lang/String;Lio/github/pixivnext/core/ImageUrls;Ljava/lang/String;Lio/github/pixivnext/core/User;Ljava/util/List;IIIIIZIILjava/lang/String;Ljava/util/List;Lio/github/pixivnext/core/SinglePage;ILio/github/pixivnext/core/Series;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 SPLio/github/pixivnext/core/Work;->getAspect()F
 SPLio/github/pixivnext/core/Work;->getCover()Ljava/lang/String;
-SPLio/github/pixivnext/core/Work;->getDemo()I
 SPLio/github/pixivnext/core/Work;->getId()J
 SPLio/github/pixivnext/core/Work;->getPage_count()I
 SPLio/github/pixivnext/core/Work;->getTitle()Ljava/lang/String;
@@ -21548,9 +21541,6 @@ SPLio/github/pixivnext/ui/AppKt$PixivApp$lambda$12$0$0$1$$inlined$entry$default$
 SPLio/github/pixivnext/ui/AppKt$PixivApp$lambda$12$0$0$1$$inlined$entry$default$9;-><init>()V
 Lio/github/pixivnext/ui/ArtKt;
 SPLio/github/pixivnext/ui/ArtKt;->$r8$lambda$6JRCtQQLlTkkvu2s9geH6isWLUo(ILandroidx/compose/ui/graphics/drawscope/DrawScope;)Lkotlin/Unit;
-SPLio/github/pixivnext/ui/ArtKt;->DemoArt$lambda$0$0$polygon(Landroidx/compose/ui/graphics/drawscope/DrawScope;FFLjava/util/List;J)V
-SPLio/github/pixivnext/ui/ArtKt;->DemoArt$lambda$0$0(ILandroidx/compose/ui/graphics/drawscope/DrawScope;)Lkotlin/Unit;
-SPLio/github/pixivnext/ui/ArtKt;->DemoArt(ILandroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 SPLio/github/pixivnext/ui/ArtKt;->WorkImage(Lio/github/pixivnext/core/Work;Landroidx/compose/ui/Modifier;Landroidx/compose/ui/layout/ContentScale;Ljava/lang/String;Landroidx/compose/runtime/Composer;II)V
 Lio/github/pixivnext/ui/ArtKt$$ExternalSyntheticLambda1;
 SPLio/github/pixivnext/ui/ArtKt$$ExternalSyntheticLambda1;-><init>(I)V

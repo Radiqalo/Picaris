@@ -18,7 +18,6 @@ constructor(
     fun feed(
         account: Long,
         spec: FeedSpec,
-        demo: Boolean = false,
         filter: ContentFilter? = null,
     ): Flow<PagingData<Work>> =
         Pager(PagingConfig(pageSize = 30, enablePlaceholders = false)) {
@@ -29,63 +28,46 @@ constructor(
                         params: LoadParams<String>
                     ): LoadResult<String, Work> =
                         try {
-                            if (demo)
-                                LoadResult.Page(
-                                    Demo.works.filter {
-                                            (if (spec.kind == "novel") it.isNovel else !it.isNovel) &&
-                                            (spec.section != "user" || spec.kind == "novel" ||
-                                                if (spec.kind == "manga") it.type == "manga" else it.type != "manga") &&
-                                            (spec.word.isEmpty() ||
-                                                it.title.contains(spec.word, true) ||
-                                                it.tags.any { t ->
-                                                    t.name.contains(spec.word, true)
-                                                })
-                                    },
-                                    null,
-                                    null,
-                                )
-                            else {
-                                val (path, query) = endpoint(spec, account)
-                                val key = params.key ?: path + query.toSortedMap().toString()
-                                val response =
-                                    try {
-                                        val raw =
-                                            api.get(
-                                                account,
-                                                params.key ?: path,
-                                                if (params.key == null) query else emptyMap(),
-                                            )
-                                        val parsed =
-                                            AppJson.decodeFromJsonElement<FeedResponse>(raw)
-                                        dao.cache(
-                                            CachedFeed(
-                                                account,
-                                                key,
-                                                AppJson.encodeToString(parsed),
-                                                System.currentTimeMillis(),
-                                            )
+                            val (path, query) = endpoint(spec, account)
+                            val key = params.key ?: path + query.toSortedMap().toString()
+                            val response =
+                                try {
+                                    val raw =
+                                        api.get(
+                                            account,
+                                            params.key ?: path,
+                                            if (params.key == null) query else emptyMap(),
                                         )
-                                        parsed
-                                    } catch (e: Exception) {
-                                        if (
-                                            e is PixivException ||
-                                                e is kotlinx.coroutines.CancellationException
+                                    val parsed =
+                                        AppJson.decodeFromJsonElement<FeedResponse>(raw)
+                                    dao.cache(
+                                        CachedFeed(
+                                            account,
+                                            key,
+                                            AppJson.encodeToString(parsed),
+                                            System.currentTimeMillis(),
                                         )
-                                            throw e
-                                        dao.cached(account, key)?.let {
-                                            AppJson.decodeFromString<FeedResponse>(it.json)
-                                                .copy(next_url = null)
-                                        } ?: throw e
-                                    }
-                                val s = filter ?: settings.flow.first().contentFilter()
-                                LoadResult.Page(
-                                    (response.illusts +
-                                            response.novels.map { it.copy(type = "novel") })
-                                        .filter(s::allows),
-                                    null,
-                                    response.next_url,
-                                )
-                            }
+                                    )
+                                    parsed
+                                } catch (e: Exception) {
+                                    if (
+                                        e is PixivException ||
+                                            e is kotlinx.coroutines.CancellationException
+                                    )
+                                        throw e
+                                    dao.cached(account, key)?.let {
+                                        AppJson.decodeFromString<FeedResponse>(it.json)
+                                            .copy(next_url = null)
+                                    } ?: throw e
+                                }
+                            val s = filter ?: settings.flow.first().contentFilter()
+                            LoadResult.Page(
+                                (response.illusts +
+                                        response.novels.map { it.copy(type = "novel") })
+                                    .filter(s::allows),
+                                null,
+                                response.next_url,
+                            )
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -176,15 +158,14 @@ constructor(
     }
 
     suspend fun bookmark(account: Long, work: Work, public: Boolean = true): Work {
-        if (work.demo < 0)
-            api.post(
-                account,
-                "${if(work.is_bookmarked) "v1" else "v2"}/${if(work.isNovel) "novel" else "illust"}/bookmark/${if(work.is_bookmarked) "delete" else "add"}",
-                mapOf(
-                    (if (work.isNovel) "novel_id" else "illust_id") to work.id.toString(),
-                    "restrict" to if (public) "public" else "private",
-                ),
-            )
+        api.post(
+            account,
+            "${if(work.is_bookmarked) "v1" else "v2"}/${if(work.isNovel) "novel" else "illust"}/bookmark/${if(work.is_bookmarked) "delete" else "add"}",
+            mapOf(
+                (if (work.isNovel) "novel_id" else "illust_id") to work.id.toString(),
+                "restrict" to if (public) "public" else "private",
+            ),
+        )
         return work.copy(
             is_bookmarked = !work.is_bookmarked,
             total_bookmarks =
@@ -232,7 +213,6 @@ constructor(
         account: Long,
         section: String,
         restrict: String,
-        demo: Boolean,
     ): Flow<PagingData<User>> {
         require(section in setOf("following", "follower", "mypixiv"))
         return Pager(PagingConfig(pageSize = 30, enablePlaceholders = false)) {
@@ -243,32 +223,21 @@ constructor(
                         params: LoadParams<String>
                     ): LoadResult<String, User> =
                         try {
-                            if (demo)
-                                LoadResult.Page(
-                                    Demo.works
-                                        .map { it.user.copy(is_followed = section == "following") }
-                                        .distinctBy { it.id }
-                                        .take(if (section == "mypixiv") 2 else 5),
-                                    null,
-                                    null,
-                                )
-                            else {
-                                val query = mutableMapOf("user_id" to account.toString())
-                                if (section == "following") query["restrict"] = restrict
-                                val response =
-                                    AppJson.decodeFromJsonElement<UserResponse>(
-                                        api.get(
-                                            account,
-                                            params.key ?: "v1/user/$section",
-                                            if (params.key == null) query else emptyMap(),
-                                        )
+                            val query = mutableMapOf("user_id" to account.toString())
+                            if (section == "following") query["restrict"] = restrict
+                            val response =
+                                AppJson.decodeFromJsonElement<UserResponse>(
+                                    api.get(
+                                        account,
+                                        params.key ?: "v1/user/$section",
+                                        if (params.key == null) query else emptyMap(),
                                     )
-                                LoadResult.Page(
-                                    response.user_previews.map { it.user },
-                                    null,
-                                    response.next_url,
                                 )
-                            }
+                            LoadResult.Page(
+                                response.user_previews.map { it.user },
+                                null,
+                                response.next_url,
+                            )
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
                         } catch (e: Exception) {
@@ -379,97 +348,4 @@ internal fun commentEndpoint(work: Work, parentId: Long?): Pair<String, Map<Stri
     else
         "v3/$kind/comments" to
             mapOf("${kind}_id" to work.id.toString(), "include_total_comments" to "true")
-}
-
-object Demo {
-    val works =
-        listOf(
-            Work(
-                1,
-                "海风经过的午后",
-                user = User(101, "青空 atelier"),
-                width = 900,
-                height = 1200,
-                total_bookmarks = 3286,
-                total_view = 18240,
-                demo = 0,
-                tags = listOf(Tag("风景"), Tag("夏日"), Tag("原创")),
-            ),
-            Work(
-                2,
-                "花与月的来信",
-                user = User(102, "mori"),
-                width = 900,
-                height = 1100,
-                total_bookmarks = 1462,
-                demo = 1,
-                tags = listOf(Tag("花"), Tag("原创")),
-            ),
-            Work(
-                3,
-                "城市慢半拍",
-                user = User(103, "sora"),
-                width = 1200,
-                height = 900,
-                total_bookmarks = 2401,
-                demo = 2,
-                tags = listOf(Tag("城市"), Tag("风景")),
-            ),
-            Work(
-                4,
-                "在云端醒来",
-                user = User(104, "白昼"),
-                width = 900,
-                height = 1300,
-                total_bookmarks = 5072,
-                demo = 3,
-                tags = listOf(Tag("云"), Tag("幻想")),
-            ),
-            Work(
-                5,
-                "蓝色之外",
-                type = "manga",
-                user = User(105, "灯台"),
-                width = 900,
-                height = 1100,
-                page_count = 12,
-                total_bookmarks = 942,
-                demo = 4,
-                tags = listOf(Tag("漫画"), Tag("原创")),
-            ),
-            Work(
-                6,
-                "森林收集者",
-                user = User(106, "木野"),
-                width = 900,
-                height = 1250,
-                total_bookmarks = 1831,
-                demo = 5,
-                tags = listOf(Tag("森林"), Tag("风景")),
-            ),
-            Work(
-                7,
-                "直到下一场雨",
-                type = "novel",
-                user = User(107, "雨森"),
-                text_length = 6210,
-                total_bookmarks = 312,
-                demo = 1,
-                caption = "一封没有寄出的信，和一个关于夏天的约定。",
-                series = Series(11, "夏日来信"),
-            ),
-            Work(
-                8,
-                "星星停靠的地方",
-                type = "novel",
-                user = User(108, "夜航"),
-                text_length = 12040,
-                total_bookmarks = 568,
-                demo = 3,
-                caption = "在最后一班列车上，遇见来自另一片星空的旅人。",
-            ),
-        )
-    val novel =
-        "第一章  风从海边来\n\n夏天的第一场雨落下时，车站的钟停在了四点十七分。\n\n我把信折好，放进旧书的夹页里。窗外的树影摇晃，远处海面上有一艘缓慢驶过的船。那些没有说出口的话，也像船一样，终于找到了可以停靠的地方。\n\n这是用于预览阅读体验的原创示例正文。真实登录后将读取 Pixiv 上的小说。\n\n"
-            .repeat(12)
 }

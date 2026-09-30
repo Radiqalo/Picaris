@@ -197,9 +197,8 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val demo by vm.demo.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
-    val trendResult by produceState<List<TrendingTag>?>(vm.cachedTrendingTags(), vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
+    val trendResult by produceState<List<TrendingTag>?>(vm.cachedTrendingTags(), vm.accountId, settings.contentKind, settings.contentFilter()) {
         value = vm.cachedTrendingTags()
         if (settings.contentKind == "novel") {
             value = emptyList()
@@ -213,7 +212,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             emptyList()
         }
     }
-    val authorResult by produceState<List<UserPreview>?>(vm.cachedRecommendedAuthors(), vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
+    val authorResult by produceState<List<UserPreview>?>(vm.cachedRecommendedAuthors(), vm.accountId, settings.contentKind, settings.contentFilter()) {
         value = vm.cachedRecommendedAuthors()
         value = if (settings.contentKind == "novel") emptyList() else try {
             vm.recommendedAuthors()
@@ -223,8 +222,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val trends = trendResult.orEmpty()
     // Pixiv's recommended tags are personalized; derive these from works the user
     // actually viewed. Trending tags below remain the separate server-provided list.
-    val recommendedTags = remember(history, demo, settings.contentKind, settings.contentFilter()) {
-        val viewedWorks = if (demo) Demo.works else history.mapNotNull { entry ->
+    val recommendedTags = remember(history, settings.contentKind, settings.contentFilter()) {
+        val viewedWorks = history.mapNotNull { entry ->
             runCatching { AppJson.decodeFromString<Work>(entry.json) }.getOrNull()
         }
         viewedWorks.asSequence()
@@ -1092,7 +1091,6 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
     var userLoading by remember { mutableStateOf(false) }
     var userRetry by remember { mutableIntStateOf(0) }
     val history by vm.searchHistory.collectAsStateWithLifecycle()
-    val demo by vm.demo.collectAsStateWithLifecycle()
     val active by vm.active.collectAsStateWithLifecycle()
     var jumping by remember { mutableStateOf(false) }
     fun submit(value: String, selectedJump: SearchJump? = null) {
@@ -1123,20 +1121,9 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
             else submitted = query
         }
     }
-    LaunchedEffect(demo, settings.contentKind) {
+    LaunchedEffect(vm.accountId, settings.contentKind) {
         if (initialQuery != null) return@LaunchedEffect
-        if (demo && settings.contentKind == "novel")
-            tags = Demo.works.filter { it.isNovel }.flatMap { it.tags }.distinctBy { it.name }
-        else if (demo)
-            tags =
-                listOf(
-                    Tag(strings.getString(R.string.ui_3539adaa60)),
-                    Tag(strings.getString(R.string.ui_1f68f47fa2)),
-                    Tag(strings.getString(R.string.ui_b0de623882)),
-                    Tag(strings.getString(R.string.ui_0b5c557e9d)),
-                    Tag(strings.getString(R.string.ui_6a0b30d361)),
-                )
-        else if (settings.contentKind == "illust")
+        if (settings.contentKind == "illust")
             runCatching { vm.tags() }.onSuccess { tags = it }
         else tags = emptyList()
     }

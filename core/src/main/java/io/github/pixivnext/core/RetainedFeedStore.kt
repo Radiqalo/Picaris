@@ -22,7 +22,7 @@ class RetainedFeedStore(
     @Synchronized
     fun get(key: FeedSession): Flow<PagingData<Work>> {
         sessions.keys
-            .filter { it.account != key.account || it.demo != key.demo || it.filter != key.filter }
+            .filter { it.account != key.account || it.filter != key.filter }
             .forEach { sessions.remove(it)?.scope?.cancel() }
         sessions[key]?.let {
             return it.flow

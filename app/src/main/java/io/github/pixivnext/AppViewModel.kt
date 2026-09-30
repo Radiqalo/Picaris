@@ -36,41 +36,34 @@ constructor(
 ) : ViewModel() {
     val settings = settingsStore.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Settings())
     val accounts = auth.data.stateIn(viewModelScope, SharingStarted.Eagerly, auth.data.value)
-    val demo = savedState.getStateFlow("demo", false)
+    private var legacyNavigationReset = savedState.remove<Boolean>("demo") == true
     val busy = MutableStateFlow(false)
     val message = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val callback = MutableSharedFlow<android.net.Uri>(extraBufferCapacity = 1)
     val revision = MutableStateFlow(0)
     val accountId
-        get() = if (demo.value) -1L else auth.active?.user?.id ?: 0L
+        get() = auth.active?.user?.id ?: 0L
 
     val active =
-        combine(accounts, demo) { a, d ->
-                if (d) Account(User(-1, "演示预览"), "", "", 0)
-                else a.accounts.find { it.user.id == a.activeId }
-            }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.Eagerly,
-                if (demo.value) Account(User(-1, "演示预览"), "", "", 0) else auth.active,
-            )
+        accounts.map { data -> data.accounts.find { it.user.id == data.activeId } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, auth.active)
     val history =
-        combine(accounts, demo) { _, _ -> accountId }
+        accounts.map { data -> data.accounts.find { it.user.id == data.activeId }?.user?.id ?: 0L }
             .distinctUntilChanged()
             .flatMapLatest { dao.history(it) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val searchHistory =
-        combine(accounts, demo) { _, _ -> accountId }
+        accounts.map { data -> data.accounts.find { it.user.id == data.activeId }?.user?.id ?: 0L }
             .distinctUntilChanged()
             .flatMapLatest { dao.searches(it) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val downloadList =
-        combine(accounts, demo) { _, _ -> accountId }
+        accounts.map { data -> data.accounts.find { it.user.id == data.activeId }?.user?.id ?: 0L }
             .distinctUntilChanged()
             .flatMapLatest { dao.downloads(it) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val cachedFeedBytes =
-        combine(accounts, demo) { _, _ -> accountId }
+        accounts.map { data -> data.accounts.find { it.user.id == data.activeId }?.user?.id ?: 0L }
             .distinctUntilChanged()
             .flatMapLatest { dao.cachedFeedBytes(it) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
@@ -80,7 +73,7 @@ constructor(
         RetainedFeedStore(
             viewModelScope,
             { key ->
-                repo.feed(key.account, key.spec, key.demo, key.filter)
+                repo.feed(key.account, key.spec, key.filter)
             },
         )
     val bookmarkStates = MutableStateFlow<Map<WorkIdentity, BookmarkState>>(emptyMap())
@@ -91,12 +84,12 @@ constructor(
     fun people(section: String, restrict: String): Flow<PagingData<User>> {
         val account = accountId
         return peopleFeeds.getOrPut(Triple(account, section, restrict)) {
-            repo.people(account, section, restrict, demo.value).cachedIn(viewModelScope)
+            repo.people(account, section, restrict).cachedIn(viewModelScope)
         }
     }
 
     fun feed(spec: FeedSpec) =
-        feeds.get(FeedSession(accountId, demo.value, spec, settings.value.contentFilter()))
+        feeds.get(FeedSession(accountId, spec, settings.value.contentFilter()))
 
     suspend fun bookmark(work: Work, public: Boolean = true): Work {
         val account = accountId
@@ -149,7 +142,6 @@ constructor(
             busy.value = true
             try {
                 auth.importToken(token)
-                savedState["demo"] = false
             } finally {
                 busy.value = false
             }
@@ -162,7 +154,6 @@ constructor(
             busy.value = true
             try {
                 auth.finishLogin(code)
-                savedState["demo"] = false
             } finally {
                 busy.value = false
             }
@@ -171,18 +162,13 @@ constructor(
 
     fun select(id: Long) {
         run {
-            savedState["demo"] = false
             auth.select(id)
             revision.value++
         }
     }
 
-    fun preview() {
-        savedState["demo"] = true
-    }
-
-    fun leave() {
-        savedState["demo"] = false
+    fun takeLegacyNavigationReset(): Boolean = legacyNavigationReset.also {
+        legacyNavigationReset = false
     }
 
     fun update(block: (Settings) -> Settings) {
@@ -203,7 +189,7 @@ constructor(
     }
 
     suspend fun detail(initial: Work): Work =
-        if (initial.demo >= 0) initial else repo.detail(accountId, initial.id, initial.isNovel)
+        repo.detail(accountId, initial.id, initial.isNovel)
 
     suspend fun tags(): List<Tag> = repo.tags(accountId)
 
@@ -229,7 +215,7 @@ constructor(
     private val discoveryAuthors = mutableMapOf<FeedSession, Deferred<List<UserPreview>>>()
     private var pixivisionRequest: Deferred<List<PixivisionArticle>>? = null
     private val authorProfiles = mutableMapOf<Pair<Long, Long>, Deferred<AuthorDetails>>()
-    private fun discoveryKey() = FeedSession(accountId, demo.value,
+    private fun discoveryKey() = FeedSession(accountId,
         FeedSpec(kind = settings.value.contentKind), settings.value.contentFilter())
     fun cachedTrendingTags(): List<TrendingTag>? = discoveryTrends[discoveryKey()]?.let {
         if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
@@ -238,19 +224,13 @@ constructor(
         if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
     }
 
-    private fun demoPixivisionArticles() = Demo.works.filterNot { it.isNovel }.take(5).map { work ->
-        PixivisionArticle(work.id, "演示特辑 · ${work.title}", "", "", work.demo)
-    }
-
     fun cachedPixivisionArticles(): List<PixivisionArticle>? {
-        if (demo.value) return demoPixivisionArticles()
         return pixivisionRequest?.let {
             if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
         }
     }
 
     suspend fun pixivisionArticles(): List<PixivisionArticle> {
-        if (demo.value) return demoPixivisionArticles()
         if (pixivisionRequest?.isCancelled == true) pixivisionRequest = null
         val request = pixivisionRequest ?: viewModelScope.async { pixivision.articles() }
             .also { pixivisionRequest = it }
@@ -261,9 +241,7 @@ constructor(
         val key = discoveryKey()
         if (discoveryTrends[key]?.isCancelled == true) discoveryTrends.remove(key)
         return discoveryTrends.getOrPut(key) { viewModelScope.async {
-        if (key.demo) Demo.works.flatMap { work -> work.tags.map { TrendingTag(it, work) } }
-            .distinctBy { it.tag.name }
-        else repo.trendingTags(key.account)
+            repo.trendingTags(key.account)
         } }.await()
     }
 
@@ -271,14 +249,12 @@ constructor(
         val key = discoveryKey()
         if (discoveryAuthors[key]?.isCancelled == true) discoveryAuthors.remove(key)
         return discoveryAuthors.getOrPut(key) { viewModelScope.async {
-        if (key.demo) Demo.works.filterNot { it.isNovel }.groupBy { it.user.id }
-            .values.map { UserPreview(it.first().user, it.take(3)) }
-        else repo.recommendedAuthors(key.account)
+            repo.recommendedAuthors(key.account)
         } }.await()
     }
 
     suspend fun searchUsers(word: String): List<User> =
-        if (demo.value) Demo.works.map { it.user } else repo.searchUsers(accountId, word)
+        repo.searchUsers(accountId, word)
 
     fun clearSearch() = run { dao.clearSearch(accountId) }
 
@@ -313,15 +289,15 @@ constructor(
         if (authorProfiles[account to initial.id]?.isCancelled == true)
             authorProfiles.remove(account to initial.id)
         return authorProfiles.getOrPut(account to initial.id) { viewModelScope.async {
-            if (account == -1L) AuthorDetails(initial) else repo.authorDetails(account, initial.id)
+            repo.authorDetails(account, initial.id)
         } }.await()
     }
 
     suspend fun user(initial: User): User =
-        if (demo.value) initial else repo.user(accountId, initial.id).first
+        repo.user(accountId, initial.id).first
 
     suspend fun follow(user: User): User =
-        if (demo.value) user.copy(is_followed = !user.is_followed) else repo.follow(accountId, user)
+        repo.follow(accountId, user)
 
     suspend fun completed(work: Work) = dao.completed(accountId, work.id)
 
@@ -331,7 +307,6 @@ constructor(
     suspend fun recordProgress(work: Work, page: Int) = repo.record(accountId, work, page)
 
     suspend fun novelBody(work: Work): NovelBody {
-        if (work.demo >= 0) return NovelBody(Demo.novel)
         val downloaded = completed(work).firstOrNull { it.kind == "novel" && it.uri.isNotEmpty() }
         val local = downloaded?.let { task ->
             withContext(Dispatchers.IO) {

@@ -11,10 +11,17 @@ import org.junit.runner.RunWith
 
 private const val PACKAGE = "io.github.pixivnext"
 
-private fun MacrobenchmarkScope.preview() {
-    if (!device.hasObject(By.text("海风经过的午后"))) device.wait(Until.hasObject(By.text("先体验界面")), 10000)
-    device.findObject(By.text("先体验界面"))?.click()
-    device.wait(Until.hasObject(By.text("海风经过的午后")), 10000)
+private fun MacrobenchmarkScope.openLoggedOutSettings() {
+    if (device.hasObject(By.text("设置")) && device.hasObject(By.desc("返回"))) {
+        device.pressBack()
+        device.waitForIdle()
+    }
+    org.junit.Assume.assumeTrue(
+        "Requires an unauthenticated installation",
+        device.wait(Until.hasObject(By.text("使用 Pixiv 账号登录")), 10000),
+    )
+    device.findObject(By.desc("设置")).click()
+    device.waitForIdle()
 }
 
 @RunWith(AndroidJUnit4::class)
@@ -35,7 +42,7 @@ class ClientBenchmark {
         }
 
     @Test
-    fun browseArtwork() =
+    fun scrollSettings() =
         rule.measureRepeated(
             packageName = PACKAGE,
             metrics = listOf(FrameTimingMetric()),
@@ -43,7 +50,7 @@ class ClientBenchmark {
             compilationMode = CompilationMode.None(),
             setupBlock = {
                 startActivityAndWait()
-                preview()
+                openLoggedOutSettings()
             },
         ) {
             repeat(3) {
@@ -70,14 +77,10 @@ class ClientBaselineProfile {
         rule.collect(packageName = PACKAGE) {
             pressHome()
             startActivityAndWait()
-            preview()
+            openLoggedOutSettings()
             repeat(3) {
                 device.swipe(700, 1700, 700, 800, 20)
                 device.waitForIdle()
             }
-            device.findObject(By.text("我的"))?.click()
-            device.waitForIdle()
-            device.findObject(By.desc("设置"))?.click()
-            device.waitForIdle()
         }
 }

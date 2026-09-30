@@ -90,7 +90,11 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
             backStack.removeAt(backStack.lastIndex)
         }
     }
-    LaunchedEffect(Unit) { vm.message.collect { snackbar.showSnackbar(it) } }
+    LaunchedEffect(Unit) {
+        if (vm.takeLegacyNavigationReset())
+            while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+        vm.message.collect { snackbar.showSnackbar(it) }
+    }
     var routedAccountId by rememberSaveable { mutableStateOf(account?.user?.id) }
     LaunchedEffect(account?.user?.id) {
         if (routedAccountId != account?.user?.id)

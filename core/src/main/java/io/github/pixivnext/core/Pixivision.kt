@@ -17,7 +17,6 @@ data class PixivisionArticle(
     val title: String,
     val cover: String,
     val url: String,
-    val demo: Int = -1,
 )
 
 fun parsePixivisionArticles(html: String): List<PixivisionArticle> {

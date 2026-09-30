@@ -200,14 +200,6 @@ private fun ThreadScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { Text(work.title, style = MaterialTheme.typography.titleMedium) }
-            if (work.demo >= 0)
-                item {
-                    Text(
-                        "本地演示评论，不会发送到 Pixiv。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             if (parent != null) item { CommentCard(parent, work, navigate, onReply = null) }
             items(state.comments, key = { it.id }) { comment ->
                 CommentCard(comment, work, navigate) {

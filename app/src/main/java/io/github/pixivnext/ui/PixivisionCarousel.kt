@@ -43,7 +43,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.pixivnext.AppViewModel
 import io.github.pixivnext.R
@@ -60,9 +59,8 @@ private data class PixivisionContent(
 fun PixivisionCarousel(vm: AppViewModel) {
     val strings = LocalResources.current
     val context = LocalContext.current
-    val demo by vm.demo.collectAsStateWithLifecycle()
     var retry by remember { mutableIntStateOf(0) }
-    val result by produceState(PixivisionContent(vm.cachedPixivisionArticles()), demo, retry) {
+    val result by produceState(PixivisionContent(vm.cachedPixivisionArticles()), retry) {
         value = PixivisionContent(vm.cachedPixivisionArticles())
         value = try {
             PixivisionContent(vm.pixivisionArticles())
@@ -108,8 +106,7 @@ fun PixivisionCarousel(vm: AppViewModel) {
                     shape = MaterialTheme.shapes.extraLarge,
                 ) {
                     Box(Modifier.fillMaxWidth().aspectRatio(1.65f)) {
-                        if (article.demo >= 0) DemoArt(article.demo, Modifier.matchParentSize())
-                        else AsyncImage(
+                        AsyncImage(
                             model = article.cover,
                             contentDescription = null,
                             modifier = Modifier.matchParentSize()

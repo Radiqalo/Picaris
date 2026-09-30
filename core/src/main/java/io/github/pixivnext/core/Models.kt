@@ -94,7 +94,6 @@ data class Work(
     val meta_single_page: SinglePage = SinglePage(),
     val text_length: Int = 0,
     val series: Series? = null,
-    val demo: Int = -1,
 ) {
     val isNovel
         get() = type == "novel"
@@ -186,7 +185,6 @@ fun ContentFilter.allows(work: Work) =
 
 data class FeedSession(
     val account: Long,
-    val demo: Boolean,
     val spec: FeedSpec,
     val filter: ContentFilter,
 )

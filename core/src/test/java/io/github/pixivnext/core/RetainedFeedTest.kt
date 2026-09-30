@@ -7,7 +7,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class RetainedFeedTest {
-    private val home = FeedSession(10, false, FeedSpec(), Settings().contentFilter())
+    private val home = FeedSession(10, FeedSpec(), Settings().contentFilter())
 
     @Test
     fun resubscribingAfterNavigationReusesLoadedGeneration() = runBlocking {

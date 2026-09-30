@@ -160,12 +160,6 @@ fun DetailScreen(
                     item {
                         Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                if (work.demo >= 0)
-                                    SuggestionChip(
-                                        {},
-                                        label = { Text(strings.getString(R.string.ui_0ecf6f27ba)) },
-                                        icon = { AppIcon(Glyph.Discover, null, Modifier.size(16.dp)) },
-                                    )
                                 Text(work.title, style = MaterialTheme.typography.headlineMedium)
                                 Text(
                                     "ID ${work.id}  ·  ${work.create_date.take(10)}",

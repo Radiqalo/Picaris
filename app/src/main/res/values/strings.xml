@@ -27,7 +27,6 @@
     <string name="ui_0b5c557e9d">幻想</string>
     <string name="ui_0b6361b284">使用 Kotlin、Jetpack Compose、Navigation 3、Ktor、Coil、Telephoto、Room、DataStore 和 Hilt。依赖许可详见源码中的 THIRD_PARTY_NOTICES。</string>
     <string name="ui_0c955150ac">已下载</string>
-    <string name="ui_0ecf6f27ba">演示作品 · 用于预览界面</string>
     <string name="ui_0ed0fdd725">屏蔽作者</string>
     <string name="ui_10ea138040">阅读与内容</string>
     <string name="ui_11d0241540">返回</string>
@@ -48,7 +47,6 @@
     <string name="ui_23fee3cacc">添加或切换 Pixiv 账号</string>
     <string name="ui_255d6cabdc">下载作品</string>
     <string name="ui_272209c708">关于 PixivNext</string>
-    <string name="ui_288ccac9b4">先体验界面</string>
     <string name="ui_296adf9512">热度</string>
     <string name="ui_29f6711704">浏览历史</string>
     <string name="ui_29ffbeb614">相关作品</string>
@@ -155,7 +153,6 @@
     <string name="ui_be6850c1b8">仅清理当前账号的浏览记录</string>
     <string name="ui_be728419d8">关闭动态取色后生效</string>
     <string name="ui_bed172efc9">关于</string>
-    <string name="ui_c7e8e58589">退出演示模式</string>
     <string name="ui_ca05850133">将移除此账号的本机登录凭据，下载文件仍然保留。</string>
     <string name="ui_d00981d6ce">排行榜</string>
     <string name="ui_d07cee786a">收藏</string>
@@ -196,7 +193,6 @@
     <string name="ui_f8c9b6d5d8">日榜</string>
     <string name="ui_f9ba0caac3">标签部分匹配</string>
     <string name="ui_fadf24dbc5">保存</string>
-    <string name="ui_fbd46976e0">演示模式</string>
     <string name="ui_fbe010365d">男性热门</string>
     <string name="ui_fcbae46bf8">已暂停</string>
     <string name="search_date_range">发布日期范围</string>

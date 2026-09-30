@@ -27,7 +27,6 @@ constructor(
     private val repo: WorkRepository,
 ) {
     suspend fun enqueue(account: Long, work: Work) {
-        check(work.demo < 0) { "演示作品不提供下载，请先登录 Pixiv" }
         val metadata = AppJson.encodeToString(work)
         if (work.isNovel) {
             queue(

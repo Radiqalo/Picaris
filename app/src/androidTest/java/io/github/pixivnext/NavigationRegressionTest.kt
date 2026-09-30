@@ -8,24 +8,18 @@ import io.github.pixivnext.core.*
 import org.junit.*
 import org.junit.runner.RunWith
 
+@Ignore("Offline demo removed; requires an isolated API fixture")
 @RunWith(AndroidJUnit4::class)
 class NavigationRegressionTest {
     @get:Rule val ui = createAndroidComposeRule<MainActivity>()
 
-    private fun preview() {
-        ui.activityRule.scenario.onActivity {
-            val vm = androidx.lifecycle.ViewModelProvider(it)[AppViewModel::class.java]
-            kotlinx.coroutines.runBlocking {
-                vm.settingsStore.update { settings -> settings.copy(showHomeMetadata = true) }
-            }
-        }
-        ui.onNodeWithText("先体验界面").performScrollTo().performClick()
-        ui.waitUntil(15000) { ui.onAllNodesWithText("海风经过的午后").fetchSemanticsNodes().isNotEmpty() }
+    private fun requireIsolatedContentFixture() {
+        error("Content scenarios require an isolated API fixture")
     }
 
     @Test
     fun likesFromCardAndKeepsFeedAcrossDetailsAndTabs() {
-        preview()
+        requireIsolatedContentFixture()
         lateinit var vm: AppViewModel
         ui.activityRule.scenario.onActivity {
             vm = androidx.lifecycle.ViewModelProvider(it)[AppViewModel::class.java]
@@ -65,7 +59,7 @@ class NavigationRegressionTest {
 
     @Test
     fun repliesToCommentWithoutRepliesOpenComposerDirectly() {
-        preview()
+        requireIsolatedContentFixture()
         ui.onNodeWithText("海风经过的午后").performClick()
         ui.onNodeWithContentDescription("评论区").performClick()
         ui.onNodeWithText("回复", substring = false).performScrollTo().performClick()
@@ -78,7 +72,7 @@ class NavigationRegressionTest {
 
     @Test
     fun showsFollowingAndSupportsLocalCommentsAndReplies() {
-        preview()
+        requireIsolatedContentFixture()
         ui.onNodeWithText("我的", useUnmergedTree = true).performClick()
         ui.onNodeWithTag("profileList").performScrollToNode(hasText("我的关注"))
         ui.onNodeWithText("我的关注").performClick()

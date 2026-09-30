@@ -29,8 +29,6 @@ import io.github.pixivnext.designsystem.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
-import me.saket.telephoto.zoomable.rememberZoomableState
-import me.saket.telephoto.zoomable.zoomable
 
 @Composable
 fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
@@ -60,7 +58,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                 .filter { it.kind in listOf("illust", "manga") }
                 .associate { it.page to it.uri }
     }
-    val count = if (work.demo >= 0) work.page_count else work.originals.size
+    val count = work.originals.size
     val pager = rememberPagerState(pageCount = { count })
     val list = rememberLazyListState()
     val bg = if (s.blackReader) Color.Black else MaterialTheme.colorScheme.background
@@ -90,43 +88,25 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                     contentPadding = PaddingValues(vertical = 80.dp),
                 ) {
                     items(count) { page ->
-                        if (work.demo >= 0)
-                            DemoArt(
-                                work.demo + page,
-                                Modifier.fillMaxWidth().aspectRatio(work.aspect).clickable {
-                                    chrome = !chrome
-                                },
-                            )
-                        else
-                            ReaderImage(
-                                pageUrl(page),
-                                "${work.title} 第${page+1}页",
-                                Modifier.fillMaxWidth().aspectRatio(work.aspect),
-                            ) {
-                                chrome = !chrome
-                            }
+                        ReaderImage(
+                            pageUrl(page),
+                            "${work.title} 第${page+1}页",
+                            Modifier.fillMaxWidth().aspectRatio(work.aspect),
+                        ) {
+                            chrome = !chrome
+                        }
                     }
                 }
             else
                 HorizontalPager(pager, Modifier.fillMaxSize(), beyondViewportPageCount = 0) { page
                     ->
-                    if (work.demo >= 0) {
-                        val zoom = rememberZoomableState()
-                        DemoArt(
-                            work.demo + page,
-                            Modifier.fillMaxWidth()
-                                .aspectRatio(work.aspect)
-                                .zoomable(zoom)
-                                .clickable { chrome = !chrome },
-                        )
-                    } else
-                        ReaderImage(
-                            pageUrl(page),
-                            work.title,
-                            Modifier.fillMaxSize(),
-                        ) {
-                            chrome = !chrome
-                        }
+                    ReaderImage(
+                        pageUrl(page),
+                        work.title,
+                        Modifier.fillMaxSize(),
+                    ) {
+                        chrome = !chrome
+                    }
                 }
             AnimatedVisibility(chrome, Modifier.align(Alignment.TopCenter)) {
                 TopAppBar(

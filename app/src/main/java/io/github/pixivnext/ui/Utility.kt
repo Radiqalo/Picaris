@@ -80,9 +80,6 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
             ) {
                 Text(strings.getString(R.string.ui_91e037beb0))
             }
-            TextButton({ vm.preview() }, Modifier.fillMaxWidth()) {
-                Text(strings.getString(R.string.ui_288ccac9b4))
-            }
             if (busy) LinearWavyProgressIndicator(Modifier.fillMaxWidth())
         }
     }
@@ -133,7 +130,6 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
 @Composable
 fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-    val isDemo by vm.demo.collectAsStateWithLifecycle()
     val account by vm.active.collectAsStateWithLifecycle()
     LaunchedEffect(account?.user?.id) { vm.syncAccountProfile() }
     LazyColumn(
@@ -165,8 +161,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                 style = MaterialTheme.typography.headlineSmall,
                                 maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             Text(
-                                if (isDemo) strings.getString(R.string.ui_fbd46976e0)
-                                else "ID ${account?.user?.id ?: ""}",
+                                "ID ${account?.user?.id ?: ""}",
                                 modifier = Modifier.clickable(enabled = account != null, onClickLabel = "我的主页") {
                                     account?.user?.let { navigate(Author(it)) }
                                 },
@@ -774,7 +769,6 @@ fun ProxyDialog(s: Settings, dismiss: () -> Unit, save: (String, String, Int) ->
 fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
-    val isDemo by vm.demo.collectAsStateWithLifecycle()
     val data by vm.accounts.collectAsStateWithLifecycle()
     var add by remember { mutableStateOf(false) }
     val tokenState = rememberTextFieldState()
@@ -801,7 +795,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                             segment = index to data.accounts.size,
                             action = {
                                 Row {
-                                    if (data.activeId == a.user.id && !isDemo)
+                                    if (data.activeId == a.user.id)
                                         AppIcon(
                                             Glyph.Check,
                                             strings.getString(R.string.ui_922c94aae3),
@@ -836,18 +830,6 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                     Text(strings.getString(R.string.ui_91e037beb0))
                 }
             }
-            if (isDemo)
-                item {
-                    TextButton(
-                        {
-                            vm.leave()
-                            back()
-                        },
-                        Modifier.fillMaxWidth(),
-                    ) {
-                        Text(strings.getString(R.string.ui_c7e8e58589))
-                    }
-                }
         }
     }
     if (add)

@@ -50,9 +50,7 @@ class CommentThreads(
         target.update { it.copy(loading = true, error = null) }
         scope.launch {
             try {
-                val result =
-                    if (work.demo >= 0) demoComments(work, parentId)
-                    else fetch(account, work, parentId, if (reset) null else old.next)
+                val result = fetch(account, work, parentId, if (reset) null else old.next)
                 target.update { current ->
                     current.copy(
                         comments =
@@ -80,15 +78,7 @@ class CommentThreads(
         target.update { it.copy(sending = true, sendError = null) }
         scope.launch {
             try {
-                val comment =
-                    if (work.demo >= 0)
-                        Comment(
-                            id = -System.nanoTime(),
-                            comment = text.trim(),
-                            user = User(-1, "演示预览"),
-                            date = java.time.OffsetDateTime.now().toString(),
-                        )
-                    else post(account, work, text, parentId)
+                val comment = post(account, work, text, parentId)
                 target.update {
                     it.copy(
                         comments = (listOf(comment) + it.comments).distinctBy { c -> c.id },
@@ -115,21 +105,4 @@ class CommentThreads(
             }
         }
     }
-
-    private fun demoComments(work: Work, parentId: Long?): CommentsResponse =
-        CommentsResponse(
-            if (parentId == null)
-                listOf(
-                    Comment(
-                        10001,
-                        "很喜欢这幅作品的氛围。",
-                        "2026-09-29T12:00:00+09:00",
-                        User(102, "mori"),
-                        has_replies = true,
-                    ),
-                    Comment(10002, "这是本地演示评论，不会发送到 Pixiv。", "2026-09-29T11:00:00+09:00", work.user),
-                )
-            else listOf(Comment(10003, "谢谢喜欢！", "2026-09-29T12:30:00+09:00", work.user)),
-            total_comments = if (parentId == null) 2 else 1,
-        )
 }

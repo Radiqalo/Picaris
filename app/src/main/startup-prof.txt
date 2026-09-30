@@ -12573,9 +12573,6 @@ SPLio/github/pixivnext/ui/AppKt$PixivApp$3$1;->create(Ljava/lang/Object;Lkotlin/
 SPLio/github/pixivnext/ui/AppKt$PixivApp$3$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lio/github/pixivnext/ui/ArtKt;
 SPLio/github/pixivnext/ui/ArtKt;->$r8$lambda$6JRCtQQLlTkkvu2s9geH6isWLUo(ILandroidx/compose/ui/graphics/drawscope/DrawScope;)Lkotlin/Unit;
-SPLio/github/pixivnext/ui/ArtKt;->DemoArt$lambda$0$0$polygon(Landroidx/compose/ui/graphics/drawscope/DrawScope;FFLjava/util/List;J)V
-SPLio/github/pixivnext/ui/ArtKt;->DemoArt$lambda$0$0(ILandroidx/compose/ui/graphics/drawscope/DrawScope;)Lkotlin/Unit;
-SPLio/github/pixivnext/ui/ArtKt;->DemoArt(ILandroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 Lio/github/pixivnext/ui/ArtKt$$ExternalSyntheticLambda1;
 SPLio/github/pixivnext/ui/ArtKt$$ExternalSyntheticLambda1;-><init>(I)V
 SPLio/github/pixivnext/ui/ArtKt$$ExternalSyntheticLambda1;->invoke(Ljava/lang/Object;)Ljava/lang/Object;
