@@ -4,8 +4,10 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.unit.IntOffset
 import android.content.Intent
@@ -273,14 +275,18 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 },
             ) { padding ->
                 val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                val scaleMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
                 val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val exitEffects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 AnimatedContent(
                     targetState = tab,
                     modifier = Modifier.padding(padding).fillMaxSize(),
                     transitionSpec = {
                         val direction = if (targetState > initialState) 1 else -1
-                        ((slideInHorizontally(spatial) { direction * it / 12 } + fadeIn(effects)) togetherWith
-                            (slideOutHorizontally(spatial) { -direction * it / 12 } + fadeOut(effects)))
+                        ((scaleIn(scaleMotion, initialScale = .94f) +
+                            slideInVertically(spatial) { direction * it / 32 } + fadeIn(effects)) togetherWith
+                            (scaleOut(scaleMotion, targetScale = 1.02f) +
+                                slideOutVertically(spatial) { -direction * it / 64 } + fadeOut(exitEffects)))
                             .using(null)
                     },
                     label = "bottom navigation page",
