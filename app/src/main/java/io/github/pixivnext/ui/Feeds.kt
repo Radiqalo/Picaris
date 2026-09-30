@@ -525,41 +525,33 @@ fun WorkCard(
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
-            Box(
-                modifier =
-                    Modifier.align(Alignment.BottomEnd)
-                        .padding(WorkImageBadgeInset)
-                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                        .clickable(enabled = !likedBusy, role = Role.Button, onClick = onLike)
-                        .testTag("like_${work.type}_${work.id}")
-                        .semantics {
-                            contentDescription =
-                                if (work.is_bookmarked) "取消喜欢 ${work.title}" else "喜欢 ${work.title}"
-                            stateDescription = if (work.is_bookmarked) "已喜欢" else "未喜欢"
-                        },
-                contentAlignment = Alignment.BottomEnd,
+            Surface(
+                onClick = onLike,
+                enabled = !likedBusy,
+                modifier = Modifier.align(Alignment.BottomEnd)
+                    .padding(WorkImageBadgeInset)
+                    .testTag("like_${work.type}_${work.id}")
+                    .semantics {
+                        contentDescription =
+                            if (work.is_bookmarked) "取消喜欢 ${work.title}" else "喜欢 ${work.title}"
+                        stateDescription = if (work.is_bookmarked) "已喜欢" else "未喜欢"
+                    },
+                shape = badgeShape,
+                color = Color.Black.copy(alpha = .48f),
+                contentColor = Color.White,
             ) {
-                Surface(
-                    shape = badgeShape,
-                    color = Color.Black.copy(alpha = .48f),
-                    contentColor = Color.White,
+                Row(
+                    Modifier.heightIn(min = 28.dp).padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    Row(
-                        Modifier.heightIn(min = 28.dp).padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        AppIcon(
-                            if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
-                            null,
-                            Modifier.size(16.dp),
-                            tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
-                        )
-                        Text(
-                            compact(work.total_bookmarks),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
+                    AppIcon(
+                        if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                        null,
+                        Modifier.size(16.dp),
+                        tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
+                    )
+                    Text(compact(work.total_bookmarks), style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
