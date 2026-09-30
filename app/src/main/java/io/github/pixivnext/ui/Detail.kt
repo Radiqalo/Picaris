@@ -6,10 +6,10 @@ import android.text.Html
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -425,10 +425,15 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     var profile by remember(initial.id) { mutableStateOf(AuthorProfile()) }
     var profileLoaded by remember(initial.id) { mutableStateOf(false) }
     var details by remember(initial.id) { mutableStateOf(AuthorDetails(initial)) }
-    val pager = rememberPagerState { 3 }
-    val scope = rememberCoroutineScope()
+    var selectedPage by remember(initial.id) { mutableIntStateOf(0) }
+    val pageGridStates = listOf(
+        rememberLazyStaggeredGridState(),
+        rememberLazyStaggeredGridState(),
+        rememberLazyStaggeredGridState(),
+    )
     val feedback = selectionFeedback()
     val pageLabels = listOf("插画", "漫画", "收藏")
+    val swipeThreshold = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
     var busy by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -443,12 +448,34 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
             .setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/users/${user.id}"), "分享作者"))
     }
     Box(Modifier.fillMaxSize()) {
-        // Let the author cover draw behind the transparent status bar; actions remain inset below it.
-        HorizontalPager(pager, Modifier.fillMaxSize(), key = { it }) { page ->
+        // Keep one author header and one feed viewport; horizontal gestures switch only the feed.
+        Box(Modifier.fillMaxSize().pointerInput(selectedPage, swipeThreshold) {
+            var horizontalDistance = 0f
+            detectHorizontalDragGestures(
+                onHorizontalDrag = { change, dragAmount ->
+                    horizontalDistance += dragAmount
+                    change.consume()
+                },
+                onDragEnd = {
+                    when {
+                        horizontalDistance <= -swipeThreshold && selectedPage < pageLabels.lastIndex -> {
+                            feedback()
+                            selectedPage += 1
+                        }
+                        horizontalDistance >= swipeThreshold && selectedPage > 0 -> {
+                            feedback()
+                            selectedPage -= 1
+                        }
+                    }
+                    horizontalDistance = 0f
+                },
+                onDragCancel = { horizontalDistance = 0f },
+            )
+        }) {
             FeedGrid(
-                FeedSpec(section = if (page == 2) "bookmarks" else "user",
-                    kind = if (page == 1) "manga" else "illust", userId = user.id),
-                vm, navigate, Modifier.fillMaxSize(),
+                FeedSpec(section = if (selectedPage == 2) "bookmarks" else "user",
+                    kind = if (selectedPage == 1) "manga" else "illust", userId = user.id),
+                vm, navigate, Modifier.fillMaxSize(), gridState = pageGridStates[selectedPage],
                 topPadding = 0.dp,
                 scrollHeaderWhileEmpty = true,
                 header = {
@@ -510,25 +537,25 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                 },
                 afterHeader = {
                     Column {
-                        PrimaryTabRow(selectedTabIndex = pager.currentPage) {
+                        PrimaryTabRow(selectedTabIndex = selectedPage) {
                             pageLabels.forEachIndexed { index, label ->
-                                Tab(selected = pager.currentPage == index,
+                                Tab(selected = selectedPage == index,
                                     onClick = {
-                                        if (pager.currentPage != index) {
+                                        if (selectedPage != index) {
                                             feedback()
-                                            scope.launch { pager.animateScrollToPage(index) }
+                                            selectedPage = index
                                         }
                                     }, text = { Text(label) })
                             }
                         }
-                        val count = when (page) {
+                        val count = when (selectedPage) {
                             0 -> profile.total_illusts
                             1 -> profile.total_manga
                             else -> 0
                         }
                         Row(Modifier.fillMaxWidth().padding(top = PixivSpacing.compact),
                             verticalAlignment = Alignment.CenterVertically) {
-                            Text(pageLabels[page], Modifier.weight(1f),
+                            Text(pageLabels[selectedPage], Modifier.weight(1f),
                                 style = MaterialTheme.typography.titleLarge)
                             if (count > 0) Text(count.toString(),
                                 style = MaterialTheme.typography.labelLarge,
