@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.*
-import androidx.navigation3.ui.NavDisplay
 import io.github.pixivnext.AppViewModel
 import io.github.pixivnext.R
 import io.github.pixivnext.core.*
@@ -147,21 +146,11 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                 val pageDecorator = remember(navigationMotion) {
                                     NavigationPageSceneDecorator(navigationMotion::settled)
                                 }
-                                NavDisplay(
+                                NavigationPageDisplay(
                                     backStack = backStack,
                                     modifier = Modifier.fillMaxSize(),
                                     sharedTransitionScope = this@SharedTransitionLayout,
-                                    transitionSpec = {
-                                        navigationMotion.forward(this)
-                                    },
-                                    popTransitionSpec = {
-                                        navigationMotion.back()
-                                    },
-                                    predictivePopTransitionSpec = { swipeEdge ->
-                                        navigationMotion.predictiveBack(
-                                            if (swipeEdge == androidx.navigationevent.NavigationEvent.EDGE_RIGHT) -1 else 1,
-                                        )
-                                    },
+                                    motion = navigationMotion,
                                     entryDecorators =
                                         listOf(rememberSaveableStateHolderNavEntryDecorator()),
                                     sceneDecoratorStrategies = listOf(pageDecorator),

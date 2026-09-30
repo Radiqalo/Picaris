@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
@@ -33,13 +34,71 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavEntryDecorator
+import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.scene.Scene
 import androidx.navigation3.scene.SceneDecoratorStrategy
 import androidx.navigation3.scene.SceneDecoratorStrategyScope
+import androidx.navigation3.scene.SceneInfo
+import androidx.navigation3.scene.SceneStrategy
+import androidx.navigation3.scene.rememberSceneState
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
+import androidx.navigationevent.NavigationEvent
+import androidx.navigationevent.NavigationEventTransitionState
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 
 internal val LocalNavigationGestureActive = staticCompositionLocalOf { false }
+private val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
+
+@Composable
+internal fun NavigationPageDisplay(
+    backStack: List<NavKey>,
+    modifier: Modifier,
+    sharedTransitionScope: SharedTransitionScope,
+    motion: NavigationMotion,
+    entryDecorators: List<NavEntryDecorator<NavKey>>,
+    sceneDecoratorStrategies: List<SceneDecoratorStrategy<NavKey>>,
+    onBack: () -> Unit,
+    sceneStrategies: List<SceneStrategy<NavKey>>,
+    entryProvider: (NavKey) -> NavEntry<NavKey>,
+) {
+    val entries = rememberDecoratedNavEntries(backStack, entryDecorators, entryProvider)
+    val sceneState = rememberSceneState(
+        entries = entries,
+        sceneStrategies = sceneStrategies,
+        sceneDecoratorStrategies = sceneDecoratorStrategies,
+        sharedTransitionScope = sharedTransitionScope,
+        onBack = onBack,
+    )
+    val scene = sceneState.currentScene
+    val navigationEventState = rememberNavigationEventState(
+        currentInfo = SceneInfo(scene),
+        backInfo = sceneState.previousScenes.map { SceneInfo(it) },
+    )
+    NavigationBackHandler(
+        state = navigationEventState,
+        isBackEnabled = scene.previousEntries.isNotEmpty(),
+        onBackCompleted = {
+            repeat(entries.size - scene.previousEntries.size) { onBack() }
+        },
+    )
+    val gestureInProgress = navigationEventState.transitionState is NavigationEventTransitionState.InProgress
+    CompositionLocalProvider(LocalNavigationGestureInProgress provides gestureInProgress) {
+        NavDisplay(
+            sceneState = sceneState,
+            navigationEventState = navigationEventState,
+            modifier = modifier,
+            transitionSpec = { motion.forward(this) },
+            popTransitionSpec = { motion.back() },
+            predictivePopTransitionSpec = { swipeEdge ->
+                motion.predictiveBack(if (swipeEdge == NavigationEvent.EDGE_RIGHT) -1 else 1)
+            },
+        )
+    }
+}
 
 internal class NavigationPageSceneDecorator(
     private val onSettled: () -> Unit,
@@ -140,7 +199,7 @@ internal fun NavigationPage(onSettled: () -> Unit, content: @Composable () -> Un
     val transitions = generateSequence<Transition<*>>(navigation) {
         it.parentTransition
     }.toList()
-    val seeking = transitions.any { it.isSeeking }
+    val seeking = LocalNavigationGestureInProgress.current
     var completingGesture by remember { mutableStateOf(false) }
     SideEffect {
         if (seeking) completingGesture = true
