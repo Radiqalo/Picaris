@@ -313,14 +313,51 @@ fun SettingRow(
         supportingContent = { Text(summary, style = MaterialTheme.typography.bodyMedium) },
         leadingContent = {
             Box(
-                Modifier.size(56.dp)
+                Modifier.size(40.dp)
                     .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                AppIcon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                AppIcon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         },
         trailingContent = action ?: { AppIcon(Glyph.Arrow, null, Modifier.size(18.dp)) },
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun SettingChoiceBlock(
+    title: String,
+    selected: String,
+    options: List<Pair<String, String>>,
+    onSelect: (String) -> Unit,
+    position: SettingsRowPosition,
+) {
+    val index = when (position) {
+        SettingsRowPosition.First, SettingsRowPosition.Only -> 0
+        SettingsRowPosition.Middle -> 1
+        SettingsRowPosition.Last -> 2
+    }
+    SegmentedListItem(
+        onClick = {},
+        shapes = ListItemDefaults.segmentedShapes(index, if (position == SettingsRowPosition.Only) 1 else 3),
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.related)) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
+                    Box(
+                        Modifier.size(40.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AppIcon(Glyph.Settings, null, Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                }
+                ChoiceChips(selected, options, onSelect, Modifier.fillMaxWidth(),
+                    alignment = Alignment.CenterHorizontally)
+            }
+        },
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -356,31 +393,13 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
         ) {
             item {
                 SettingsGroup(strings.getString(R.string.ui_09b58aa342)) {
-                    SettingRow(
-                        "显示作者与作品名",
-                        "在发现、动态和收藏瀑布流中显示文字",
-                        action = {
-                            Switch(
-                                s.showHomeMetadata,
-                                { v ->
-                                    vm.update { it.copy(showHomeMetadata = v) }
-                                },
-                            )
-                        },
+                    SettingChoiceBlock(
+                        title = strings.getString(R.string.ui_e848ddd482),
+                        selected = s.theme,
+                        options = listOf("system" to "系统", "light" to "浅色", "dark" to "深色"),
+                        onSelect = { theme -> vm.update { it.copy(theme = theme) } },
                         position = SettingsRowPosition.First,
-                    ) {
-                        vm.update { it.copy(showHomeMetadata = !it.showHomeMetadata) }
-                    }
-                    SettingRow(
-                        strings.getString(R.string.ui_e848ddd482),
-                        when (s.theme) {
-                            "light" -> strings.getString(R.string.ui_80ec9e2b1b)
-                            "dark" -> strings.getString(R.string.ui_30b2c979ac)
-                            else -> strings.getString(R.string.ui_f4bbd91f79)
-                        },
-                    ) {
-                        dialog = "theme"
-                    }
+                    )
                     SettingRow(
                         strings.getString(R.string.ui_9d180a2c78),
                         strings.getString(R.string.ui_d80ba66133),
@@ -410,13 +429,28 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
             item {
                 SettingsGroup(strings.getString(R.string.ui_10ea138040)) {
                     SettingRow(
+                        "显示作者与作品名",
+                        "在图片流中显示作者与作品名",
+                        action = {
+                            Switch(
+                                s.showHomeMetadata,
+                                { v ->
+                                    vm.update { it.copy(showHomeMetadata = v) }
+                                },
+                            )
+                        },
+                        position = SettingsRowPosition.First,
+                    ) {
+                        vm.update { it.copy(showHomeMetadata = !it.showHomeMetadata) }
+                    }
+                    SettingRow(
                         strings.getString(R.string.ui_d5edf52f07),
                         strings.getString(R.string.ui_5b34213640),
                         Glyph.Book,
                         action = {
                             Switch(s.blackReader, { v -> vm.update { it.copy(blackReader = v) } })
                         },
-                        position = SettingsRowPosition.First,
+                        position = SettingsRowPosition.Middle,
                     ) {
                         vm.update { it.copy(blackReader = !it.blackReader) }
                     }
@@ -520,43 +554,6 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
         }
     }
     when (dialog) {
-        "theme" ->
-            AlertDialog(
-                onDismissRequest = { dialog = null },
-                title = { Text(strings.getString(R.string.ui_e848ddd482)) },
-                text = {
-                    Column {
-                        listOf(
-                                "system" to strings.getString(R.string.ui_f4bbd91f79),
-                                "light" to strings.getString(R.string.ui_80ec9e2b1b),
-                                "dark" to strings.getString(R.string.ui_30b2c979ac),
-                            )
-                            .forEach { (k, t) ->
-                                Row(
-                                    Modifier.fillMaxWidth().clickable {
-                                        vm.update { it.copy(theme = k) }
-                                        dialog = null
-                                    },
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    RadioButton(
-                                        s.theme == k,
-                                        {
-                                            vm.update { it.copy(theme = k) }
-                                            dialog = null
-                                        },
-                                    )
-                                    Text(t)
-                                }
-                            }
-                    }
-                },
-                confirmButton = {
-                    TextButton({ dialog = null }) {
-                        Text(strings.getString(R.string.ui_33246f6a5e))
-                    }
-                },
-            )
         "color" ->
             AlertDialog(
                 onDismissRequest = { dialog = null },
