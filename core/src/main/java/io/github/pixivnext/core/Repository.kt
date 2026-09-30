@@ -135,7 +135,10 @@ constructor(
                     "v1/search/$kind"
                 }
                 else -> {
-                    q["include_ranking_illusts"] = "true"
+                    if (kind == "novel") {
+                        q["include_ranking_novels"] = "false"
+                        q["include_ranking_label"] = "true"
+                    } else q["include_ranking_illusts"] = "true"
                     q["include_privacy_policy"] = "true"
                     "v1/$kind/recommended"
                 }
