@@ -1,15 +1,9 @@
 package io.github.pixivnext.ui
 
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.SpringSpec
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.ui.unit.IntOffset
 import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -22,9 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.*
@@ -308,54 +299,32 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         }
                 },
             ) { padding ->
-                val exitSpatial = MaterialTheme.motionScheme.fastSpatialSpec<IntOffset>()
-                val enterSpatial = remember(exitSpatial) {
-                    if (exitSpatial is SpringSpec) spring(
-                        dampingRatio = exitSpatial.dampingRatio * 0.9f,
-                        stiffness = exitSpatial.stiffness,
-                        visibilityThreshold = exitSpatial.visibilityThreshold,
-                    ) else exitSpatial
-                }
-                val effects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-                val exitEffects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
-                val layoutDirection = LocalLayoutDirection.current
-                AnimatedContent(
-                    targetState = tab,
-                    modifier = Modifier.padding(padding).fillMaxSize().clipToBounds(),
-                    transitionSpec = {
-                        val tabDirection = if (targetState > initialState) 1 else -1
-                        val direction = tabDirection * if (layoutDirection == LayoutDirection.Ltr) 1 else -1
-                        ((slideInHorizontally(enterSpatial) { direction * it / 4 } + fadeIn(effects)) togetherWith
-                            (slideOutHorizontally(exitSpatial) { -direction * it / 6 } + fadeOut(exitEffects)))
-                            .apply { targetContentZIndex = 1f }
-                            .using(null)
-                    },
-                    label = "bottom navigation page",
+                BottomNavigationPages(
+                    tab = tab,
+                    modifier = Modifier.padding(padding),
                 ) { currentTab ->
-                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        holder.SaveableStateProvider(currentTab) {
-                            val homeGrid = rememberLazyStaggeredGridState()
-                            val homeList = rememberLazyListState()
-                            ScrollingScreen(
-                                scrollBehaviorEnabled = false
-                            ) {
-                                if (currentTab == 0) {
-                                    LaunchedEffect(settings.contentKind) {
-                                        homeReselection.collectLatest {
-                                            if (settings.contentKind == "novel")
-                                                homeList.animateScrollToItem(0)
-                                            else homeGrid.animateScrollToItem(0)
-                                        }
+                    holder.SaveableStateProvider(currentTab) {
+                        val homeGrid = rememberLazyStaggeredGridState()
+                        val homeList = rememberLazyListState()
+                        ScrollingScreen(
+                            scrollBehaviorEnabled = false
+                        ) {
+                            if (currentTab == 0) {
+                                LaunchedEffect(settings.contentKind) {
+                                    homeReselection.collectLatest {
+                                        if (settings.contentKind == "novel")
+                                            homeList.animateScrollToItem(0)
+                                        else homeGrid.animateScrollToItem(0)
                                     }
                                 }
-                                when (currentTab) {
-                                    0 ->
-                                        RecommendedHomeScreen(vm, navigate, homeGrid, homeList)
-                                    1 -> DiscoverScreen(vm, navigate)
-                                    2 -> FollowScreen(vm, navigate)
-                                    3 -> SearchScreen(vm, navigate, back = null)
-                                    else -> ProfileScreen(vm, navigate)
-                                }
+                            }
+                            when (currentTab) {
+                                0 ->
+                                    RecommendedHomeScreen(vm, navigate, homeGrid, homeList)
+                                1 -> DiscoverScreen(vm, navigate)
+                                2 -> FollowScreen(vm, navigate)
+                                3 -> SearchScreen(vm, navigate, back = null)
+                                else -> ProfileScreen(vm, navigate)
                             }
                         }
                     }
