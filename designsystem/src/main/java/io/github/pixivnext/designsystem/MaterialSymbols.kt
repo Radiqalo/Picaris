@@ -6,6 +6,13 @@ import androidx.compose.ui.res.vectorResource
 
 enum class MaterialSymbol(val resource: Int) {
     Home(R.drawable.ms_home),
+    HomeFilled(R.drawable.ms_home_filled),
+    Explore(R.drawable.ms_explore),
+    ExploreFilled(R.drawable.ms_explore_filled),
+    Feed(R.drawable.ms_dynamic_feed),
+    FeedFilled(R.drawable.ms_dynamic_feed_filled),
+    Person(R.drawable.ms_person),
+    PersonFilled(R.drawable.ms_person_filled),
     Image(R.drawable.ms_image),
     Book(R.drawable.ms_menu_book),
     Lock(R.drawable.ms_lock),

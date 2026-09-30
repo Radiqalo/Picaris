@@ -200,7 +200,9 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             strings.getString(R.string.ui_753ccc8e2e),
             strings.getString(R.string.ui_a82c993d73),
         )
-    val icons = listOf(materialSymbol(MaterialSymbol.Home), Glyph.Discover, Glyph.Feed, Glyph.Person)
+    val icons = listOf(MaterialSymbol.Home, MaterialSymbol.Explore, MaterialSymbol.Feed, MaterialSymbol.Person)
+    val selectedIcons = listOf(MaterialSymbol.HomeFilled, MaterialSymbol.ExploreFilled,
+        MaterialSymbol.FeedFilled, MaterialSymbol.PersonFilled)
     val holder = rememberSaveableStateHolder()
     val homeReselection = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val feedback = selectionFeedback()
@@ -232,7 +234,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             railExpanded = true,
                             selected = tab == index,
                             onClick = { selectTab(index) },
-                            icon = { FeedbackIcon(icons[index], title, tab == index) },
+                            icon = { FeedbackIcon(materialSymbol(if (tab == index) selectedIcons[index] else icons[index]), title, tab == index) },
                             label = { Text(title) },
                         )
                     }
@@ -249,7 +251,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                 ShortNavigationBarItem(
                                     selected = tab == index,
                                     onClick = { selectTab(index) },
-                                    icon = { FeedbackIcon(icons[index], null, tab == index) },
+                                    icon = { FeedbackIcon(materialSymbol(if (tab == index) selectedIcons[index] else icons[index]), null, tab == index) },
                                     label = { Text(title) },
                                 )
                             }

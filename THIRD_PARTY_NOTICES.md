@@ -10,7 +10,7 @@ PixivNext uses the following libraries through Gradle. Versions and the complete
 | OkHttp and MockWebServer | [OkHttp](https://github.com/square/okhttp), Apache-2.0 |
 | Okio (transitive) | [Okio](https://github.com/square/okio), Apache-2.0 |
 | Coil | [Coil](https://github.com/coil-kt/coil), Apache-2.0 |
-| Material Symbols (rounded Home, Image, Menu Book, Lock, Lock Open, Inbox, Calendar Month, Dark Mode, Wallpaper, Palette, Contrast, 18 Up Rating, Smart Toy, Label Off, Person Off, Public, Cleaning Services vector assets) | [Google Material Design Icons](https://github.com/google/material-design-icons), Apache-2.0; original path data preserved |
+| Material Symbols (rounded Home (outline/filled), Explore (outline/filled), Dynamic Feed (outline/filled), Person (outline/filled), Image, Menu Book, Lock, Lock Open, Inbox, Calendar Month, Dark Mode, Wallpaper, Palette, Contrast, 18 Up Rating, Smart Toy, Label Off, Person Off, Public, Cleaning Services vector assets) | [Google Material Design Icons](https://github.com/google/material-design-icons), Apache-2.0; original path data preserved |
 | MaterialKolor / Material Color Utilities | [MaterialKolor](https://github.com/jordond/MaterialKolor), Apache-2.0 (Kotlin port of Google Material Color Utilities) |
 | Telephoto | [Telephoto](https://github.com/saket/telephoto), Apache-2.0 |
 | JUnit 4 (tests only) | [JUnit 4](https://github.com/junit-team/junit4), EPL-1.0 |
