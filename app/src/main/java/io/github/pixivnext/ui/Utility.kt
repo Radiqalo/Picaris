@@ -161,6 +161,9 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             Text(
                                 if (isDemo) strings.getString(R.string.ui_fbd46976e0)
                                 else "ID ${account?.user?.id ?: ""}",
+                                modifier = Modifier.clickable(enabled = account != null, onClickLabel = "我的主页") {
+                                    account?.user?.let { navigate(Author(it)) }
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -177,14 +180,13 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     listOf(
                         "我的关注" to { navigate(People("following", "我的关注")) },
                         "我的粉丝" to { navigate(People("follower", "我的粉丝")) },
-                        "我的作品" to { account?.user?.let { navigate(Author(it)) }; Unit },
                     ).forEachIndexed { index, (label, action) ->
                         SegmentedListItem(
                             colors = PixivContainerDefaults.listItemColors(),
                             onClick = action,
-                            shapes = ListItemDefaults.segmentedShapes(index, 3),
+                            shapes = ListItemDefaults.segmentedShapes(index, 2),
                             content = { Text(label, style = MaterialTheme.typography.titleMedium) },
-                            leadingContent = { AppIcon(if (index == 2) Glyph.Discover else Glyph.Person, null) },
+                            leadingContent = { AppIcon(Glyph.Person, null) },
                             trailingContent = { AppIcon(Glyph.Arrow, null) },
                         )
                     }
