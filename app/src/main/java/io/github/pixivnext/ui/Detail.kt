@@ -5,20 +5,13 @@ import android.content.Intent
 import android.text.Html
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -431,19 +424,40 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     var profile by remember(initial.id) { mutableStateOf(AuthorProfile()) }
     var profileLoaded by remember(initial.id) { mutableStateOf(false) }
     var details by remember(initial.id) { mutableStateOf(AuthorDetails(initial)) }
-    var selectedPage by remember(initial.id) { mutableIntStateOf(0) }
+    val pager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 3 })
+    val outerScroll = rememberLazyListState()
     val pageGridStates = listOf(
         rememberLazyStaggeredGridState(),
         rememberLazyStaggeredGridState(),
         rememberLazyStaggeredGridState(),
     )
-    val feedback = selectionFeedback()
-    val pageLabels = listOf("插画", "漫画", "收藏")
-    val swipeThreshold = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
-    var artworkOffset by remember(initial.id) { mutableFloatStateOf(0f) }
-    var viewportWidth by remember(initial.id) { mutableIntStateOf(0) }
-    var pageTransitionRunning by remember(initial.id) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val pageLabels = listOf("插画", "漫画", "收藏")
+    val feedback = selectionFeedback()
+    val pageMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val workTransition = LocalWorkTransition.current
+    val coordinatedScroll = remember(outerScroll) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+            ): androidx.compose.ui.geometry.Offset {
+                if (available.y >= 0f) return androidx.compose.ui.geometry.Offset.Zero
+                val consumed = outerScroll.dispatchRawDelta(-available.y)
+                return androidx.compose.ui.geometry.Offset(0f, -consumed)
+            }
+
+            override fun onPostScroll(
+                consumed: androidx.compose.ui.geometry.Offset,
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource,
+            ): androidx.compose.ui.geometry.Offset {
+                if (available.y <= 0f) return androidx.compose.ui.geometry.Offset.Zero
+                val consumedY = outerScroll.dispatchRawDelta(-available.y)
+                return androidx.compose.ui.geometry.Offset(0f, -consumedY)
+            }
+        }
+    }
     var busy by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -457,147 +471,88 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND)
             .setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/users/${user.id}"), "分享作者"))
     }
-    fun changePage(target: Int) {
-        if (target == selectedPage || pageTransitionRunning) return
-        feedback()
-        if (viewportWidth <= 0) {
-            selectedPage = target
-            artworkOffset = 0f
-            return
-        }
-        pageTransitionRunning = true
-        val exitTarget = if (target > selectedPage) -viewportWidth.toFloat() else viewportWidth.toFloat()
-        scope.launch {
-            animateAuthorArtworkOffset(artworkOffset, exitTarget) { artworkOffset = it }
-            selectedPage = target
-            artworkOffset = -exitTarget
-            androidx.compose.runtime.withFrameNanos { }
-            animateAuthorArtworkOffset(artworkOffset, 0f) { artworkOffset = it }
-            pageTransitionRunning = false
-        }
-    }
-    Box(Modifier.fillMaxSize()) {
-        // Keep one author header and one feed viewport; animate only artwork when switching tabs.
-        Box(Modifier.fillMaxSize().onSizeChanged { viewportWidth = it.width }
-            .pointerInput(selectedPage, swipeThreshold, viewportWidth) {
-            var horizontalDistance = 0f
-            detectHorizontalDragGestures(
-                onHorizontalDrag = { change, dragAmount ->
-                    if (!pageTransitionRunning) {
-                        horizontalDistance += dragAmount
-                        val proposed = artworkOffset + dragAmount
-                        artworkOffset = when (selectedPage) {
-                            0 -> proposed.coerceAtMost(0f)
-                            pageLabels.lastIndex -> proposed.coerceAtLeast(0f)
-                            else -> proposed.coerceIn(-viewportWidth.toFloat(), viewportWidth.toFloat())
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val viewportHeight = maxHeight
+        LazyColumn(state = outerScroll, modifier = Modifier.fillMaxSize()) {
+            item(key = "author_profile") {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.fillMaxWidth().height(254.dp)) {
+                        Box(Modifier.fillMaxWidth().height(210.dp)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                            profile.background_image_url?.takeIf(String::isNotBlank)?.let {
+                                coil3.compose.AsyncImage(it, null, Modifier.fillMaxSize(),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                            }
                         }
-                        change.consume()
+                        Avatar(user, Modifier.align(Alignment.BottomCenter).size(88.dp), sharedTransition = true)
                     }
-                },
-                onDragEnd = {
-                    val target = when {
-                        horizontalDistance <= -swipeThreshold && selectedPage < pageLabels.lastIndex -> selectedPage + 1
-                        horizontalDistance >= swipeThreshold && selectedPage > 0 -> selectedPage - 1
-                        else -> selectedPage
-                    }
-                    if (target != selectedPage) changePage(target)
-                    else scope.launch { animateAuthorArtworkOffset(artworkOffset, 0f) { artworkOffset = it } }
-                    horizontalDistance = 0f
-                },
-                onDragCancel = {
-                    horizontalDistance = 0f
-                    if (!pageTransitionRunning) {
-                        scope.launch { animateAuthorArtworkOffset(artworkOffset, 0f) { artworkOffset = it } }
-                    }
-                },
-            )
-        }) {
-            FeedGrid(
-                FeedSpec(section = if (selectedPage == 2) "bookmarks" else "user",
-                    kind = if (selectedPage == 1) "manga" else "illust", userId = user.id),
-                vm, navigate, Modifier.fillMaxSize(),
-                itemsModifier = Modifier.graphicsLayer { translationX = artworkOffset },
-                gridState = pageGridStates[selectedPage],
-                topPadding = 0.dp,
-                scrollHeaderWhileEmpty = true,
-                header = {
-                    Column(Modifier.fillMaxWidth()) {
-                        BoxWithConstraints(Modifier.fillMaxWidth().height(250.dp)) {
-                            Box(Modifier.align(Alignment.TopCenter)
-                                .requiredWidth(maxWidth + PixivSpacing.content * 2)
-                                .height(210.dp)
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
-                                profile.background_image_url?.takeIf(String::isNotBlank)?.let {
-                                    coil3.compose.AsyncImage(it, null, Modifier.fillMaxSize(),
-                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                    Column(Modifier.fillMaxWidth().padding(PixivSpacing.content),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
+                        Text(user.name, Modifier.authorTransition(user.id, "name"),
+                            style = MaterialTheme.typography.headlineSmall,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Button(
+                            onClick = {
+                                vm.run {
+                                    busy = true
+                                    try { user = vm.follow(user) } finally { busy = false }
                                 }
-                            }
-                            Avatar(user, Modifier.align(Alignment.BottomStart)
-                                .padding(start = PixivSpacing.content).offset(y = 28.dp).size(104.dp),
-                                sharedTransition = true)
-                            Column(Modifier.align(Alignment.BottomEnd)
-                                .padding(end = PixivSpacing.content, bottom = 6.dp)
-                                .width((maxWidth - 152.dp).coerceAtLeast(168.dp)),
-                                verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    AuthorMetric(
-                                        if (profileLoaded) profile.total_illusts + profile.total_manga else null,
-                                        "作品",
-                                    )
-                                    AuthorMetric(if (profileLoaded) profile.total_follow_users else null, "关注")
-                                    AuthorMetric(if (profileLoaded) profile.total_illust_bookmarks_public else null, "收藏")
-                                }
-                                Button(
-                                    onClick = {
-                                        vm.run {
-                                            busy = true
-                                            try { user = vm.follow(user) } finally { busy = false }
-                                        }
-                                    },
-                                    enabled = !busy,
-                                    modifier = Modifier.fillMaxWidth().height(44.dp),
-                                    shapes = ButtonDefaults.shapesFor(44.dp),
-                                ) { Text(if (user.is_followed) "已关注" else "关注") }
-                            }
-                        }
-                        Spacer(Modifier.height(32.dp))
-                        Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
-                            verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
-                            Text(user.name, Modifier.authorTransition(user.id, "name"),
-                                style = MaterialTheme.typography.headlineSmall)
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                                Text(
-                                    user.comment,
-                                    Modifier.weight(1f).heightIn(min = 40.dp),
-                                    maxLines = 2,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                TextButton(onClick = { showProfile = true }) { Text("查看资料") }
-                            }
-                            Row(Modifier.fillMaxWidth().heightIn(min = 32.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                Text("ID ${user.id}", style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                profile.region?.takeIf(String::isNotBlank)?.let {
-                                    Text(" · $it", style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
+                            },
+                            enabled = !busy,
+                            modifier = Modifier.fillMaxWidth(.75f).height(ButtonDefaults.MediumContainerHeight),
+                            shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
+                        ) { Text(if (user.is_followed) "已关注" else "关注") }
+                        Text(if (profileLoaded) "${profile.total_follow_users} 关注" else " ",
+                            Modifier.heightIn(min = 24.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(profile.region.orEmpty(), Modifier.heightIn(min = 24.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(user.comment, Modifier.weight(1f).heightIn(min = 40.dp),
+                                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { showProfile = true }) { Text("查看资料") }
                         }
                     }
-                },
-                afterHeader = {
-                    PrimaryTabRow(selectedTabIndex = selectedPage) {
-                        pageLabels.forEachIndexed { index, label ->
-                            Tab(selected = selectedPage == index,
-                                onClick = { if (selectedPage != index) changePage(index) },
-                                text = { Text(label) })
-                        }
+                }
+            }
+            item(key = "author_tabs") {
+                PrimaryTabRow(selectedTabIndex = pager.currentPage, modifier = Modifier.fillMaxWidth()) {
+                    pageLabels.forEachIndexed { index, label ->
+                        Tab(selected = pager.currentPage == index,
+                            onClick = {
+                                if (pager.currentPage != index) {
+                                    feedback()
+                                    scope.launch { pager.animateScrollToPage(index, animationSpec = pageMotion) }
+                                }
+                            }, text = { Text(label) })
                     }
-                },
-            )
+                }
+            }
+            item(key = "author_works") {
+                androidx.compose.foundation.pager.HorizontalPager(
+                    state = pager,
+                    beyondViewportPageCount = 1,
+                    modifier = Modifier.fillMaxWidth().height(viewportHeight),
+                    pageNestedScrollConnection = coordinatedScroll,
+                ) { page ->
+                    CompositionLocalProvider(
+                        LocalWorkTransition provides if (page == pager.currentPage) workTransition else null,
+                    ) {
+                        FeedGrid(
+                            FeedSpec(section = if (page == 2) "bookmarks" else "user",
+                                kind = if (page == 1) "manga" else "illust", userId = user.id),
+                            vm, navigate, Modifier.fillMaxSize(),
+                            gridState = pageGridStates[page],
+                            pullToRefreshEnabled = false,
+                        )
+                    }
+                }
+            }
         }
         Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween) {
@@ -608,30 +563,4 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     if (showProfile) ModalBottomSheet(onDismissRequest = { showProfile = false }) {
         AuthorProfileContent(details.copy(user = user), vm, profileLoaded)
     }
-}
-
-@Composable
-private fun RowScope.AuthorMetric(value: Int?, label: String) {
-    Column(
-        Modifier.weight(1f),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
-    ) {
-        Text(value?.let(::compact) ?: "—", style = MaterialTheme.typography.titleMedium,
-            maxLines = 1, softWrap = false)
-        Text(label, style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1, softWrap = false)
-    }
-}
-
-private suspend fun animateAuthorArtworkOffset(from: Float, to: Float, onValue: (Float) -> Unit) {
-    animate(
-        initialValue = from,
-        targetValue = to,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow,
-        ),
-    ) { value, _ -> onValue(value) }
 }
