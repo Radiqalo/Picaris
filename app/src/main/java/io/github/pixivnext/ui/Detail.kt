@@ -443,8 +443,8 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
             .setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/users/${user.id}"), "分享作者"))
     }
     Box(Modifier.fillMaxSize()) {
-        // Keep scrollable content below the status bar. Floating actions remain above it.
-        HorizontalPager(pager, Modifier.fillMaxSize().statusBarsPadding(), key = { it }) { page ->
+        // Let the author cover draw behind the transparent status bar; actions remain inset below it.
+        HorizontalPager(pager, Modifier.fillMaxSize(), key = { it }) { page ->
             FeedGrid(
                 FeedSpec(section = if (page == 2) "bookmarks" else "user",
                     kind = if (page == 1) "manga" else "illust", userId = user.id),
