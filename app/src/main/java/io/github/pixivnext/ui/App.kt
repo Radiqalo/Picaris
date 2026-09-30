@@ -178,8 +178,15 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                 }
                                             }
                                             entry<Detail>(metadata = ListDetailSceneStrategy.detailPane()) {
-                                                Box(Modifier.fillMaxSize().forwardReturningDetailTaps()) {
-                                                    DetailScreen(it.work, vm, navigate, back)
+                                                val entry = it
+                                                val isInteractive = { backStack.lastOrNull() == entry }
+                                                NavigationExitContent(isInteractive) {
+                                                    DetailScreen(entry.work, vm,
+                                                        navigate = { route ->
+                                                            if (isInteractive()) navigate(route)
+                                                        },
+                                                        back = { if (isInteractive()) back() },
+                                                    )
                                                 }
                                             }
                                             entry<Reader> {

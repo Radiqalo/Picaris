@@ -10,6 +10,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.compose.foundation.Canvas
@@ -24,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -32,13 +34,16 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import coil3.compose.AsyncImage
 import io.github.pixivnext.core.Work
 import kotlin.math.*
@@ -65,38 +70,90 @@ class TransitionTapRouter {
     }
 }
 
+/** Retain exit visuals without retaining the exited screen's hit-test surface. */
 @Composable
-fun Modifier.forwardReturningDetailTaps(): Modifier {
-    val navigationTransition = LocalNavAnimatedContentScope.current.transition
-    // Predictive system-back can keep the target at Visible while its progress is running.
-    // Treat that interval as a return too, so a tap immediately after the edge gesture is
-    // forwarded to the feed underneath instead of being swallowed by the outgoing detail.
-    val returning = navigationTransition.targetState != EnterExitState.Visible ||
-        (navigationTransition.isRunning && navigationTransition.currentState == EnterExitState.Visible)
+fun NavigationExitContent(isInteractive: () -> Boolean, content: @Composable () -> Unit) {
+    val interactive = isInteractive()
+    val navigation = LocalNavAnimatedContentScope.current.transition
+    val layer = rememberGraphicsLayer()
+    var captured by remember { mutableStateOf(false) }
+    var gestureActive by remember { mutableStateOf(false) }
+    val captureReady = navigation.targetState != EnterExitState.Visible
+    val input = if (interactive || !captured || gestureActive)
+        Modifier.forwardCommittedExitTaps(isInteractive) { gestureActive = it } else Modifier
+    val semantics = if (interactive) Modifier else Modifier.clearAndSetSemantics { }
+
+    Layout(
+        content = { Box(Modifier.fillMaxSize()) { content() } },
+        modifier = Modifier.fillMaxSize().then(input).then(semantics).drawWithContent {
+            when {
+                interactive -> {
+                    captured = false
+                    drawContent()
+                }
+                !captureReady -> drawContent()
+                else -> {
+                    if (!captured) {
+                        // Shared artwork is already rendered by SharedTransitionLayout's overlay.
+                        // Cache the remaining exit visuals, then stop placing their live children.
+                        layer.record { this@drawWithContent.drawContent() }
+                        captured = true
+                    }
+                    drawLayer(layer)
+                }
+            }
+        },
+    ) { measurables, constraints ->
+        val child = measurables.single().measure(constraints)
+        layout(child.width, child.height) {
+            if (interactive || !captured) child.place(0, 0)
+        }
+    }
+}
+
+@Composable
+private fun Modifier.forwardCommittedExitTaps(
+    isInteractive: () -> Boolean,
+    onGestureActiveChanged: (Boolean) -> Unit,
+): Modifier {
+    val interactiveState = rememberUpdatedState(isInteractive)
+    val gestureActiveChanged = rememberUpdatedState(onGestureActiveChanged)
     val router = LocalTransitionTapRouter.current
     val density = androidx.compose.ui.platform.LocalDensity.current
     val topGuard = with(density) { 100.dp.toPx() }
     val bottomGuard = with(density) { 104.dp.toPx() }
     val origin = remember { mutableStateOf(Offset.Zero) }
     val size = remember { mutableStateOf(IntSize.Zero) }
+    val currentOrigin = rememberUpdatedState(origin.value)
+    val currentSize = rememberUpdatedState(size.value)
     return this
         .onGloballyPositioned { origin.value = it.positionInWindow() }
         .onSizeChanged { size.value = it }
-        .pointerInput(returning, router, origin.value, size.value, topGuard, bottomGuard) {
-            if (returning && router != null) {
+        .pointerInput(router, topGuard, bottomGuard) {
+            if (router != null) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    var moved = false
-                    var released = false
-                    do {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop)
-                            moved = true
-                        if (!change.pressed) released = true
-                    } while (change.pressed)
-                    if (released && !moved && down.position.y in topGuard..(size.value.height.toFloat() - bottomGuard))
-                        router.dispatch(origin.value + down.position)
+                    gestureActiveChanged.value(true)
+                    try {
+                        val downOrigin = currentOrigin.value
+                        var moved = false
+                        var released = false
+                        if (!interactiveState.value()) down.consume()
+                        do {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop)
+                                moved = true
+                            if (!interactiveState.value()) change.consume()
+                            if (!change.pressed) released = true
+                        } while (change.pressed)
+                        val currentHeight = currentSize.value.height.toFloat()
+                        if (released && !moved && !interactiveState.value() &&
+                            down.position.y in topGuard..(currentHeight - bottomGuard)
+                        ) router.dispatch(downOrigin + down.position)
+                    } finally {
+                        gestureActiveChanged.value(false)
+                    }
                 }
             }
         }
