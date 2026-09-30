@@ -1203,7 +1203,12 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
         SearchBar(
             state = searchState,
             inputField = searchField,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth().padding(
+                start = PixivSpacing.content,
+                end = PixivSpacing.content,
+                bottom = PixivSpacing.content,
+            ),
+            colors = SearchBarDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
         )
         idSuggestions()
         if (jumping) LoadingState()
