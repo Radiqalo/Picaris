@@ -403,6 +403,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     var user by remember(initial.id) { mutableStateOf(initial) }
     var profile by remember(initial.id) { mutableStateOf(AuthorProfile()) }
     var profileLoaded by remember(initial.id) { mutableStateOf(false) }
+    var details by remember(initial.id) { mutableStateOf(AuthorDetails(initial)) }
     val pager = rememberPagerState { 3 }
     val scope = rememberCoroutineScope()
     val feedback = selectionFeedback()
@@ -412,7 +413,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     val context = LocalContext.current
     LaunchedEffect(initial.id, vm.accountId) {
         try {
-            vm.authorDetails(initial).let { user = it.user; profile = it.profile; profileLoaded = true }
+            vm.authorDetails(initial).let { details = it; user = it.user; profile = it.profile; profileLoaded = true }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (_: Exception) { /* Keep the known author and their reachable works. */ }
     }
@@ -504,17 +505,6 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         }
     }
     if (showProfile) ModalBottomSheet(onDismissRequest = { showProfile = false }) {
-        Column(Modifier.fillMaxWidth().padding(PixivSpacing.section),
-            verticalArrangement = Arrangement.spacedBy(PixivSpacing.related)) {
-            Text(user.name, style = MaterialTheme.typography.headlineSmall)
-            Text("ID ${user.id}", style = MaterialTheme.typography.bodySmall)
-            profile.region?.takeIf { it.isNotBlank() }?.let { Text(it) }
-            if (user.comment.isNotBlank()) Text(user.comment)
-            val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-            profile.webpage?.takeIf { it.startsWith("https://") || it.startsWith("http://") }?.let { link ->
-                TextButton(onClick = { uriHandler.openUri(link) }) { Text("个人网站") }
-            }
-            Spacer(Modifier.navigationBarsPadding())
-        }
+        AuthorProfileContent(details.copy(user = user), vm, profileLoaded)
     }
 }

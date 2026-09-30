@@ -29,10 +29,38 @@ data class AuthorProfile(
     val total_manga: Int = 0,
     val total_novels: Int = 0,
     val total_follow_users: Int = 0,
+    val gender: String = "",
+    val birth: String = "",
+    val birth_day: String = "",
+    val birth_year: Int = 0,
+    val job: String = "",
+    val twitter_account: String = "",
+    val twitter_url: String? = null,
+    val pawoo_url: String? = null,
+    val total_illust_bookmarks_public: Int = 0,
+    val total_illust_series: Int = 0,
+    val total_novel_series: Int = 0,
 )
 
 @Serializable
-data class AuthorDetails(val user: User = User(), val profile: AuthorProfile = AuthorProfile())
+data class ProfilePublicity(
+    val gender: String = "", val region: String = "",
+    val birth_day: String = "", val birth_year: String = "", val job: String = "",
+)
+
+@Serializable
+data class AuthorWorkspace(
+    val pc: String = "", val monitor: String = "", val tool: String = "",
+    val scanner: String = "", val tablet: String = "", val mouse: String = "",
+    val printer: String = "", val desktop: String = "", val music: String = "",
+    val desk: String = "", val chair: String = "", val comment: String = "",
+    val workspace_image_url: String? = null,
+)
+
+@Serializable
+data class AuthorDetails(val user: User = User(), val profile: AuthorProfile = AuthorProfile(),
+    val profile_publicity: ProfilePublicity = ProfilePublicity(),
+    val workspace: AuthorWorkspace = AuthorWorkspace())
 
 @Serializable data class Tag(val name: String = "", val translated_name: String? = null)
 
