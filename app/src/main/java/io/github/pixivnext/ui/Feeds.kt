@@ -336,13 +336,13 @@ private fun DiscoveryTagWorks(tag: Tag, vm: AppViewModel, navigate: (NavKey) -> 
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
             if (works.itemCount == 0 && works.loadState.refresh is LoadState.Loading) items(5) {
-                Spacer(Modifier.width(144.dp).height(200.dp)
+                Spacer(Modifier.width(144.dp).height(180.dp)
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small))
             } else items(minOf(5, works.itemCount), key = { index -> works.peek(index)?.id ?: -index.toLong() }) { index ->
                 works[index]?.let { work ->
                     val identity = work.identity(vm.accountId)
                     val current = bookmarks[identity]?.apply(work) ?: work
-                    Box(Modifier.width(144.dp)) {
+                    Box(Modifier.width(180.dp * current.aspect)) {
                         WorkCard(current, likedBusy = identity in busy,
                             showMetadata = settings.showHomeMetadata, sharedTransition = false,
                             onLike = { vm.run { vm.bookmark(current) } },
