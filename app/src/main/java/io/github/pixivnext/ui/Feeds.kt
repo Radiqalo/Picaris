@@ -366,7 +366,7 @@ private fun DiscoveryTagWorks(tag: Tag, vm: AppViewModel, navigate: (NavKey) -> 
                     val current = bookmarks[identity]?.apply(work) ?: work
                     Box(Modifier.width(180.dp * current.aspect)) {
                         WorkCard(current, likedBusy = identity in busy,
-                            showMetadata = settings.showHomeMetadata, sharedTransition = false,
+                            showMetadata = settings.showHomeMetadata,
                             onLike = { vm.run { vm.bookmark(current) } },
                             onClick = { vm.record(current); navigate(Detail(current)) })
                     }
