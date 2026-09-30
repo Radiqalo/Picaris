@@ -51,12 +51,15 @@ class ClientUiTest {
     @Test
     fun searchesDemoAndOpensNovelReader() {
         preview()
-        ui.onAllNodesWithText("搜索", useUnmergedTree = true).assertCountEquals(0)
-        ui.onNodeWithContentDescription("搜索").performClick()
+        ui.onAllNodesWithText("搜索", useUnmergedTree = true).assertCountEquals(1)
+        ui.onNodeWithContentDescription("搜索").assertDoesNotExist()
+        ui.onNodeWithText("搜索", useUnmergedTree = true).performClick()
+        ui.onNodeWithContentDescription("返回").assertDoesNotExist()
         ui.onNodeWithText("作品、标签或创作者").performTextInput("海风")
         ui.onNodeWithText("海风").performImeAction()
         ui.onNodeWithText("海风经过的午后").assertExists()
         ui.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        ui.onNodeWithText("首页", useUnmergedTree = true).performClick()
         ui.onNodeWithText("小说").performClick()
         ui.waitUntil(10000) { ui.onAllNodesWithText("直到下一场雨").fetchSemanticsNodes().isNotEmpty() }
         ui.onNodeWithText("直到下一场雨").performClick()

@@ -240,11 +240,13 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             strings.getString(R.string.tab_home),
             strings.getString(R.string.ui_523e40a074),
             strings.getString(R.string.ui_753ccc8e2e),
+            strings.getString(R.string.ui_f04090805c),
             strings.getString(R.string.ui_a82c993d73),
         )
-    val icons = listOf(MaterialSymbol.Home, MaterialSymbol.Explore, MaterialSymbol.Feed, MaterialSymbol.Person)
-    val selectedIcons = listOf(MaterialSymbol.HomeFilled, MaterialSymbol.ExploreFilled,
-        MaterialSymbol.FeedFilled, MaterialSymbol.PersonFilled)
+    val icons = listOf(materialSymbol(MaterialSymbol.Home), materialSymbol(MaterialSymbol.Explore),
+        materialSymbol(MaterialSymbol.Feed), Glyph.Search, materialSymbol(MaterialSymbol.Person))
+    val selectedIcons = listOf(materialSymbol(MaterialSymbol.HomeFilled), materialSymbol(MaterialSymbol.ExploreFilled),
+        materialSymbol(MaterialSymbol.FeedFilled), Glyph.Search, materialSymbol(MaterialSymbol.PersonFilled))
     val holder = rememberSaveableStateHolder()
     val homeReselection = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val feedback = selectionFeedback()
@@ -276,7 +278,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             railExpanded = true,
                             selected = tab == index,
                             onClick = { selectTab(index) },
-                            icon = { FeedbackIcon(materialSymbol(if (tab == index) selectedIcons[index] else icons[index]), title, tab == index) },
+                            icon = { FeedbackIcon(if (tab == index) selectedIcons[index] else icons[index], title, tab == index) },
                             label = { Text(title) },
                         )
                     }
@@ -294,7 +296,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                 ShortNavigationBarItem(
                                     selected = tab == index,
                                     onClick = { selectTab(index) },
-                                    icon = { FeedbackIcon(materialSymbol(if (tab == index) selectedIcons[index] else icons[index]), null, tab == index) },
+                                    icon = { FeedbackIcon(if (tab == index) selectedIcons[index] else icons[index], null, tab == index) },
                                     label = { Text(title) },
                                 )
                             }
@@ -332,11 +334,10 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             }
                             when (currentTab) {
                                 0 ->
-                                    RecommendedHomeScreen(vm, navigate, homeGrid, homeList) {
-                                        navigate(Search)
-                                    }
+                                    RecommendedHomeScreen(vm, navigate, homeGrid, homeList)
                                 1 -> DiscoverScreen(vm, navigate)
                                 2 -> FollowScreen(vm, navigate)
+                                3 -> SearchScreen(vm, navigate, back = null)
                                 else -> ProfileScreen(vm, navigate)
                             }
                         }

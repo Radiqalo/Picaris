@@ -105,14 +105,6 @@ fun ContentKindAction(vm: AppViewModel) {
 }
 
 @Composable
-fun SearchAction(onClick: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
-    IconButton(onClick) {
-        AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
-    }
-}
-
-@Composable
 fun ChoiceChips(
     selected: String,
     options: List<Pair<String, String>>,
@@ -181,7 +173,6 @@ fun RecommendedHomeScreen(
     navigate: (NavKey) -> Unit,
     gridState: LazyStaggeredGridState,
     listState: LazyListState,
-    search: () -> Unit,
 ) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     FeedGrid(
@@ -199,7 +190,6 @@ fun RecommendedHomeScreen(
                     "",
                     windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
                     scrollBehavior = null,
-                    actions = { SearchAction(search) },
                 )
                 Spacer(Modifier.height(PixivSpacing.content))
             }
@@ -264,8 +254,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         topPadding = 0.dp,
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
-                ScreenBar("", scrollBehavior = null,
-                    actions = { SearchAction { navigate(Search) } })
+                ScreenBar("", scrollBehavior = null)
                 FilledTonalButton(
                     onClick = {
                         navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking"))
@@ -471,8 +460,7 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         topPadding = 0.dp,
         header = {
             Column {
-                ScreenBar("", scrollBehavior = null,
-                    actions = { SearchAction { navigate(Search) } })
+                ScreenBar("", scrollBehavior = null)
                 Spacer(Modifier.height(PixivSpacing.content))
             }
         },
@@ -1092,7 +1080,7 @@ fun EmptyState(
 }
 
 @Composable
-fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit, initialQuery: String? = null) {
+fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit)?, initialQuery: String? = null) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
 
