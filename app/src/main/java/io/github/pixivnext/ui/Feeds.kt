@@ -59,6 +59,7 @@ fun ScrollingScreen(
 fun ScreenBar(
     title: String,
     back: (() -> Unit)? = null,
+    windowInsets: WindowInsets = TopAppBarDefaults.windowInsets,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
@@ -75,6 +76,7 @@ fun ScreenBar(
         scrollBehavior = LocalAppBarScrollBehavior.current,
         navigationIcon = navigationContent,
         actions = actions,
+        windowInsets = windowInsets,
     )
 }
 
@@ -160,8 +162,14 @@ fun RecommendedHomeScreen(
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
     Column {
+        // Collapse the status-bar gutter with the home app bar, leaving the feed edge to edge.
+        val collapsed = LocalAppBarScrollBehavior.current?.state?.collapsedFraction ?: 0f
+        Spacer(Modifier.height(
+            WindowInsets.statusBars.asPaddingValues().calculateTopPadding() * (1f - collapsed)
+        ))
         ScreenBar(
             strings.getString(R.string.tab_home) + if (demo) " · 演示" else "",
+            windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
             actions = {
                 IconButton(search) {
                     AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
