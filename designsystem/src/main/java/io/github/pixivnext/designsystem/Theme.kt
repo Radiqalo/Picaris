@@ -8,8 +8,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
+
+/** Shared layout rhythm; component shapes and colors come from Material 3 Expressive. */
+object PixivSpacing {
+    val tight = 4.dp
+    val compact = 8.dp
+    val related = 12.dp
+    val content = 16.dp
+    val section = 24.dp
+}
 
 internal fun seededColors(seed: Long, dark: Boolean) =
     com.materialkolor.dynamicColorScheme(
@@ -48,41 +56,11 @@ fun PixivTheme(
             if (dark) dynamicDarkColorScheme(LocalContext.current)
             else dynamicLightColorScheme(LocalContext.current)
         } else androidx.compose.runtime.remember(seed, dark) { seededColors(seed, dark) }
-    val referenceColors =
-        if (dark) colors
-        else
-            colors.copy(
-                primary = Color(0xFF356783),
-                onPrimary = Color.White,
-                background = Color(0xFFF7F8FC),
-                surface = Color(0xFFF7F8FC),
-                surfaceContainerLowest = Color.White,
-                surfaceContainerLow = Color(0xFFF0F3F9),
-                surfaceContainer = Color(0xFFEDF1F8),
-                surfaceContainerHigh = Color(0xFFE7EDF5),
-                surfaceContainerHighest = Color(0xFFE1E8F1),
-                primaryContainer = Color(0xFFD7EAF8),
-                onPrimaryContainer = Color(0xFF17394E),
-                secondaryContainer = Color(0xFFD7EAF8),
-                onSecondaryContainer = Color(0xFF17394E),
-            )
-
     MaterialExpressiveTheme(
-        colorScheme = referenceColors,
+        colorScheme = colors,
         motionScheme = MotionScheme.expressive(),
-        typography =
-            Typography(
-                headlineLarge =
-                    Typography()
-                        .headlineLarge
-                        .copy(fontWeight = FontWeight.Bold, letterSpacing = (-.8).sp),
-                headlineMedium =
-                    Typography()
-                        .headlineMedium
-                        .copy(fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp),
-                titleLarge = Typography().titleLarge.copy(fontWeight = FontWeight.Bold),
-                titleMedium = Typography().titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            ),
+        shapes = Shapes(),
+        typography = Typography(),
         content = content,
     )
 }
