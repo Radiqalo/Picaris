@@ -288,15 +288,6 @@ fun CollectionScreen(
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     var mode by rememberSaveable { mutableStateOf("day") }
-    val rankingModes =
-        listOf(
-            "day" to strings.getString(R.string.ui_f8c9b6d5d8),
-            "week" to strings.getString(R.string.ui_5e00476f4e),
-            "month" to strings.getString(R.string.ui_0b554f5235),
-            "day_male" to strings.getString(R.string.ui_fbe010365d),
-            "day_female" to strings.getString(R.string.ui_b57634d889),
-            "week_rookie" to strings.getString(R.string.ui_8b7adaf587),
-        )
     Column {
         if (route.section == "ranking" || route.section == "search")
             MediumFlexibleTopAppBar(
@@ -330,15 +321,55 @@ fun CollectionScreen(
             header =
                 if (route.section == "ranking") {
                     {
-                        ChoiceChips(
-                            mode,
-                            rankingModes,
-                            { mode = it },
-                            Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
-                            showCheck = true,
-                        )
+                        RankingModePicker(mode, { mode = it })
                     }
                 } else null,
+        )
+    }
+}
+
+@Composable
+fun RankingModePicker(selected: String, onSelect: (String) -> Unit) {
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    val primary =
+        listOf(
+            "day" to strings.getString(R.string.ui_f8c9b6d5d8),
+            "week" to strings.getString(R.string.ui_5e00476f4e),
+            "month" to strings.getString(R.string.ui_0b554f5235),
+        )
+    val more =
+        listOf(
+            "day_male" to strings.getString(R.string.ui_fbe010365d),
+            "day_female" to strings.getString(R.string.ui_b57634d889),
+            "week_rookie" to strings.getString(R.string.ui_8b7adaf587),
+        )
+    var menu by remember { mutableStateOf(false) }
+    Column {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("榜单", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Box {
+                TextButton({ menu = true }) {
+                    Text(more.firstOrNull { it.first == selected }?.second ?: "更多模式")
+                }
+                DropdownMenu(menu, { menu = false }) {
+                    more.forEach { (key, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                menu = false
+                                onSelect(key)
+                            },
+                        )
+                    }
+                }
+            }
+        }
+        ChoiceChips(
+            selected,
+            primary,
+            onSelect,
+            Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
+            showCheck = true,
         )
     }
 }
