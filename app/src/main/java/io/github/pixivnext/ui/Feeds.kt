@@ -63,6 +63,7 @@ fun ScreenBar(
     back: (() -> Unit)? = null,
     windowInsets: WindowInsets = TopAppBarDefaults.windowInsets,
     scrollBehavior: TopAppBarScrollBehavior? = LocalAppBarScrollBehavior.current,
+    modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
@@ -75,6 +76,7 @@ fun ScreenBar(
             IconButton(back) { AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540)) }
     }
     TopAppBar(
+        modifier = modifier,
         title = titleContent,
         scrollBehavior = scrollBehavior,
         colors = TopAppBarDefaults.topAppBarColors(
@@ -459,6 +461,7 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Uni
             strings.getString(R.string.ui_d07cee786a),
             back = back,
             scrollBehavior = null,
+            modifier = Modifier.aboveWorkTransition(),
             actions = {
                 IconButton(onClick = { private = !private }) {
                     AppIcon(
@@ -497,6 +500,7 @@ fun CollectionScreen(
     Column {
         if (route.section == "ranking" || route.section == "search")
             TopAppBar(
+                modifier = Modifier.aboveWorkTransition(),
                 title = {
                     Text(
                         if (route.section == "search") "#${route.title}"
@@ -519,7 +523,8 @@ fun CollectionScreen(
                 },
                 scrollBehavior = if (route.section == "search") null else LocalAppBarScrollBehavior.current,
             )
-        else ScreenBar(route.title, back = back, scrollBehavior = null)
+        else ScreenBar(route.title, back = back, scrollBehavior = null,
+            modifier = Modifier.aboveWorkTransition())
         if (route.section == "ranking")
             RankingPages(vm, navigate, Modifier.weight(1f), rankingDate)
         else FeedGrid(
@@ -593,6 +598,7 @@ private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier:
         PrimaryScrollableTabRow(
             selectedTabIndex = pager.currentPage,
             edgePadding = 0.dp,
+            modifier = Modifier.aboveWorkTransition(),
         ) {
             modes.forEachIndexed { index, (_, title) ->
                 Tab(
