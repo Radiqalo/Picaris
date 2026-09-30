@@ -50,6 +50,8 @@ val LocalWorkTransition = staticCompositionLocalOf<SharedTransitionScope?> { nul
 val LocalImageTransitionEnabled = staticCompositionLocalOf { true }
 val LocalTransitionTapRouter = staticCompositionLocalOf<TransitionTapRouter?> { null }
 val LocalFeedTapTargetsEnabled = staticCompositionLocalOf { false }
+internal class ArtworkReturnFeedback(val type: String, val id: Long)
+internal val LocalArtworkReturnFeedback = staticCompositionLocalOf<ArtworkReturnFeedback?> { null }
 
 class TransitionTapRouter {
     private data class Target(val bounds: Rect, val onClick: () -> Unit)

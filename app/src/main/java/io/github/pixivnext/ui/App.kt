@@ -62,6 +62,15 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
         onPauseOrDispose { }
     }
     val revision by vm.revision.collectAsStateWithLifecycle()
+    var artworkReturn by remember(account?.user?.id, revision) {
+        mutableStateOf<ArtworkReturnFeedback?>(null)
+    }
+    LaunchedEffect(artworkReturn) {
+        if (artworkReturn != null) {
+            kotlinx.coroutines.delay(500)
+            artworkReturn = null
+        }
+    }
     val backStack = rememberNavBackStack(Home)
     var authorNavigation by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
@@ -82,6 +91,9 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
     }
     val back: () -> Unit = {
         if (backStack.size > 1) {
+            (backStack.lastOrNull() as? Detail)?.work?.let {
+                artworkReturn = ArtworkReturnFeedback(it.type, it.id)
+            }
             authorNavigation = backStack.lastOrNull() is Author
             backStack.removeAt(backStack.lastIndex)
         }
@@ -138,6 +150,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                 LocalWorkTransition provides this,
                                 LocalImageTransitionEnabled provides !authorNavigation,
                                 LocalTransitionTapRouter provides remember { TransitionTapRouter() },
+                                LocalArtworkReturnFeedback provides artworkReturn,
                             ) {
                                 val navigationMotion = rememberNavigationMotion()
                                 val imageNavigation = remember(navigationMotion) {

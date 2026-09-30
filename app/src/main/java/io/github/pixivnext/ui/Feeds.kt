@@ -2,6 +2,7 @@ package io.github.pixivnext.ui
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
@@ -915,6 +916,20 @@ fun WorkCard(
         onDispose { if (registerTapTarget) tapRouter?.remove(tapTargetKey) }
     }
     val likeInteraction = remember { MutableInteractionSource() }
+    val artworkReturn = LocalArtworkReturnFeedback.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    LaunchedEffect(artworkReturn, work.type, work.id) {
+        if (artworkReturn?.type == work.type && artworkReturn.id == work.id) {
+            val center = with(density) { 16.dp.toPx() }
+            val press = PressInteraction.Press(androidx.compose.ui.geometry.Offset(center, center))
+            likeInteraction.emit(press)
+            try {
+                kotlinx.coroutines.delay(120)
+            } finally {
+                likeInteraction.tryEmit(PressInteraction.Release(press))
+            }
+        }
+    }
     val feedback = toggleFeedback()
 
     Column(

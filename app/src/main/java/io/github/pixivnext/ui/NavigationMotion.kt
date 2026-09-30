@@ -3,6 +3,7 @@ package io.github.pixivnext.ui
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.FiniteAnimationSpec
@@ -140,7 +141,7 @@ internal class NavigationMotion(
                 )
             NavigationMotionStyle.Zoom ->
                 (scaleIn(scale, initialScale = 0.92f) + fadeIn(effects)) togetherWith (
-                    scaleOut(scale, targetScale = 0.98f) + ExitTransition.KeepUntilTransitionsFinished
+                    ExitTransition.KeepUntilTransitionsFinished
                 )
         }
     }
@@ -149,10 +150,10 @@ internal class NavigationMotion(
         predictiveDirection?.let { return backPreview(it, committed = true) }
         return when (style) {
             NavigationMotionStyle.Slide ->
-                slideInHorizontally(position) { -direction * it / 12 } togetherWith
+                EnterTransition.None togetherWith
                     slideOutHorizontally(position) { direction * it }
             NavigationMotionStyle.Zoom ->
-                scaleIn(scale, initialScale = 0.98f) togetherWith (
+                EnterTransition.None togetherWith (
                     scaleOut(scale, targetScale = 0.92f) + fadeOut(effects)
                 )
         }
@@ -166,7 +167,7 @@ internal class NavigationMotion(
     private fun backPreview(swipeDirection: Int, committed: Boolean = false): ContentTransform {
         val previewExit = scaleOut(scale, targetScale = 0.90f) +
             slideOutHorizontally(position) { swipeDirection * it / 32 }
-        return scaleIn(scale, initialScale = 0.98f) togetherWith
+        return EnterTransition.None togetherWith
             if (committed) previewExit + fadeOut(effects) else previewExit
     }
 
@@ -217,7 +218,13 @@ internal fun NavigationPage(onSettled: () -> Unit, content: @Composable () -> Un
     val density = LocalDensity.current
     Surface(
         modifier = Modifier.fillMaxSize().graphicsLayer {
-            val rounding = if (gestureActive) 1f else corners.coerceIn(0f, 1f)
+            val revealingPage = navigation.currentState == EnterExitState.PreEnter ||
+                navigation.targetState == EnterExitState.PreEnter
+            val rounding = when {
+                gestureActive && revealingPage -> 0f
+                gestureActive -> 1f
+                else -> corners.coerceIn(0f, 1f)
+            }
             shape = pageShape.copy(
                 topStart = CornerSize(pageShape.topStart.toPx(size, density) * rounding),
                 topEnd = CornerSize(pageShape.topEnd.toPx(size, density) * rounding),
