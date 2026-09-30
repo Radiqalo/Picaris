@@ -441,9 +441,11 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                                 }
                             }
-                            Avatar(user, Modifier.align(Alignment.BottomCenter).size(88.dp))
+                            Avatar(user, Modifier.align(Alignment.BottomCenter).size(88.dp),
+                                sharedTransition = page == pager.currentPage)
                         }
-                        Text(user.name, style = MaterialTheme.typography.headlineSmall)
+                        Text(user.name, Modifier.authorTransition(user.id, "name", page == pager.currentPage),
+                            style = MaterialTheme.typography.headlineSmall)
                         Button(
                             onClick = {
                                 vm.run {

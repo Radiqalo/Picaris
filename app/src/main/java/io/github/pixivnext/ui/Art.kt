@@ -18,6 +18,22 @@ import io.github.pixivnext.core.Work
 import kotlin.math.*
 
 val LocalWorkTransition = staticCompositionLocalOf<SharedTransitionScope?> { null }
+val LocalImageTransitionEnabled = staticCompositionLocalOf { true }
+
+@Composable
+fun Modifier.authorTransition(id: Long, part: String, enabled: Boolean = true): Modifier {
+    val transition = LocalWorkTransition.current
+    if (!enabled || transition == null || id == 0L) return this
+    val navigation = LocalNavAnimatedContentScope.current
+    val motion = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.geometry.Rect>()
+    return with(transition) {
+        val key = rememberSharedContentState("author:$id:$part")
+        if (part == "avatar") this@authorTransition.sharedElement(key, navigation,
+            boundsTransform = { _, _ -> motion })
+        else this@authorTransition.sharedBounds(key, navigation,
+            boundsTransform = { _, _ -> motion })
+    }
+}
 
 @Composable
 fun WorkImage(
@@ -28,7 +44,7 @@ fun WorkImage(
     sharedTransition: Boolean = false,
 ) {
     val transition = LocalWorkTransition.current
-    val imageModifier = if (sharedTransition && transition != null) {
+    val imageModifier = if (sharedTransition && LocalImageTransitionEnabled.current && transition != null) {
         val navigationScope = LocalNavAnimatedContentScope.current
         val boundsAnimation = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.geometry.Rect>()
         with(transition) {

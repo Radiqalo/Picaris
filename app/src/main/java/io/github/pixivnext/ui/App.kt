@@ -64,8 +64,10 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
     }
     val revision by vm.revision.collectAsStateWithLifecycle()
     val backStack = rememberNavBackStack(Home)
+    var authorNavigation by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val navigate: (NavKey) -> Unit = {
+        authorNavigation = it is Author
         if (it == Home) {
             while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
         } else if (it is Detail && backStack.lastOrNull() is Detail)
@@ -74,7 +76,12 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
             backStack[backStack.lastIndex] = it
         else backStack.add(it)
     }
-    val back: () -> Unit = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }
+    val back: () -> Unit = {
+        if (backStack.size > 1) {
+            authorNavigation = backStack.lastOrNull() is Author
+            backStack.removeAt(backStack.lastIndex)
+        }
+    }
     LaunchedEffect(Unit) { vm.message.collect { snackbar.showSnackbar(it) } }
     var routedAccountId by rememberSaveable { mutableStateOf(account?.user?.id) }
     LaunchedEffect(account?.user?.id) {
@@ -119,7 +126,8 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                     key(account?.user?.id, revision) {
                         val strategy = rememberListDetailSceneStrategy<NavKey>()
                         SharedTransitionLayout {
-                            CompositionLocalProvider(LocalWorkTransition provides this) {
+                            CompositionLocalProvider(LocalWorkTransition provides this,
+                                LocalImageTransitionEnabled provides !authorNavigation) {
                                 NavDisplay(
                                     backStack = backStack,
                                     entryDecorators =
@@ -157,9 +165,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                 ScrollingScreen { ReaderScreen(it.work, vm, back) }
                                             }
                                             entry<Author>(metadata = ListDetailSceneStrategy.listPane()) {
-                                                ScrollingScreen {
-                                                    AuthorScreen(it.user, vm, navigate, back)
-                                                }
+                                                AuthorScreen(it.user, vm, navigate, back)
                                             }
                                             entry<Collection>(
                                                 metadata = ListDetailSceneStrategy.listPane()

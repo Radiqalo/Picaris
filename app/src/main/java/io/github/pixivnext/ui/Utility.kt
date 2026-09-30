@@ -152,9 +152,10 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         Avatar(account?.user ?: User(), Modifier.size(72.dp).clip(CircleShape)
                             .clickable(enabled = account != null, onClickLabel = "我的主页") {
                                 account?.user?.let { navigate(Author(it)) }
-                            })
+                            }, sharedTransition = true)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight)) {
                             Text(account?.user?.name ?: "PixivNext",
+                                Modifier.authorTransition(account?.user?.id ?: 0L, "name"),
                                 style = MaterialTheme.typography.headlineSmall,
                                 maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             Text(
