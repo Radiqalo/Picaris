@@ -33,7 +33,6 @@ constructor(
                                 LoadResult.Page(
                                     Demo.works.filter {
                                         (if (spec.kind == "novel") it.isNovel else !it.isNovel) &&
-                                            (spec.kind != "manga" || it.type == "manga") &&
                                             (spec.word.isEmpty() ||
                                                 it.title.contains(spec.word, true) ||
                                                 it.tags.any { t ->
@@ -100,7 +99,7 @@ constructor(
         val path =
             when (s.section) {
                 "ranking" -> {
-                    q["mode"] = if (s.kind == "manga" && s.mode == "day") "day_manga" else s.mode
+                    q["mode"] = s.mode
                     "v1/$kind/ranking"
                 }
                 "follow" -> {
@@ -115,7 +114,6 @@ constructor(
                 }
                 "user" -> {
                     q["user_id"] = s.userId.toString()
-                    if (kind == "illust") q["type"] = s.kind
                     "v1/user/${if(kind=="novel") "novels" else "illusts"}"
                 }
                 "series" -> {
@@ -139,7 +137,7 @@ constructor(
                 else -> {
                     q["include_ranking_illusts"] = "true"
                     q["include_privacy_policy"] = "true"
-                    "v1/${if(s.kind=="manga") "manga" else kind}/recommended"
+                    "v1/$kind/recommended"
                 }
             }
         return path to q

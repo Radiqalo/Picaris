@@ -190,6 +190,7 @@ data class FeedSpec(
 @Serializable
 data class Settings(
     val theme: String = "system",
+    val contentKind: String = "illust",
     val dynamicColor: Boolean = true,
     val seed: Long = 0xFF6256CA,
     val blackReader: Boolean = true,

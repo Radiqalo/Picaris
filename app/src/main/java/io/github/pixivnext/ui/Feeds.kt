@@ -78,34 +78,39 @@ fun ScreenBar(
 }
 
 @Composable
-fun KindTabs(
-    selected: String,
-    onSelect: (String) -> Unit,
-    novel: Boolean = true,
-    modifier: Modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-) {
+fun ContentKindAction(vm: AppViewModel) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-
-    val kinds =
-        if (novel)
-            listOf(
-                "illust" to strings.getString(R.string.ui_2a47176e3d),
-                "manga" to strings.getString(R.string.ui_6a0b30d361),
-                "novel" to strings.getString(R.string.ui_6eb705b4ce),
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val selected = if (settings.contentKind == "novel") "novel" else "illust"
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { menu = true }) {
+            Text(
+                if (selected == "novel") strings.getString(R.string.content_novel)
+                else strings.getString(R.string.content_illust)
             )
-        else
+        }
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             listOf(
-                "illust" to strings.getString(R.string.ui_2a47176e3d),
-                "manga" to strings.getString(R.string.ui_6a0b30d361),
-            )
-    ChoiceChips(
-        selected,
-        kinds,
-        onSelect,
-        modifier,
-        showCheck = true,
-        alignment = Alignment.CenterHorizontally,
-    )
+                "illust" to strings.getString(R.string.content_illust_detail),
+                "novel" to strings.getString(R.string.content_novel),
+            ).forEach { (kind, title) ->
+                DropdownMenuItem(
+                    text = { Text(title) },
+                    onClick = {
+                        menu = false
+                        vm.selectContentKind(kind)
+                    },
+                    leadingIcon = {
+                        AppIcon(if (kind == "novel") Glyph.Book else Glyph.Feed, null)
+                    },
+                    trailingIcon = {
+                        if (selected == kind) AppIcon(Glyph.Check, null)
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -167,8 +172,7 @@ fun ChoiceChips(
 @Composable
 fun RecommendedHomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-
-    var kind by rememberSaveable { mutableStateOf("illust") }
+    val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
     Column {
         ScreenBar(
@@ -183,17 +187,10 @@ fun RecommendedHomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: 
             },
         )
         FeedGrid(
-            FeedSpec(kind = kind),
+            FeedSpec(kind = settings.contentKind),
             vm,
             navigate,
             Modifier.weight(1f),
-            header = {
-                KindTabs(
-                    kind,
-                    { kind = it },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
-                )
-            },
         )
     }
 }
@@ -235,8 +232,13 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 @Composable
 private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
+    val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
-    val trends by produceState(emptyList<TrendingTag>(), vm.accountId, demo) {
+    val trends by produceState(emptyList<TrendingTag>(), vm.accountId, demo, settings.contentKind) {
+        if (settings.contentKind == "novel") {
+            value = emptyList()
+            return@produceState
+        }
         value = try {
             vm.trendingTags()
         } catch (e: kotlinx.coroutines.CancellationException) {
@@ -246,7 +248,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         }
     }
     FeedGrid(
-        FeedSpec(kind = "illust"),
+        FeedSpec(kind = settings.contentKind),
         vm,
         navigate,
         Modifier.fillMaxSize(),
@@ -325,7 +327,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     }
                 }
                 Text(
-                    strings.getString(R.string.discover_works),
+                    if (settings.contentKind == "novel") strings.getString(R.string.discover_novels)
+                    else strings.getString(R.string.discover_works),
                     style = MaterialTheme.typography.titleLarge,
                 )
             }
@@ -335,39 +338,27 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 
 @Composable
 private fun RankingFeedScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
-    var kind by rememberSaveable { mutableStateOf("illust") }
+    val settings by vm.settings.collectAsStateWithLifecycle()
     var mode by rememberSaveable { mutableStateOf("day") }
     FeedGrid(
-        FeedSpec(section = "ranking", kind = kind, mode = mode),
+        FeedSpec(section = "ranking", kind = settings.contentKind, mode = mode),
         vm,
         navigate,
         Modifier.fillMaxSize(),
         rank = true,
-        header = {
-            Column {
-                RankingModePicker(mode, { mode = it })
-                KindTabs(kind, { kind = it }, modifier = Modifier.fillMaxWidth())
-            }
-        },
+        header = { RankingModePicker(mode, { mode = it }) },
     )
 }
 
 @Composable
 fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
-    var kind by rememberSaveable { mutableStateOf("illust") }
+    val settings by vm.settings.collectAsStateWithLifecycle()
     Column {
         FeedGrid(
-            FeedSpec(section = "follow", kind = kind),
+            FeedSpec(section = "follow", kind = settings.contentKind),
             vm,
             navigate,
             Modifier.weight(1f),
-            header = {
-                KindTabs(
-                    kind,
-                    { kind = it },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
-                )
-            },
         )
     }
 }
@@ -375,37 +366,29 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 @Composable
 fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-
-    var kind by rememberSaveable { mutableStateOf("illust") }
+    val settings by vm.settings.collectAsStateWithLifecycle()
     var private by rememberSaveable { mutableStateOf(false) }
     Column {
         ScreenBar(strings.getString(R.string.ui_d07cee786a))
         FeedGrid(
             FeedSpec(
                 section = "bookmarks",
-                kind = kind,
+                kind = settings.contentKind,
                 restrict = if (private) "private" else "public",
             ),
             vm,
             navigate,
             Modifier.weight(1f),
             header = {
-                Column {
-                    KindTabs(
-                        kind,
-                        { kind = it },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
-                    )
-                    ChoiceChips(
-                        if (private) "private" else "public",
-                        listOf(
-                            "public" to strings.getString(R.string.ui_dfe5a318ab),
-                            "private" to strings.getString(R.string.ui_82b464fc64),
-                        ),
-                        { private = it == "private" },
-                        Modifier.fillMaxWidth(),
-                    )
-                }
+                ChoiceChips(
+                    if (private) "private" else "public",
+                    listOf(
+                        "public" to strings.getString(R.string.ui_dfe5a318ab),
+                        "private" to strings.getString(R.string.ui_82b464fc64),
+                    ),
+                    { private = it == "private" },
+                    Modifier.fillMaxWidth(),
+                )
             },
         )
     }
@@ -419,6 +402,7 @@ fun CollectionScreen(
     back: () -> Unit,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
+    val settings by vm.settings.collectAsStateWithLifecycle()
 
     var mode by rememberSaveable { mutableStateOf("day") }
     Column {
@@ -442,7 +426,9 @@ fun CollectionScreen(
         FeedGrid(
             FeedSpec(
                 section = route.section,
-                kind = route.kind,
+                kind =
+                    if (route.section == "series" || route.section == "related") route.kind
+                    else settings.contentKind,
                 mode = mode,
                 userId = route.userId,
                 word = route.word,
@@ -795,12 +781,13 @@ fun EmptyState(
 @Composable
 fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
+    val settings by vm.settings.collectAsStateWithLifecycle()
 
     val word = rememberTextFieldState()
     val searchState = rememberSearchBarState()
     val searchScope = rememberCoroutineScope()
     var submitted by rememberSaveable { mutableStateOf("") }
-    var kind by rememberSaveable { mutableStateOf("illust") }
+    var kind by rememberSaveable { mutableStateOf("work") }
     var sort by rememberSaveable { mutableStateOf("date_desc") }
     var target by rememberSaveable { mutableStateOf("partial_match_for_tags") }
     val focus = LocalFocusManager.current
@@ -824,8 +811,10 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
         focus.clearFocus()
         keyboard?.hide()
     }
-    LaunchedEffect(Unit) {
-        if (demo)
+    LaunchedEffect(demo, settings.contentKind) {
+        if (demo && settings.contentKind == "novel")
+            tags = Demo.works.filter { it.isNovel }.flatMap { it.tags }.distinctBy { it.name }
+        else if (demo)
             tags =
                 listOf(
                     Tag(strings.getString(R.string.ui_3539adaa60)),
@@ -834,7 +823,9 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                     Tag(strings.getString(R.string.ui_0b5c557e9d)),
                     Tag(strings.getString(R.string.ui_6a0b30d361)),
                 )
-        else runCatching { vm.tags() }.onSuccess { tags = it }
+        else if (settings.contentKind == "illust")
+            runCatching { vm.tags() }.onSuccess { tags = it }
+        else tags = emptyList()
     }
     LaunchedEffect(submitted, kind) {
         if (kind == "user" && submitted.isNotBlank()) {
@@ -884,8 +875,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
         ChoiceChips(
             kind,
             listOf(
-                "illust" to strings.getString(R.string.ui_f394cdc91d),
-                "novel" to strings.getString(R.string.ui_6eb705b4ce),
+                "work" to strings.getString(R.string.ui_f394cdc91d),
                 "user" to strings.getString(R.string.ui_698bea5124),
             ),
             { kind = it },
@@ -912,7 +902,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                 FeedGrid(
                     FeedSpec(
                         section = "search",
-                        kind = kind,
+                        kind = settings.contentKind,
                         word = submitted,
                         sort = sort,
                         target = target,

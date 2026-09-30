@@ -168,6 +168,11 @@ constructor(
         }
     }
 
+    fun selectContentKind(kind: String) {
+        require(kind == "illust" || kind == "novel")
+        run { settingsStore.update { it.copy(contentKind = kind) } }
+    }
+
     fun search(word: String) {
         if (word.isNotBlank())
             run { dao.search(SearchEntity(accountId, word.trim(), System.currentTimeMillis())) }

@@ -366,7 +366,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     var user by remember { mutableStateOf(initial) }
-    var kind by rememberSaveable { mutableStateOf("illust") }
+    val settings by vm.settings.collectAsStateWithLifecycle()
     var busy by remember { mutableStateOf(false) }
     val demo by vm.demo.collectAsStateWithLifecycle()
     LaunchedEffect(user.id) {
@@ -416,9 +416,8 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                     Text(user.comment, style = MaterialTheme.typography.bodyMedium)
             }
         }
-        KindTabs(kind, { kind = it })
         FeedGrid(
-            FeedSpec(section = "user", kind = kind, userId = user.id),
+            FeedSpec(section = "user", kind = settings.contentKind, userId = user.id),
             vm,
             navigate,
             Modifier.weight(1f),

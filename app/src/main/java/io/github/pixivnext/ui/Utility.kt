@@ -140,11 +140,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     Column {
         ScreenBar(
             strings.getString(R.string.ui_a82c993d73),
-            actions = {
-                IconButton({ navigate(Utility("settings")) }) {
-                    AppIcon(Glyph.Settings, strings.getString(R.string.ui_7debf9cb03))
-                }
-            },
+            actions = { ContentKindAction(vm) },
         )
         LazyColumn(
             modifier = Modifier.testTag("profileList"),
