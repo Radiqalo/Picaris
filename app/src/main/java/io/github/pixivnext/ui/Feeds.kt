@@ -1411,6 +1411,7 @@ fun Avatar(user: User, modifier: Modifier = Modifier, sharedTransition: Boolean 
             user.profile_image_urls.medium,
             user.name,
             avatarModifier,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
         )
     else
         Surface(

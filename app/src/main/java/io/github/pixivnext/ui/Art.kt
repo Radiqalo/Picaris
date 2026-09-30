@@ -4,6 +4,7 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
@@ -36,7 +37,8 @@ fun Modifier.authorTransition(id: Long, part: String, enabled: Boolean = true): 
     return with(transition) {
         val key = rememberSharedContentState("author:$id:$part")
         if (part == "avatar") this@authorTransition.sharedElement(key, navigation,
-            boundsTransform = { _, _ -> motion })
+            boundsTransform = { _, _ -> motion },
+            clipInOverlayDuringTransition = OverlayClip(CircleShape))
         else this@authorTransition.sharedBounds(key, navigation,
             boundsTransform = { _, _ -> motion })
     }
