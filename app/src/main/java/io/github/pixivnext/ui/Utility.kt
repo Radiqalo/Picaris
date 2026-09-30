@@ -153,7 +153,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         ) {
             item {
                 Surface(
-                    shape = RoundedCornerShape(32.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
                     color = MaterialTheme.colorScheme.primaryContainer,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -920,7 +920,7 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
                     val work = remember(record.json) { AppJson.decodeFromString<Work>(record.json) }
                     Surface(
                         onClick = { navigate(Detail(work)) },
-                        shape = RoundedCornerShape(22.dp),
+                        shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                     ) {
                         Row(
@@ -930,7 +930,7 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
                         ) {
                             WorkImage(
                                 work,
-                                Modifier.size(72.dp, 88.dp).clip(RoundedCornerShape(16.dp)),
+                                Modifier.size(72.dp, 88.dp).clip(MaterialTheme.shapes.small),
                             )
                             Column(Modifier.weight(1f)) {
                                 Text(
@@ -976,7 +976,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             ) {
                 items(tasks, key = { it.id }) { task ->
                     Surface(
-                        shape = RoundedCornerShape(24.dp),
+                        shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                     ) {
                         Column(
@@ -1118,7 +1118,7 @@ fun AboutScreen(back: () -> Unit) {
         ) {
             Surface(
                 Modifier.size(88.dp),
-                shape = RoundedCornerShape(28.dp),
+                shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.primary,
             ) {
                 Box(contentAlignment = Alignment.Center) {

@@ -545,7 +545,7 @@ fun EmptyState(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Surface(
-                shape = RoundedCornerShape(30.dp),
+                shape = MaterialTheme.shapes.extraLarge,
                 color = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 AppIcon(icon, null, Modifier.padding(24.dp).size(40.dp))
@@ -745,7 +745,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                 }
                 item {
                     Surface(
-                        shape = RoundedCornerShape(24.dp),
+                        shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth(),
                     ) {

@@ -3,7 +3,6 @@ package io.github.pixivnext.ui
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -60,21 +59,20 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                         state = list,
                         contentPadding = PaddingValues(16.dp),
                         modifier = Modifier.fillMaxSize().testTag("peopleList"),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                     ) {
                         items(people.itemCount, key = people.itemKey { it.id }) { index ->
                             people[index]?.let { user ->
-                                Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                UserRow(
+                                    user,
+                                    { navigate(Author(user)) },
+                                    segment = index to people.itemCount,
                                 ) {
-                                    UserRow(user, { navigate(Author(user)) }) {
-                                        if (user.is_followed)
-                                            Text(
-                                                "已关注",
-                                                style = MaterialTheme.typography.labelMedium,
-                                            )
-                                    }
+                                    if (user.is_followed)
+                                        Text(
+                                            "已关注",
+                                            style = MaterialTheme.typography.labelMedium,
+                                        )
                                 }
                             }
                         }
@@ -267,7 +265,7 @@ private fun CommentCard(
     onReply: (() -> Unit)?,
 ) {
     Surface(
-        shape = RoundedCornerShape(24.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(

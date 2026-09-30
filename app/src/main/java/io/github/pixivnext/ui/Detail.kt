@@ -378,7 +378,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         ScreenBar(user.name, back = back)
         Surface(
             Modifier.padding(horizontal = 20.dp).fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
