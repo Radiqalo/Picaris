@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -30,6 +32,7 @@ import io.github.pixivnext.AppViewModel
 import io.github.pixivnext.R
 import io.github.pixivnext.core.*
 import io.github.pixivnext.designsystem.*
+import kotlinx.coroutines.launch
 
 private val WorkImageBadgeInset = 8.dp
 
@@ -563,7 +566,9 @@ fun EmptyState(
 fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
-    var word by rememberSaveable { mutableStateOf("") }
+    val word = rememberTextFieldState()
+    val searchState = rememberSearchBarState()
+    val searchScope = rememberCoroutineScope()
     var submitted by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf("illust") }
     var sort by rememberSaveable { mutableStateOf("date_desc") }
@@ -581,9 +586,10 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
     val history by vm.searchHistory.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
     fun submit(value: String) {
-        word = value
+        word.setTextAndPlaceCursorAtEnd(value)
         submitted = value.trim()
         vm.search(submitted)
+        searchScope.launch { searchState.animateToCollapsed() }
         focus.clearFocus()
         keyboard?.hide()
     }
@@ -613,6 +619,24 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
             userLoading = false
         }
     }
+    val searchField: @Composable () -> Unit = {
+        SearchBarDefaults.InputField(
+            textFieldState = word,
+            searchBarState = searchState,
+            onSearch = ::submit,
+            placeholder = { Text(strings.getString(R.string.ui_f15043c361)) },
+            leadingIcon = { AppIcon(Glyph.Search, null) },
+            trailingIcon = {
+                if (word.text.isNotEmpty())
+                    IconButton({
+                        word.setTextAndPlaceCursorAtEnd("")
+                        submitted = ""
+                    }) {
+                        AppIcon(Glyph.Close, strings.getString(R.string.ui_7b15e5e8e7))
+                    }
+            },
+        )
+    }
     Column {
         ScreenBar(
             strings.getString(R.string.ui_f04090805c),
@@ -623,29 +647,10 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                 }
             },
         )
-        OutlinedTextField(
-            word,
-            { word = it },
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            placeholder = { Text(strings.getString(R.string.ui_f15043c361)) },
-            leadingIcon = { AppIcon(Glyph.Search, null) },
-            trailingIcon = {
-                if (word.isNotEmpty())
-                    IconButton({
-                        word = ""
-                        submitted = ""
-                    }) {
-                        AppIcon(Glyph.Close, strings.getString(R.string.ui_7b15e5e8e7))
-                    }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(28.dp),
-            keyboardOptions =
-                androidx.compose.foundation.text.KeyboardOptions(
-                    imeAction = androidx.compose.ui.text.input.ImeAction.Search
-                ),
-            keyboardActions =
-                androidx.compose.foundation.text.KeyboardActions(onSearch = { submit(word) }),
+        SearchBar(
+            state = searchState,
+            inputField = searchField,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
         ChoiceChips(
             kind,
@@ -761,6 +766,16 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                     }
                 }
             }
+    }
+    ExpandedFullScreenSearchBar(state = searchState, inputField = searchField) {
+        history.take(8).forEach { entry ->
+            ListItem(
+                leadingContent = { AppIcon(Glyph.History, null) },
+                modifier = Modifier.clickable { submit(entry.word) },
+            ) {
+                Text(entry.word)
+            }
+        }
     }
     if (filter)
         AlertDialog(
