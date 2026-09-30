@@ -137,9 +137,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                         }
                                     }
                                     entry<Detail>(metadata = ListDetailSceneStrategy.detailPane()) {
-                                        ScrollingScreen {
-                                            DetailScreen(it.work, vm, navigate, back)
-                                        }
+                                        DetailScreen(it.work, vm, navigate, back)
                                     }
                                     entry<Reader> {
                                         ScrollingScreen { ReaderScreen(it.work, vm, back) }
