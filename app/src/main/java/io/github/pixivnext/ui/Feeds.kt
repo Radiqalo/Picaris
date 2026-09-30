@@ -1,6 +1,7 @@
 package io.github.pixivnext.ui
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -40,8 +41,14 @@ private val WorkImageBadgeInset = 8.dp
 val LocalAppBarScrollBehavior = staticCompositionLocalOf<TopAppBarScrollBehavior?> { null }
 
 @Composable
-fun ScrollingScreen(content: @Composable () -> Unit) {
-    val behavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+fun ScrollingScreen(
+    scrollableState: ScrollableState? = null,
+    content: @Composable () -> Unit,
+) {
+    val behavior =
+        if (scrollableState != null)
+            TopAppBarDefaults.enterAlwaysScrollBehavior(scrollableState = scrollableState)
+        else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     CompositionLocalProvider(LocalAppBarScrollBehavior provides behavior) {
         Box(Modifier.fillMaxSize().nestedScroll(behavior.nestedScrollConnection)) { content() }
     }
@@ -148,7 +155,12 @@ fun ChoiceChips(
 }
 
 @Composable
-fun RecommendedHomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: () -> Unit) {
+fun RecommendedHomeScreen(
+    vm: AppViewModel,
+    navigate: (NavKey) -> Unit,
+    gridState: LazyStaggeredGridState,
+    search: () -> Unit,
+) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
@@ -166,6 +178,7 @@ fun RecommendedHomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, search: 
             vm,
             navigate,
             Modifier.weight(1f),
+            gridState = gridState,
         )
     }
 }
@@ -475,6 +488,7 @@ fun FeedGrid(
     modifier: Modifier = Modifier,
     rank: Boolean = false,
     header: (@Composable () -> Unit)? = null,
+    gridState: LazyStaggeredGridState? = null,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
@@ -493,7 +507,7 @@ fun FeedGrid(
     val items = flow.collectAsLazyPagingItems()
     val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
     val busy by vm.bookmarkBusy.collectAsStateWithLifecycle()
-    val grid = key(spec) { rememberLazyStaggeredGridState() }
+    val grid = gridState ?: key(spec) { rememberLazyStaggeredGridState() }
     val refreshing = items.loadState.refresh is LoadState.Loading
     val error = items.loadState.refresh as? LoadState.Error
     val showFeedMetadata =

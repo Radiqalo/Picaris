@@ -3,6 +3,7 @@ package io.github.pixivnext.ui
 import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.*
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
@@ -237,10 +238,11 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             ) { padding ->
                 Box(Modifier.padding(padding)) {
                     holder.SaveableStateProvider(tab) {
-                        ScrollingScreen {
+                        val homeGrid = rememberLazyStaggeredGridState()
+                        ScrollingScreen(scrollableState = homeGrid.takeIf { tab == 0 }) {
                             when (tab) {
                                 0 ->
-                                    RecommendedHomeScreen(vm, navigate) {
+                                    RecommendedHomeScreen(vm, navigate, homeGrid) {
                                         navigate(Search)
                                     }
                                 1 -> DiscoverScreen(vm, navigate)
