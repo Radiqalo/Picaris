@@ -567,7 +567,7 @@ fun FeedGrid(
                                     Modifier.fillMaxWidth().padding(20.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    LoadingIndicator(Modifier.size(32.dp))
+                                    CircularWavyProgressIndicator(Modifier.size(32.dp))
                                 }
                             is LoadState.Error ->
                                 TextButton({ items.retry() }, Modifier.fillMaxWidth()) {
@@ -708,19 +708,8 @@ fun compact(n: Int) =
 
 @Composable
 fun LoadingState() {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            LoadingIndicator()
-            Text(
-                strings.getString(R.string.ui_19fa805abc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        CircularWavyProgressIndicator(Modifier.size(48.dp))
     }
 }
 

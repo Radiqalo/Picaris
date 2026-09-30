@@ -246,7 +246,7 @@ fun UgoiraPlayer(work: Work, vm: AppViewModel, toggle: () -> Unit) {
                     retry++
                 }
             image != null -> Image(image!!, work.title, Modifier.fillMaxSize())
-            else -> LoadingIndicator()
+            else -> CircularWavyProgressIndicator()
         }
         if (ready)
             FilledTonalIconButton(

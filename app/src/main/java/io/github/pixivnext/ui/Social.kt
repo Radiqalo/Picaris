@@ -83,7 +83,7 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                         Modifier.fillMaxWidth().padding(16.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        LoadingIndicator()
+                                        CircularWavyProgressIndicator()
                                     }
                                 is LoadState.Error ->
                                     TextButton({ people.retry() }, Modifier.fillMaxWidth()) {
@@ -325,7 +325,7 @@ private fun CommentFooter(state: ThreadState, load: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         when {
-            state.loading -> LoadingIndicator(Modifier.size(32.dp))
+            state.loading -> CircularWavyProgressIndicator(Modifier.size(32.dp))
             state.error != null -> {
                 Text(state.error, color = MaterialTheme.colorScheme.error)
                 TextButton(load) { Text("重新加载评论") }
