@@ -195,7 +195,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
-    val trends by produceState(emptyList<TrendingTag>(), vm.accountId, demo, settings.contentKind) {
+    val trendResult by produceState<List<TrendingTag>?>(null, vm.accountId, demo, settings.contentKind) {
+        value = null
         if (settings.contentKind == "novel") {
             value = emptyList()
             return@produceState
@@ -208,6 +209,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             emptyList()
         }
     }
+    val trends = trendResult.orEmpty()
+    val loadingTrends = trendResult == null && settings.contentKind != "novel"
     FeedGrid(
         FeedSpec(kind = settings.contentKind),
         vm,
@@ -226,7 +229,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(strings.getString(R.string.ui_d00981d6ce))
                 }
-                if (trends.isNotEmpty()) {
+                if (loadingTrends) DiscoveryPlaceholders()
+                else if (trends.isNotEmpty()) {
                     Text(
                         strings.getString(R.string.discover_featured),
                         style = MaterialTheme.typography.headlineSmall,
@@ -306,6 +310,50 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             }
         },
     )
+}
+
+@Composable
+private fun DiscoveryPlaceholders() {
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    Text(strings.getString(R.string.discover_featured),
+        style = MaterialTheme.typography.headlineSmall)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(3) {
+            ElevatedCard(Modifier.width(260.dp)) {
+                Box(Modifier.fillMaxWidth().height(150.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh))
+            }
+        }
+    }
+    Text(strings.getString(R.string.discover_tags),
+        style = MaterialTheme.typography.titleLarge)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(4) {
+            SuggestionChip(
+                onClick = {},
+                enabled = false,
+                modifier = Modifier.width(112.dp),
+                label = { Spacer(Modifier.height(20.dp)) },
+            )
+        }
+    }
+    Text(strings.getString(R.string.discover_artists),
+        style = MaterialTheme.typography.titleLarge)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(3) {
+            ElevatedCard(Modifier.width(180.dp)) {
+                Row(Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.size(48.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest))
+                    Box(Modifier.width(88.dp).height(16.dp)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest))
+                }
+            }
+        }
+    }
 }
 
 @Composable
