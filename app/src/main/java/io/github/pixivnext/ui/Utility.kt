@@ -135,15 +135,21 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val isDemo by vm.demo.collectAsStateWithLifecycle()
     val account by vm.active.collectAsStateWithLifecycle()
     LaunchedEffect(account?.user?.id) { vm.syncAccountProfile() }
-    Column {
-        ScreenBar(strings.getString(R.string.ui_a82c993d73), actions = { ContentKindAction(vm) })
-        LazyColumn(
-            modifier = Modifier.weight(1f).testTag("profileList"),
-            contentPadding = PaddingValues(PixivSpacing.content),
-            verticalArrangement = Arrangement.spacedBy(PixivSpacing.section),
-        ) {
-            item(key = "identity") {
-                Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().testTag("profileList"),
+        contentPadding = PaddingValues(bottom = PixivSpacing.content),
+        verticalArrangement = Arrangement.spacedBy(PixivSpacing.section),
+    ) {
+        item(key = "title") {
+            ScreenBar(
+                strings.getString(R.string.ui_a82c993d73),
+                scrollBehavior = null,
+                actions = { ContentKindAction(vm) },
+            )
+        }
+        item(key = "identity") {
+            Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
                     Row(
                         Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
                         verticalAlignment = Alignment.CenterVertically,
@@ -175,8 +181,9 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     ProfileLibraryActions(navigate)
                 }
             }
-            item(key = "pixiv") {
-                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+        item(key = "pixiv") {
+            Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                     listOf(
                         "我的关注" to { navigate(People("following", "我的关注")) },
                         "我的粉丝" to { navigate(People("follower", "我的粉丝")) },
@@ -192,8 +199,9 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     }
                 }
             }
-            item(key = "preferences") {
-                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+        item(key = "preferences") {
+            Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                     listOf(
                         Triple("settings", strings.getString(R.string.ui_7debf9cb03), Glyph.Settings),
                         Triple("about", strings.getString(R.string.ui_272209c708), Glyph.Discover),
@@ -209,7 +217,6 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     }
                 }
             }
-        }
     }
 }
 

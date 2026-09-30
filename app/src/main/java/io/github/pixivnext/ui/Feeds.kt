@@ -1,7 +1,6 @@
 package io.github.pixivnext.ui
 
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.ScrollableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -46,15 +45,15 @@ val LocalAppBarScrollBehavior = staticCompositionLocalOf<TopAppBarScrollBehavior
 
 @Composable
 fun ScrollingScreen(
-    scrollableState: ScrollableState? = null,
+    scrollBehaviorEnabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val behavior =
-        if (scrollableState != null)
-            TopAppBarDefaults.enterAlwaysScrollBehavior(scrollableState = scrollableState)
-        else TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val behavior = if (scrollBehaviorEnabled) TopAppBarDefaults.enterAlwaysScrollBehavior() else null
     CompositionLocalProvider(LocalAppBarScrollBehavior provides behavior) {
-        Box(Modifier.fillMaxSize().nestedScroll(behavior.nestedScrollConnection)) { content() }
+        val modifier =
+            if (behavior == null) Modifier
+            else Modifier.nestedScroll(behavior.nestedScrollConnection)
+        Box(Modifier.fillMaxSize().then(modifier)) { content() }
     }
 }
 
@@ -63,6 +62,7 @@ fun ScreenBar(
     title: String,
     back: (() -> Unit)? = null,
     windowInsets: WindowInsets = TopAppBarDefaults.windowInsets,
+    scrollBehavior: TopAppBarScrollBehavior? = LocalAppBarScrollBehavior.current,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
@@ -76,7 +76,7 @@ fun ScreenBar(
     }
     TopAppBar(
         title = titleContent,
-        scrollBehavior = LocalAppBarScrollBehavior.current,
+        scrollBehavior = scrollBehavior,
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.background,
             scrolledContainerColor = MaterialTheme.colorScheme.background,
@@ -178,41 +178,36 @@ fun RecommendedHomeScreen(
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
-    Column {
-        // Collapse the status-bar gutter with the home app bar, leaving the feed edge to edge.
-        val collapsed = LocalAppBarScrollBehavior.current?.state?.collapsedFraction ?: 0f
-        Spacer(Modifier.height(
-            WindowInsets.statusBars.asPaddingValues().calculateTopPadding() * (1f - collapsed)
-        ))
-        ScreenBar(
-            strings.getString(R.string.tab_home) + if (demo) " · 演示" else "",
-            windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
-            actions = {
-                IconButton(search) {
-                    AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
-                }
-            },
-        )
-        FeedGrid(
-            FeedSpec(kind = settings.contentKind),
-            vm,
-            navigate,
-            Modifier.weight(1f),
-            gridState = gridState,
-            listState = listState,
-        )
-    }
+    FeedGrid(
+        FeedSpec(kind = settings.contentKind),
+        vm,
+        navigate,
+        Modifier.fillMaxSize(),
+        gridState = gridState,
+        listState = listState,
+        topPadding = 0.dp,
+        header = {
+            Column {
+                Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding()))
+                ScreenBar(
+                    strings.getString(R.string.tab_home) + if (demo) " · 演示" else "",
+                    windowInsets = TopAppBarDefaults.windowInsets.only(WindowInsetsSides.Horizontal),
+                    scrollBehavior = null,
+                    actions = {
+                        IconButton(search) {
+                            AppIcon(Glyph.Search, strings.getString(R.string.ui_f04090805c))
+                        }
+                    },
+                )
+                Spacer(Modifier.height(PixivSpacing.content))
+            }
+        },
+    )
 }
 
 @Composable
 fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
-    Column {
-        ScreenBar(strings.getString(R.string.ui_523e40a074))
-        Box(Modifier.weight(1f)) {
-            DiscoveryLanding(vm, navigate)
-        }
-    }
+    DiscoveryLanding(vm, navigate)
 }
 
 @Composable
@@ -221,8 +216,6 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
-    val pullRefreshEnabled =
-        LocalAppBarScrollBehavior.current?.state?.heightOffset?.let { it >= -0.5f } ?: true
     val trendResult by produceState<List<TrendingTag>?>(vm.cachedTrendingTags(), vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
         value = vm.cachedTrendingTags()
         if (settings.contentKind == "novel") {
@@ -266,8 +259,10 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         vm,
         navigate,
         Modifier.fillMaxSize(),
+        topPadding = 0.dp,
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
+                ScreenBar(strings.getString(R.string.ui_523e40a074), scrollBehavior = null)
                 FilledTonalButton(
                     onClick = {
                         navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking"))
@@ -344,7 +339,6 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 )
             }
         },
-        pullToRefreshEnabled = pullRefreshEnabled,
     )
 }
 
@@ -467,18 +461,19 @@ private fun DiscoveryPlaceholders() {
 fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val pullRefreshEnabled =
-        LocalAppBarScrollBehavior.current?.state?.heightOffset?.let { it >= -0.5f } ?: true
-    Column {
-        ScreenBar(strings.getString(R.string.ui_753ccc8e2e))
-        FeedGrid(
-            FeedSpec(section = "follow", kind = settings.contentKind),
-            vm,
-            navigate,
-            Modifier.weight(1f),
-            pullToRefreshEnabled = pullRefreshEnabled,
-        )
-    }
+    FeedGrid(
+        FeedSpec(section = "follow", kind = settings.contentKind),
+        vm,
+        navigate,
+        Modifier.fillMaxSize(),
+        topPadding = 0.dp,
+        header = {
+            Column {
+                ScreenBar(strings.getString(R.string.ui_753ccc8e2e), scrollBehavior = null)
+                Spacer(Modifier.height(PixivSpacing.content))
+            }
+        },
+    )
 }
 
 @Composable
@@ -661,6 +656,7 @@ fun FeedGrid(
     listState: LazyListState? = null,
     topPadding: Dp = PixivSpacing.content,
     pullToRefreshEnabled: Boolean = true,
+    scrollHeaderWhileEmpty: Boolean = false,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
@@ -686,9 +682,9 @@ fun FeedGrid(
     val showFeedMetadata = spec.section != "ranking" && settings.showHomeMetadata
     val feedContent: @Composable () -> Unit = {
         when {
-            refreshing && items.itemCount == 0 -> FeedGridStatus(header) { LoadingState() }
+            refreshing && items.itemCount == 0 -> FeedGridStatus(header, scrollHeaderWhileEmpty) { LoadingState() }
             error != null && items.itemCount == 0 ->
-                FeedGridStatus(header) {
+                FeedGridStatus(header, scrollHeaderWhileEmpty) {
                     EmptyState(
                         strings.getString(R.string.ui_590a4df471),
                         error.error.message ?: strings.getString(R.string.ui_73a13d2b99),
@@ -699,7 +695,7 @@ fun FeedGrid(
                     }
                 }
             items.itemCount == 0 ->
-                FeedGridStatus(header) {
+                FeedGridStatus(header, scrollHeaderWhileEmpty) {
                     EmptyState(
                         strings.getString(R.string.ui_37ce9e3518),
                         if (spec.section == "bookmarks") strings.getString(R.string.ui_408822a29e)
@@ -845,8 +841,19 @@ private fun FeedAppendState(state: LoadState, count: Int, retry: () -> Unit) {
 }
 
 @Composable
-private fun FeedGridStatus(header: (@Composable () -> Unit)?, content: @Composable () -> Unit) {
+private fun FeedGridStatus(
+    header: (@Composable () -> Unit)?,
+    scrollHeader: Boolean,
+    content: @Composable () -> Unit,
+) {
     if (header == null) content()
+    else if (scrollHeader)
+        LazyColumn(Modifier.fillMaxSize()) {
+            item(key = "feed_header") { header() }
+            item(key = "feed_status") {
+                Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) { content() }
+            }
+        }
     else
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.padding(horizontal = PixivSpacing.content)) { header() }

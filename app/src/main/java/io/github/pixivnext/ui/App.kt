@@ -319,19 +319,14 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         val homeGrid = rememberLazyStaggeredGridState()
                         val homeList = rememberLazyListState()
                         ScrollingScreen(
-                            scrollableState =
-                                if (currentTab != 0) null
-                                else if (settings.contentKind == "novel") homeList else homeGrid
+                            scrollBehaviorEnabled = false
                         ) {
                             if (currentTab == 0) {
-                                val appBar = LocalAppBarScrollBehavior.current
                                 LaunchedEffect(settings.contentKind) {
                                     homeReselection.collectLatest {
                                         if (settings.contentKind == "novel")
                                             homeList.animateScrollToItem(0)
                                         else homeGrid.animateScrollToItem(0)
-                                        appBar?.state?.heightOffset = 0f
-                                        appBar?.state?.contentOffset = 0f
                                     }
                                 }
                             }
