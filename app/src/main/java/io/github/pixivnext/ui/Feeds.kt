@@ -905,15 +905,15 @@ fun EmptyState(
 }
 
 @Composable
-fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
+fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit, initialQuery: String? = null) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
 
-    val word = rememberTextFieldState()
+    val word = rememberTextFieldState(initialQuery.orEmpty())
     val searchState = rememberSearchBarState()
     val searchScope = rememberCoroutineScope()
-    var submitted by rememberSaveable { mutableStateOf("") }
-    var kind by rememberSaveable { mutableStateOf("work") }
+    var submitted by rememberSaveable { mutableStateOf(initialQuery.orEmpty()) }
+    val resultPager = rememberPagerState(pageCount = { 2 })
     var sort by rememberSaveable { mutableStateOf("date_desc") }
     var target by rememberSaveable { mutableStateOf("partial_match_for_tags") }
     val focus = LocalFocusManager.current
@@ -926,18 +926,41 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
     var users by remember { mutableStateOf<List<User>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
     var userLoading by remember { mutableStateOf(false) }
+    var userRetry by remember { mutableIntStateOf(0) }
     val history by vm.searchHistory.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
     val active by vm.active.collectAsStateWithLifecycle()
+    var jumping by remember { mutableStateOf(false) }
     fun submit(value: String) {
-        word.setTextAndPlaceCursorAtEnd(value)
-        submitted = value.trim()
-        vm.search(submitted)
+        if (jumping || value.isBlank()) return
+        val query = value.trim()
+        word.setTextAndPlaceCursorAtEnd(query)
         searchScope.launch { searchState.animateToCollapsed() }
         focus.clearFocus()
         keyboard?.hide()
+        val jump = parseSearchJump(query, settings.contentKind == "novel")
+        if (jump != null) {
+            jumping = true
+            vm.run {
+                try {
+                    when (jump) {
+                        is SearchJump.Artwork -> navigate(Detail(vm.detail(Work(
+                            id = jump.id, type = if (jump.novel) "novel" else "illust",
+                        ))))
+                        is SearchJump.Artist -> navigate(Author(vm.user(User(id = jump.id))))
+                    }
+                } finally {
+                    jumping = false
+                }
+            }
+        } else {
+            vm.search(query)
+            if (initialQuery == null) navigate(SearchResults(query))
+            else submitted = query
+        }
     }
     LaunchedEffect(demo, settings.contentKind) {
+        if (initialQuery != null) return@LaunchedEffect
         if (demo && settings.contentKind == "novel")
             tags = Demo.works.filter { it.isNovel }.flatMap { it.tags }.distinctBy { it.name }
         else if (demo)
@@ -953,16 +976,19 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
             runCatching { vm.tags() }.onSuccess { tags = it }
         else tags = emptyList()
     }
-    LaunchedEffect(submitted, kind) {
-        if (kind == "user" && submitted.isNotBlank()) {
+    LaunchedEffect(submitted, vm.accountId, userRetry) {
+        if (submitted.isNotBlank()) {
             userLoading = true
             error = null
             try {
                 users = vm.searchUsers(submitted)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 error = e.message
+            } finally {
+                userLoading = false
             }
-            userLoading = false
         }
     }
     val searchField: @Composable () -> Unit = {
@@ -970,13 +996,13 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
             textFieldState = word,
             searchBarState = searchState,
             onSearch = ::submit,
-            placeholder = { Text(strings.getString(R.string.ui_f15043c361)) },
+            placeholder = { Text("关键词、ID 或 Pixiv 链接") },
             leadingIcon = { AppIcon(Glyph.Search, null) },
             trailingIcon = {
                 if (word.text.isNotEmpty())
                     IconButton({
                         word.setTextAndPlaceCursorAtEnd("")
-                        submitted = ""
+                        if (initialQuery == null) submitted = ""
                     }) {
                         AppIcon(Glyph.Close, strings.getString(R.string.ui_7b15e5e8e7))
                     }
@@ -985,10 +1011,10 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
     }
     Column {
         ScreenBar(
-            strings.getString(R.string.ui_f04090805c),
+            if (initialQuery == null) strings.getString(R.string.ui_f04090805c) else "搜索结果",
             back = back,
             actions = {
-                IconButton({ filter = true }) {
+                if (initialQuery != null) IconButton({ filter = true }) {
                     AppIcon(Glyph.Settings, strings.getString(R.string.ui_1c31f74a1d))
                 }
             },
@@ -998,47 +1024,55 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
             inputField = searchField,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
-        ChoiceChips(
-            kind,
-            listOf(
-                "work" to strings.getString(R.string.ui_f394cdc91d),
-                "user" to strings.getString(R.string.ui_698bea5124),
-            ),
-            { kind = it },
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-        )
-        if (submitted.isNotEmpty()) {
-            if (kind == "user") {
-                if (userLoading) LoadingState()
-                else if (error != null)
-                    EmptyState(
-                        strings.getString(R.string.ui_b9786d51c3),
-                        error!!,
-                        action = strings.getString(R.string.ui_e2d53a6d3a),
-                    ) {
-                        submit(submitted)
-                    }
-                else
-                    LazyColumn {
-                        items(users, key = { it.id }) { user ->
-                            UserRow(user, { navigate(Author(user)) })
+        if (jumping) LoadingState()
+        else if (submitted.isNotEmpty()) {
+            PrimaryTabRow(selectedTabIndex = resultPager.currentPage) {
+                listOf(
+                    strings.getString(R.string.ui_f394cdc91d),
+                    strings.getString(R.string.ui_698bea5124),
+                ).forEachIndexed { index, label ->
+                    Tab(
+                        selected = resultPager.currentPage == index,
+                        onClick = { searchScope.launch { resultPager.animateScrollToPage(index) } },
+                        text = { Text(label) },
+                    )
+                }
+            }
+            HorizontalPager(state = resultPager, modifier = Modifier.weight(1f)) { page ->
+                if (page == 1) {
+                    if (userLoading) LoadingState()
+                    else if (error != null)
+                        EmptyState(
+                            strings.getString(R.string.ui_b9786d51c3),
+                            error!!,
+                            action = strings.getString(R.string.ui_e2d53a6d3a),
+                        ) {
+                            userRetry++
                         }
-                    }
-            } else
-                FeedGrid(
-                    FeedSpec(
-                        section = "search",
-                        kind = settings.contentKind,
-                        word = submitted,
-                        sort = sort,
-                        target = target,
-                        startDate = startDate,
-                        endDate = endDate,
-                    ),
-                    vm,
-                    navigate,
-                    Modifier.weight(1f),
-                )
+                    else if (users.isEmpty())
+                        EmptyState("没有找到作者", "", Glyph.Person)
+                    else
+                        LazyColumn(Modifier.fillMaxSize()) {
+                            items(users, key = { it.id }) { user ->
+                                UserRow(user, { navigate(Author(user)) })
+                            }
+                        }
+                } else
+                    FeedGrid(
+                        FeedSpec(
+                            section = "search",
+                            kind = settings.contentKind,
+                            word = submitted,
+                            sort = sort,
+                            target = target,
+                            startDate = startDate,
+                            endDate = endDate,
+                        ),
+                        vm,
+                        navigate,
+                        Modifier.fillMaxSize(),
+                    )
+            }
         } else
             LazyColumn(
                 contentPadding = PaddingValues(20.dp),

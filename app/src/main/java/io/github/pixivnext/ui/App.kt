@@ -29,6 +29,8 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Serializable data object Search : NavKey
 
+@Serializable data class SearchResults(val query: String) : NavKey
+
 @Serializable data class People(val section: String, val title: String) : NavKey
 
 @Serializable data class Replies(val work: Work, val comment: Comment) : NavKey
@@ -63,6 +65,8 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
         if (it == Home) {
             while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
         } else if (it is Detail && backStack.lastOrNull() is Detail)
+            backStack[backStack.lastIndex] = it
+        else if (it is SearchResults && backStack.lastOrNull() is SearchResults)
             backStack[backStack.lastIndex] = it
         else backStack.add(it)
     }
@@ -127,6 +131,9 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                             }
                                             entry<Search>(metadata = ListDetailSceneStrategy.listPane()) {
                                                 ScrollingScreen { SearchScreen(vm, navigate, back) }
+                                            }
+                                            entry<SearchResults>(metadata = ListDetailSceneStrategy.listPane()) {
+                                                ScrollingScreen { SearchScreen(vm, navigate, back, it.query) }
                                             }
                                             entry<People> {
                                                 ScrollingScreen { PeopleScreen(it, vm, navigate, back) }
