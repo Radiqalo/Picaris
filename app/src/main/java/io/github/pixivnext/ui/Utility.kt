@@ -365,7 +365,7 @@ private fun SettingChoiceBlock(
                     Text(title, style = MaterialTheme.typography.titleMedium)
                 }
                 ChoiceChips(selected, options, onSelect, Modifier.fillMaxWidth(),
-                    alignment = Alignment.CenterHorizontally)
+                    alignment = Alignment.CenterHorizontally, equalWidth = true)
             }
         },
         modifier = Modifier.fillMaxWidth(),

@@ -106,6 +106,7 @@ fun ChoiceChips(
     modifier: Modifier = Modifier,
     showCheck: Boolean = false,
     alignment: Alignment.Horizontal = Alignment.Start,
+    equalWidth: Boolean = false,
 ) {
     val sources = remember(options) { List(options.size) { MutableInteractionSource() } }
     val feedback = selectionFeedback()
@@ -124,6 +125,10 @@ fun ChoiceChips(
                     ToggleButton(
                         checked = selected == key,
                         onCheckedChange = { select(key) },
+                        colors = if (equalWidth) ToggleButtonDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                        ) else ToggleButtonDefaults.colors(),
                         shapes =
                             when {
                                 options.size == 1 ->
@@ -135,7 +140,7 @@ fun ChoiceChips(
                             },
                         interactionSource = sources[index],
                         modifier =
-                            Modifier.animateWidth(
+                            (if (equalWidth) Modifier.weight(1f) else Modifier).animateWidth(
                                 interactionSource = sources[index],
                                 compressionLimit =
                                     padding.calculateEndPadding(LocalLayoutDirection.current),
