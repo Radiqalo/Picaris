@@ -484,10 +484,11 @@ fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Uni
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     var private by rememberSaveable { mutableStateOf(false) }
-    Column {
+    Column(Modifier.fillMaxSize()) {
         ScreenBar(
             strings.getString(R.string.ui_d07cee786a),
             back = back,
+            scrollBehavior = null,
             actions = {
                 IconButton(onClick = { private = !private }) {
                     AppIcon(

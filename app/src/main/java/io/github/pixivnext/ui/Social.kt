@@ -28,7 +28,7 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         remember(route.section, restrict, vm.accountId) { vm.people(route.section, restrict) }
     val people = flow.collectAsLazyPagingItems()
     val list = rememberLazyListState()
-    Column {
+    Column(Modifier.fillMaxSize()) {
         ScreenBar(route.title, back = back, scrollBehavior = null)
         if (route.section == "following")
             ChoiceChips(

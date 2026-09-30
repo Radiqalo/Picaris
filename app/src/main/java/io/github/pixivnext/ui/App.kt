@@ -172,7 +172,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                 ScrollingScreen { SearchScreen(vm, navigate, back, it.query) }
                                             }
                                             entry<People> {
-                                                ScrollingScreen { PeopleScreen(it, vm, navigate, back) }
+                                                ScrollingScreen(scrollBehaviorEnabled = false) { PeopleScreen(it, vm, navigate, back) }
                                             }
                                             entry<Replies> {
                                                 ScrollingScreen { RepliesScreen(it, vm, navigate, back) }
@@ -206,10 +206,10 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                             entry<Collection>(
                                                 metadata = ListDetailSceneStrategy.listPane()
                                             ) {
-                                                ScrollingScreen { CollectionScreen(it, vm, navigate, back) }
+                                                ScrollingScreen(scrollBehaviorEnabled = it.section == "ranking") { CollectionScreen(it, vm, navigate, back) }
                                             }
                                             entry<Utility> {
-                                                ScrollingScreen {
+                                                ScrollingScreen(scrollBehaviorEnabled = false) {
                                                     UtilityScreen(it.page, vm, navigate, back)
                                                 }
                                             }

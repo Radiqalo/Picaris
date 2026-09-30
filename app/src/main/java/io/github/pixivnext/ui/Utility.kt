@@ -403,13 +403,14 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     vm.setDownloadTree(uri.toString())
                 }
         }
-    Column {
+    Column(Modifier.fillMaxSize()) {
         ScreenBar(
             strings.getString(R.string.ui_7debf9cb03),
             back,
+            scrollBehavior = null,
         )
         LazyColumn(
-            modifier = Modifier.testTag("settingsList"),
+            modifier = Modifier.weight(1f).fillMaxWidth().testTag("settingsList"),
             contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
@@ -909,8 +910,8 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     val history by vm.history.collectAsStateWithLifecycle()
-    Column {
-        ScreenBar(strings.getString(R.string.ui_29f6711704), back = back)
+    Column(Modifier.fillMaxSize()) {
+        ScreenBar(strings.getString(R.string.ui_29f6711704), back = back, scrollBehavior = null)
         if (history.isEmpty())
             EmptyState(
                 strings.getString(R.string.ui_f1fd08eeb6),
@@ -919,6 +920,7 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
             )
         else
             LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -964,7 +966,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
 
     val tasks by vm.downloadList.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    Column {
+    Column(Modifier.fillMaxSize()) {
         ScreenBar(
             strings.getString(R.string.ui_18df1a67a2),
             back,
@@ -978,6 +980,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             )
         else
             LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
