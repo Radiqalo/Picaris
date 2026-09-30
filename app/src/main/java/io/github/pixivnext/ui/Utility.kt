@@ -132,121 +132,128 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
 @Composable
 fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-
     val isDemo by vm.demo.collectAsStateWithLifecycle()
     val account by vm.active.collectAsStateWithLifecycle()
     Column {
-        ScreenBar(
-            strings.getString(R.string.ui_a82c993d73),
-            actions = { ContentKindAction(vm) },
-        )
+        ScreenBar(strings.getString(R.string.ui_a82c993d73), actions = { ContentKindAction(vm) })
         LazyColumn(
-            modifier = Modifier.testTag("profileList"),
-            contentPadding = PaddingValues(20.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.weight(1f).testTag("profileList"),
+            contentPadding = PaddingValues(PixivSpacing.content),
+            verticalArrangement = Arrangement.spacedBy(PixivSpacing.section),
         ) {
-            item {
-                Surface(
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(
-                        Modifier.padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(20.dp),
+            item(key = "identity") {
+                Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        ) {
-                            Avatar(account?.user ?: User(), Modifier.size(64.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    account?.user?.name ?: "PixivNext",
-                                    style = MaterialTheme.typography.titleLarge,
-                                )
-                                Text(
-                                    if (isDemo) strings.getString(R.string.ui_fbd46976e0)
-                                    else "ID ${account?.user?.id}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                            IconButton({ navigate(Utility("accounts")) }) {
-                                AppIcon(Glyph.Arrow, strings.getString(R.string.ui_9d4ca7f307))
-                            }
+                        Avatar(account?.user ?: User(), Modifier.size(72.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight)) {
+                            Text(account?.user?.name ?: "PixivNext",
+                                style = MaterialTheme.typography.headlineSmall,
+                                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(
+                                if (isDemo) strings.getString(R.string.ui_fbd46976e0)
+                                else "ID ${account?.user?.id ?: ""}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
-                        ) {
-                            listOf(
-                                Triple("bookmarks", strings.getString(R.string.profile_bookmarks), Glyph.Heart),
-                                Triple("history", strings.getString(R.string.profile_history), Glyph.History),
-                                Triple("downloads", strings.getString(R.string.ui_18df1a67a2), Glyph.Download),
-                            ).forEach { (page, label, icon) ->
-                                FilledTonalButton(
-                                    onClick = { navigate(Utility(page)) },
-                                    modifier = Modifier.weight(1f),
-                                    shapes = ButtonDefaults.shapes(),
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
-                                    ) {
-                                        AppIcon(icon, null)
-                                        Text(label, style = MaterialTheme.typography.labelMedium,
-                                            maxLines = 1)
-                                    }
-                                }
-                            }
+                        FilledTonalIconButton(onClick = { navigate(Utility("accounts")) }) {
+                            AppIcon(Glyph.Arrow, strings.getString(R.string.ui_9d4ca7f307))
                         }
                     }
+                    Button(
+                        onClick = { navigate(Utility("bookmarks")) },
+                        modifier = Modifier.fillMaxWidth().height(ButtonDefaults.LargeContainerHeight),
+                        shapes = ButtonDefaults.shapesFor(ButtonDefaults.LargeContainerHeight),
+                        contentPadding = ButtonDefaults.LargeContentPadding,
+                    ) {
+                        AppIcon(Glyph.Heart, null, Modifier.size(ButtonDefaults.LargeIconSize))
+                        Spacer(Modifier.width(ButtonDefaults.LargeIconSpacing))
+                        Text(strings.getString(R.string.profile_bookmarks),
+                            Modifier.weight(1f), style = ButtonDefaults.textStyleFor(ButtonDefaults.LargeContainerHeight))
+                        AppIcon(Glyph.Arrow, null)
+                    }
+                    ProfileLibraryActions(navigate)
                 }
             }
-            item {
-                SettingsGroup("我的 Pixiv") {
-                    SettingRow(
-                        "我的关注",
-                        "公开与非公开关注",
-                        Glyph.Person,
-                        position = SettingsRowPosition.First,
-                    ) {
-                        navigate(People("following", "我的关注"))
-                    }
-                    SettingRow("我的粉丝", "关注我的创作者与读者", Glyph.Person) {
-                        navigate(People("follower", "我的粉丝"))
-                    }
-                    SettingRow(
-                        "我的作品",
-                        "插画、漫画与小说",
-                        Glyph.Discover,
-                        position = SettingsRowPosition.Last,
-                    ) {
-                        account?.user?.let { navigate(Author(it)) }
-                    }
-                }
-            }
-            item {
-                SettingsGroup(strings.getString(R.string.ui_414559692f)) {
-                    SettingRow(
-                        strings.getString(R.string.ui_7debf9cb03),
-                        strings.getString(R.string.ui_40b33b3472),
-                        Glyph.Settings,
-                        position = SettingsRowPosition.First,
-                    ) {
-                        navigate(Utility("settings"))
-                    }
-                    SettingRow(
-                        strings.getString(R.string.ui_272209c708),
-                        "Android 17 · Material 3 Expressive",
-                        Glyph.Discover,
-                        position = SettingsRowPosition.Last,
-                    ) {
-                        navigate(Utility("about"))
+            item(key = "pixiv") {
+                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    listOf(
+                        "我的关注" to { navigate(People("following", "我的关注")) },
+                        "我的粉丝" to { navigate(People("follower", "我的粉丝")) },
+                        "我的作品" to { account?.user?.let { navigate(Author(it)) }; Unit },
+                    ).forEachIndexed { index, (label, action) ->
+                        SegmentedListItem(
+                            onClick = action,
+                            shapes = ListItemDefaults.segmentedShapes(index, 3),
+                            content = { Text(label, style = MaterialTheme.typography.titleMedium) },
+                            leadingContent = { AppIcon(if (index == 2) Glyph.Discover else Glyph.Person, null) },
+                            trailingContent = { AppIcon(Glyph.Arrow, null) },
+                        )
                     }
                 }
             }
+            item(key = "preferences") {
+                Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
+                    listOf(
+                        Triple("settings", strings.getString(R.string.ui_7debf9cb03), Glyph.Settings),
+                        Triple("about", strings.getString(R.string.ui_272209c708), Glyph.Discover),
+                    ).forEachIndexed { index, (page, label, icon) ->
+                        SegmentedListItem(
+                            onClick = { navigate(Utility(page)) },
+                            shapes = ListItemDefaults.segmentedShapes(index, 2),
+                            content = { Text(label) },
+                            leadingContent = { AppIcon(icon, null) },
+                            trailingContent = { AppIcon(Glyph.Arrow, null) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileLibraryActions(navigate: (NavKey) -> Unit) {
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    val actions = listOf(
+        Triple("history", strings.getString(R.string.profile_history), Glyph.History),
+        Triple("downloads", strings.getString(R.string.ui_18df1a67a2), Glyph.Download),
+    )
+    val sources = remember { List(2) { androidx.compose.foundation.interaction.MutableInteractionSource() } }
+    ButtonGroup(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+        overflowIndicator = { menu -> ButtonGroupDefaults.OverflowIndicator(menuState = menu) },
+    ) {
+        actions.forEachIndexed { index, (page, label, icon) ->
+            customItem(
+                buttonGroupContent = {
+                    FilledTonalButton(
+                        onClick = { navigate(Utility(page)) },
+                        modifier = Modifier.weight(1f).animateWidth(sources[index])
+                            .height(ButtonDefaults.MediumContainerHeight),
+                        interactionSource = sources[index],
+                        shapes = ButtonDefaults.shapes(
+                            shape = if (index == 0) ButtonGroupDefaults.connectedLeadingButtonShape
+                                else ButtonGroupDefaults.connectedTrailingButtonShape,
+                            pressedShape = if (index == 0) ButtonGroupDefaults.connectedLeadingButtonPressShape
+                                else ButtonGroupDefaults.connectedTrailingButtonPressShape,
+                        ),
+                    ) {
+                        AppIcon(icon, null, Modifier.size(ButtonDefaults.SmallIconSize))
+                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                        Text(label, maxLines = 1)
+                    }
+                },
+                menuContent = {
+                    DropdownMenuItem(text = { Text(label) }, onClick = { navigate(Utility(page)) },
+                        leadingIcon = { AppIcon(icon, null) })
+                },
+            )
         }
     }
 }
