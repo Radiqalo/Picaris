@@ -8,6 +8,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -116,8 +117,6 @@ private fun thread(work: Work, vm: AppViewModel, parentId: Long? = null): Thread
 @Composable
 fun CommentPreview(work: Work, vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val state = thread(work, vm)
-    var replyId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var replyName by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -130,10 +129,7 @@ fun CommentPreview(work: Work, vm: AppViewModel, navigate: (NavKey) -> Unit) {
         state.comments.take(3).forEach { comment ->
             CommentCard(comment, work, navigate) {
                 if (comment.has_replies) navigate(Replies(work, comment))
-                else {
-                    replyId = comment.id
-                    replyName = comment.user.name
-                }
+                else navigate(Replies(work, comment))
             }
         }
         if (state.comments.isEmpty()) CommentFooter(state) { vm.comments.load(vm.accountId, work) }
@@ -143,7 +139,6 @@ fun CommentPreview(work: Work, vm: AppViewModel, navigate: (NavKey) -> Unit) {
             Text("写评论")
         }
     }
-    replyId?.let { ReplyComposer(work, it, replyName, vm) { replyId = null } }
 }
 
 @Composable
@@ -163,41 +158,40 @@ private fun ThreadScreen(
     back: () -> Unit,
 ) {
     val state = thread(work, vm, parent?.id)
-    var composer by rememberSaveable { mutableStateOf(false) }
     var replyName by rememberSaveable { mutableStateOf(parent?.user?.name ?: "") }
     var directReplyId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var directReplyName by rememberSaveable { mutableStateOf("") }
+    var text by rememberSaveable(vm.accountId, work.id, work.type, parent?.id) { mutableStateOf("") }
+    val targetId = directReplyId ?: parent?.id
+    val sendState by remember(vm.accountId, work.id, work.type, targetId) {
+        vm.comments.state(vm.accountId, work, targetId)
+    }.collectAsStateWithLifecycle()
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     Scaffold(
+        modifier = Modifier.imePadding(),
         topBar = {
             TopAppBar(
                 scrollBehavior = LocalAppBarScrollBehavior.current,
                 title = { Text(if (parent == null) "评论区" else "评论回复") },
                 navigationIcon = { IconButton(back) { AppIcon(Glyph.Back, "返回") } },
                 actions = {
-                    TextButton(
+                    IconButton(
                         { vm.comments.load(vm.accountId, work, parent?.id, refresh = true) },
-                        enabled = !state.loading && !state.sending,
-                    ) {
-                        Text("刷新")
-                    }
+                        enabled = !state.loading && !sendState.sending,
+                    ) { AppIcon(materialSymbol(MaterialSymbol.Refresh), "刷新评论") }
                 },
             )
         },
         bottomBar = {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                FilledTonalButton(
-                    {
+            CommentInputBar(text, { text = it }, sendState, replyName, focus,
+                cancelReply = if (directReplyId != null) ({ directReplyId = null; replyName = parent?.user?.name ?: "" }) else null,
+                send = {
+                    vm.comments.send(vm.accountId, work, text, targetId) {
+                        text = ""
+                        directReplyId = null
                         replyName = parent?.user?.name ?: ""
-                        composer = true
-                    },
-                    Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
-                    enabled = !state.sending,
-                ) {
-                    AppIcon(Glyph.Comment, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (parent == null) "写评论" else "回复 ${parent.user.name}")
-                }
-            }
+                    }
+                })
         },
     ) { padding ->
         LazyColumn(
@@ -220,41 +214,18 @@ private fun ThreadScreen(
                     if (parent == null && comment.has_replies) navigate(Replies(work, comment))
                     else if (parent == null) {
                         directReplyId = comment.id
-                        directReplyName = comment.user.name
+                        replyName = comment.user.name
+                        focus.requestFocus()
+                        keyboard?.show()
                     } else {
                         replyName = comment.user.name
-                        composer = true
+                        focus.requestFocus()
+                        keyboard?.show()
                     }
                 }
             }
             item { CommentFooter(state) { vm.comments.load(vm.accountId, work, parent?.id) } }
         }
-    }
-    if (composer)
-        CommentComposer(work, state, replyName, { composer = false }) { text ->
-            vm.comments.send(vm.accountId, work, text, parent?.id) { composer = false }
-        }
-    directReplyId?.let {
-        ReplyComposer(work, it, directReplyName, vm) { directReplyId = null }
-    }
-}
-
-@Composable
-private fun ReplyComposer(
-    work: Work,
-    parentId: Long,
-    replyName: String,
-    vm: AppViewModel,
-    dismiss: () -> Unit,
-) {
-    val account = vm.accountId
-    val state by
-        remember(account, work.id, work.type, parentId) {
-                vm.comments.state(account, work, parentId)
-            }
-            .collectAsStateWithLifecycle()
-    CommentComposer(work, state, replyName, dismiss) { text ->
-        vm.comments.send(account, work, text, parentId, dismiss)
     }
 }
 
@@ -345,43 +316,43 @@ private fun CommentFooter(state: ThreadState, load: () -> Unit) {
 }
 
 @Composable
-private fun CommentComposer(
-    work: Work,
+private fun CommentInputBar(
+    text: String,
+    onTextChange: (String) -> Unit,
     state: ThreadState,
     replyName: String,
-    dismiss: () -> Unit,
-    send: (String) -> Unit,
+    focus: androidx.compose.ui.focus.FocusRequester,
+    cancelReply: (() -> Unit)?,
+    send: () -> Unit,
 ) {
-    var text by rememberSaveable { mutableStateOf("") }
     val count = text.codePointCount(0, text.length)
-    AlertDialog(
-        onDismissRequest = { if (!state.sending) dismiss() },
-        title = { Text(if (replyName.isEmpty()) "写评论" else "回复 $replyName") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (work.demo >= 0) Text("仅保存为本地演示评论。")
-                OutlinedTextField(
-                    text,
-                    { text = it },
-                    Modifier.fillMaxWidth().testTag("commentInput"),
+    val feedback = selectionFeedback()
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(PixivSpacing.content),
+            verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+            if (replyName.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("回复 $replyName", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                if (cancelReply != null) IconButton(cancelReply, enabled = !state.sending) {
+                    AppIcon(Glyph.Close, "取消回复")
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+                OutlinedTextField(text, onTextChange,
+                    Modifier.weight(1f).focusRequester(focus).testTag("commentInput"),
                     enabled = !state.sending,
-                    label = { Text("评论内容") },
-                    minLines = 3,
-                    maxLines = 6,
+                    placeholder = { Text("写评论") },
+                    minLines = 1, maxLines = 4,
                     isError = count > 140,
-                    supportingText = { Text("$count / 140") },
-                )
-                state.sendError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    supportingText = if (text.isNotEmpty()) ({ Text("$count / 140") }) else null)
+                FilledIconButton(onClick = { feedback(); send() },
+                    enabled = !state.sending && text.isNotBlank() && count <= 140) {
+                    if (state.sending) CircularWavyProgressIndicator(Modifier.size(24.dp))
+                    else AppIcon(materialSymbol(MaterialSymbol.Send), "发送评论")
+                }
             }
-        },
-        confirmButton = {
-            TextButton(
-                { send(text) },
-                enabled = !state.sending && text.isNotBlank() && count <= 140,
-            ) {
-                Text(if (state.sending) "发送中…" else "发送")
-            }
-        },
-        dismissButton = { TextButton(dismiss, enabled = !state.sending) { Text("取消") } },
-    )
+            state.sendError?.let { Text(it, color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall) }
+        }
+    }
 }
