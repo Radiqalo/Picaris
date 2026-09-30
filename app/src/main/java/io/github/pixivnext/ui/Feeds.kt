@@ -473,11 +473,7 @@ fun FeedGrid(
     val list = listState ?: key(spec) { rememberLazyListState() }
     val refreshing = items.loadState.refresh is LoadState.Loading
     val error = items.loadState.refresh as? LoadState.Error
-    val showFeedMetadata =
-        spec.section != "ranking" &&
-            ((spec.section != "recommended" &&
-                spec.section != "follow" &&
-                spec.section != "bookmarks") || settings.showHomeMetadata)
+    val showFeedMetadata = spec.section != "ranking" && settings.showHomeMetadata
     PullToRefreshBox(
         isRefreshing = refreshing && items.itemCount > 0,
         onRefresh = { items.refresh() },
