@@ -8,7 +8,7 @@
     <string name="tab_home">首页</string>
     <string name="discover_recommend">推荐</string>
     <string name="discover_following">关注动态</string>
-    <string name="discover_featured">热门作品与标签</string>
+    <string name="discover_featured">人气标签</string>
     <string name="discover_tags">推荐标签</string>
     <string name="discover_artists">推荐作者</string>
     <string name="discover_works">推荐作品</string>

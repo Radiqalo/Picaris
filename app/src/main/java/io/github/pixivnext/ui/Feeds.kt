@@ -216,6 +216,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val demo by vm.demo.collectAsStateWithLifecycle()
+    val history by vm.history.collectAsStateWithLifecycle()
     val trendResult by produceState<List<TrendingTag>?>(vm.cachedTrendingTags(), vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
         value = vm.cachedTrendingTags()
         if (settings.contentKind == "novel") {
@@ -238,6 +239,21 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         catch (_: Exception) { emptyList() }
     }
     val trends = trendResult.orEmpty()
+    // Pixiv's recommended tags are personalized; derive these from works the user
+    // actually viewed. Trending tags below remain the separate server-provided list.
+    val recommendedTags = remember(history, demo, settings.contentKind, settings.contentFilter()) {
+        val viewedWorks = if (demo) Demo.works else history.mapNotNull { entry ->
+            runCatching { AppJson.decodeFromString<Work>(entry.json) }.getOrNull()
+        }
+        viewedWorks.asSequence()
+            .filter { (settings.contentKind == "novel") == it.isNovel }
+            .filter(settings.contentFilter()::allows)
+            .flatMap { it.tags.asSequence() }
+            .filter { it.name.isNotBlank() }
+            .distinctBy { it.name }
+            .take(8)
+            .toList()
+    }
     val loadingTrends = trendResult == null && settings.contentKind != "novel"
     FeedGrid(
         FeedSpec(kind = settings.contentKind),
@@ -257,12 +273,22 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(strings.getString(R.string.ui_d00981d6ce))
                 }
+                if (recommendedTags.isNotEmpty()) {
+                    Text(strings.getString(R.string.discover_tags),
+                        style = MaterialTheme.typography.titleLarge)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(recommendedTags, key = { it.name }) { tag ->
+                            SuggestionChip(
+                                onClick = { navigate(Collection(tag.name, "search", word = tag.name)) },
+                                label = { Text("#${tag.translated_name ?: tag.name}") },
+                            )
+                        }
+                    }
+                }
                 if (loadingTrends) DiscoveryPlaceholders()
                 else if (trends.isNotEmpty()) {
-                    Text(
-                        strings.getString(R.string.discover_featured),
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
+                    Text(strings.getString(R.string.discover_featured),
+                        style = MaterialTheme.typography.headlineSmall)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(trends.take(6), key = { it.tag.name }) { trend ->
                             ElevatedCard(
@@ -284,33 +310,15 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                         ),
                                         label = {
-                                            Text(
-                                                "#${trend.tag.translated_name ?: trend.tag.name}",
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
+                                            Text("#${trend.tag.translated_name ?: trend.tag.name}",
+                                                maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         },
                                     )
                                 }
                             }
                         }
                     }
-                    Text(
-                        strings.getString(R.string.discover_tags),
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(trends, key = { it.tag.name }) { trend ->
-                            SuggestionChip(
-                                onClick = {
-                                    navigate(Collection(trend.tag.name, "search", word = trend.tag.name))
-                                },
-                                label = { Text("#${trend.tag.translated_name ?: trend.tag.name}") },
-                            )
-                        }
-                    }
                     trends.take(3).forEach { trend -> DiscoveryTagWorks(trend.tag, vm, navigate) }
-
                 }
                 if (settings.contentKind != "novel") {
                     Text(strings.getString(R.string.discover_artists), style = MaterialTheme.typography.titleLarge)
@@ -411,16 +419,6 @@ private fun DiscoveryAuthorCard(preview: UserPreview, vm: AppViewModel, navigate
 @Composable
 private fun DiscoveryPlaceholders() {
     val strings = androidx.compose.ui.platform.LocalResources.current
-    Text(strings.getString(R.string.discover_featured),
-        style = MaterialTheme.typography.headlineSmall)
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(3) {
-            ElevatedCard(Modifier.width(260.dp)) {
-                Box(Modifier.fillMaxWidth().height(150.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh))
-            }
-        }
-    }
     Text(strings.getString(R.string.discover_tags),
         style = MaterialTheme.typography.titleLarge)
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -431,6 +429,16 @@ private fun DiscoveryPlaceholders() {
                 modifier = Modifier.width(112.dp),
                 label = { Spacer(Modifier.height(20.dp)) },
             )
+        }
+    }
+    Text(strings.getString(R.string.discover_featured),
+        style = MaterialTheme.typography.headlineSmall)
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        items(3) {
+            ElevatedCard(Modifier.width(260.dp)) {
+                Box(Modifier.fillMaxWidth().height(150.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh))
+            }
         }
     }
     repeat(3) {
