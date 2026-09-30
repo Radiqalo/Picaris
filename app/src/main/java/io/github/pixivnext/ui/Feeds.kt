@@ -245,18 +245,22 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             ) {
                                 Box {
                                     WorkImage(trend.cover, Modifier.fillMaxWidth().height(150.dp))
-                                    Surface(
-                                        modifier = Modifier.align(Alignment.BottomStart),
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    ) {
-                                        Text(
-                                            "#${trend.tag.name}",
-                                            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    }
+                                    SuggestionChip(
+                                        onClick = {
+                                            navigate(Collection(trend.tag.name, "search", word = trend.tag.name))
+                                        },
+                                        modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
+                                        colors = SuggestionChipDefaults.suggestionChipColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        ),
+                                        label = {
+                                            Text(
+                                                "#${trend.tag.translated_name ?: trend.tag.name}",
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        },
+                                    )
                                 }
                             }
                         }
