@@ -1,6 +1,13 @@
 package io.github.pixivnext.ui
 
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.unit.IntOffset
 import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -264,16 +271,28 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         }
                 },
             ) { padding ->
-                Box(Modifier.padding(padding)) {
-                    holder.SaveableStateProvider(tab) {
+                val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                AnimatedContent(
+                    targetState = tab,
+                    modifier = Modifier.padding(padding).fillMaxSize(),
+                    transitionSpec = {
+                        val direction = if (targetState > initialState) 1 else -1
+                        ((slideInHorizontally(spatial) { direction * it / 12 } + fadeIn(effects)) togetherWith
+                            (slideOutHorizontally(spatial) { -direction * it / 12 } + fadeOut(effects)))
+                            .using(null)
+                    },
+                    label = "bottom navigation page",
+                ) { currentTab ->
+                    holder.SaveableStateProvider(currentTab) {
                         val homeGrid = rememberLazyStaggeredGridState()
                         val homeList = rememberLazyListState()
                         ScrollingScreen(
                             scrollableState =
-                                if (tab != 0) null
+                                if (currentTab != 0) null
                                 else if (settings.contentKind == "novel") homeList else homeGrid
                         ) {
-                            if (tab == 0) {
+                            if (currentTab == 0) {
                                 val appBar = LocalAppBarScrollBehavior.current
                                 LaunchedEffect(settings.contentKind) {
                                     homeReselection.collectLatest {
@@ -285,7 +304,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                     }
                                 }
                             }
-                            when (tab) {
+                            when (currentTab) {
                                 0 ->
                                     RecommendedHomeScreen(vm, navigate, homeGrid, homeList) {
                                         navigate(Search)
