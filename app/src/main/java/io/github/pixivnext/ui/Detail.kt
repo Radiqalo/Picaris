@@ -509,29 +509,31 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                     }
                 },
                 afterHeader = {
-                    PrimaryTabRow(selectedTabIndex = pager.currentPage) {
-                        pageLabels.forEachIndexed { index, label ->
-                            Tab(selected = pager.currentPage == index,
-                                onClick = {
-                                    if (pager.currentPage != index) {
-                                        feedback()
-                                        scope.launch { pager.animateScrollToPage(index) }
-                                    }
-                                }, text = { Text(label) })
+                    Column {
+                        PrimaryTabRow(selectedTabIndex = pager.currentPage) {
+                            pageLabels.forEachIndexed { index, label ->
+                                Tab(selected = pager.currentPage == index,
+                                    onClick = {
+                                        if (pager.currentPage != index) {
+                                            feedback()
+                                            scope.launch { pager.animateScrollToPage(index) }
+                                        }
+                                    }, text = { Text(label) })
+                            }
                         }
-                    }
-                    val count = when (page) {
-                        0 -> profile.total_illusts
-                        1 -> profile.total_manga
-                        else -> 0
-                    }
-                    Row(Modifier.fillMaxWidth().padding(top = PixivSpacing.compact),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Text(pageLabels[page], Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleLarge)
-                        if (count > 0) Text(count.toString(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val count = when (page) {
+                            0 -> profile.total_illusts
+                            1 -> profile.total_manga
+                            else -> 0
+                        }
+                        Row(Modifier.fillMaxWidth().padding(top = PixivSpacing.compact),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text(pageLabels[page], Modifier.weight(1f),
+                                style = MaterialTheme.typography.titleLarge)
+                            if (count > 0) Text(count.toString(),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 },
             )
