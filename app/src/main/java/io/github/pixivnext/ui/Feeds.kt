@@ -217,6 +217,13 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             emptyList()
         }
     }
+    val authorResult by produceState<List<UserPreview>?>(null, vm.accountId, demo, settings.contentKind, settings.contentFilter()) {
+        value = null
+        value = if (settings.contentKind == "novel") emptyList() else try {
+            vm.recommendedAuthors()
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+        catch (_: Exception) { emptyList() }
+    }
     val trends = trendResult.orEmpty()
     val loadingTrends = trendResult == null && settings.contentKind != "novel"
     FeedGrid(
@@ -257,7 +264,9 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                         onClick = {
                                             navigate(Collection(trend.tag.name, "search", word = trend.tag.name))
                                         },
-                                        modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
+                                        modifier = Modifier.align(Alignment.BottomStart)
+                                            .padding(start = 12.dp, bottom = 4.dp, end = 12.dp),
+                                        border = null,
                                         colors = SuggestionChipDefaults.suggestionChipColors(
                                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                                         ),
@@ -287,30 +296,17 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             )
                         }
                     }
-                    val artists = trends.map { it.cover.user }.distinctBy { it.id }.take(10)
-                    if (artists.isNotEmpty()) {
-                        Text(
-                            strings.getString(R.string.discover_artists),
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(artists, key = { it.id }) { artist ->
-                                ElevatedCard(onClick = { navigate(Author(artist)) }) {
-                                    Row(
-                                        Modifier.width(180.dp).padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        Avatar(artist)
-                                        Text(
-                                            artist.name,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.titleSmall,
-                                        )
-                                    }
-                                }
-                            }
+                    trends.take(3).forEach { trend -> DiscoveryTagWorks(trend.tag, vm, navigate) }
+
+                }
+                if (settings.contentKind != "novel") {
+                    Text(strings.getString(R.string.discover_artists), style = MaterialTheme.typography.titleLarge)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+                        if (authorResult == null) items(3) {
+                            Spacer(Modifier.width(260.dp).height(300.dp)
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.large))
+                        } else items(authorResult.orEmpty(), key = { it.user.id }) { preview ->
+                            DiscoveryAuthorCard(preview, vm, navigate)
                         }
                     }
                 }
@@ -322,6 +318,70 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             }
         },
     )
+}
+
+@Composable
+private fun DiscoveryTagWorks(tag: Tag, vm: AppViewModel, navigate: (NavKey) -> Unit) {
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val spec = remember(tag.name) { FeedSpec(section = "search", word = tag.name) }
+    val flow = remember(spec, vm.accountId, settings.contentFilter()) { vm.feed(spec) }
+    val works = flow.collectAsLazyPagingItems()
+    val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
+    val busy by vm.bookmarkBusy.collectAsStateWithLifecycle()
+    Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("#${tag.translated_name ?: tag.name} · 相关作品", Modifier.weight(1f),
+                style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            TextButton(onClick = { navigate(Collection(tag.name, "search", word = tag.name)) }) { Text("查看全部") }
+        }
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+            if (works.itemCount == 0 && works.loadState.refresh is LoadState.Loading) items(5) {
+                Spacer(Modifier.width(144.dp).height(200.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small))
+            } else items(minOf(5, works.itemCount), key = { index -> works.peek(index)?.id ?: -index.toLong() }) { index ->
+                works[index]?.let { work ->
+                    val identity = work.identity(vm.accountId)
+                    val current = bookmarks[identity]?.apply(work) ?: work
+                    Box(Modifier.width(144.dp)) {
+                        WorkCard(current, likedBusy = identity in busy,
+                            showMetadata = settings.showHomeMetadata, sharedTransition = false,
+                            onLike = { vm.run { vm.bookmark(current) } },
+                            onClick = { vm.record(current); navigate(Detail(current)) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DiscoveryAuthorCard(preview: UserPreview, vm: AppViewModel, navigate: (NavKey) -> Unit) {
+    var user by remember(preview.user) { mutableStateOf(preview.user) }
+    var busy by remember { mutableStateOf(false) }
+    ElevatedCard(onClick = { navigate(Author(user)) }, modifier = Modifier.width(260.dp)) {
+        preview.illusts.firstOrNull()?.let { WorkImage(it, Modifier.fillMaxWidth().height(96.dp)) }
+        Column(Modifier.fillMaxWidth().padding(PixivSpacing.content),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+            Avatar(user, Modifier.size(64.dp))
+            Text(user.name, style = MaterialTheme.typography.titleMedium, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+            if (user.comment.isNotBlank()) Text(user.comment, maxLines = 2,
+                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+            FilledTonalButton(onClick = {
+                vm.run {
+                    busy = true
+                    try { user = vm.follow(user) } finally { busy = false }
+                }
+            }, enabled = !busy) { Text(if (user.is_followed) "已关注" else "关注") }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.tight)) {
+            preview.illusts.take(3).forEach { work ->
+                WorkImage(work, Modifier.weight(1f).height(84.dp)
+                    .clickable { vm.record(work); navigate(Detail(work)) })
+            }
+        }
+    }
 }
 
 @Composable
@@ -349,23 +409,19 @@ private fun DiscoveryPlaceholders() {
             )
         }
     }
-    Text(strings.getString(R.string.discover_artists),
-        style = MaterialTheme.typography.titleLarge)
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(3) {
-            ElevatedCard(Modifier.width(180.dp)) {
-                Row(Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.size(48.dp).clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest))
-                    Box(Modifier.width(88.dp).height(16.dp)
-                        .clip(MaterialTheme.shapes.extraSmall)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest))
+    repeat(3) {
+        Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+            Spacer(Modifier.width(160.dp).height(24.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.extraSmall))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+                items(5) {
+                    Spacer(Modifier.width(144.dp).height(200.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small))
                 }
             }
         }
     }
+
 }
 
 @Composable
@@ -753,6 +809,7 @@ fun WorkCard(
     rank: Int? = null,
     likedBusy: Boolean = false,
     showMetadata: Boolean = true,
+    sharedTransition: Boolean = true,
     onLike: () -> Unit,
     onClick: () -> Unit,
 ) {
@@ -772,7 +829,7 @@ fun WorkCard(
             WorkImage(
                 work,
                 Modifier.fillMaxWidth().aspectRatio(if (work.isNovel) .9f else work.aspect),
-                sharedTransition = true,
+                sharedTransition = sharedTransition,
             )
             val labels = buildList {
                 if (rank != null) add("${rank + 1}")

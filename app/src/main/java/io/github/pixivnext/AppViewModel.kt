@@ -204,6 +204,11 @@ constructor(
             .distinctBy { it.tag.name }
         else repo.trendingTags(accountId)
 
+    suspend fun recommendedAuthors(): List<UserPreview> =
+        if (demo.value) Demo.works.filterNot { it.isNovel }.groupBy { it.user.id }
+            .values.map { UserPreview(it.first().user, it.take(3)) }
+        else repo.recommendedAuthors(accountId)
+
     suspend fun searchUsers(word: String): List<User> =
         if (demo.value) Demo.works.map { it.user } else repo.searchUsers(accountId, word)
 

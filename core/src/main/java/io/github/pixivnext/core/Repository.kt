@@ -204,6 +204,17 @@ constructor(
             (j["profile"]?.jsonObject?.get("total_illusts")?.jsonPrimitive?.content ?: "")
     }
 
+    suspend fun recommendedAuthors(account: Long): List<UserPreview> {
+        val filter = settings.flow.first().contentFilter()
+        return AppJson.decodeFromJsonElement<UserResponse>(
+            api.get(account, "v1/user/recommended", mapOf("filter" to "for_android"))
+        ).user_previews.map { preview ->
+            preview.copy(illusts = preview.illusts.filter(filter::allows).map { work ->
+                if (work.user.id == 0L) work.copy(user = preview.user) else work
+            })
+        }.filter { it.illusts.isNotEmpty() }.take(10)
+    }
+
     suspend fun searchUsers(account: Long, word: String): List<User> =
         AppJson.decodeFromJsonElement<UserResponse>(
                 api.get(account, "v1/search/user", mapOf("word" to word))
