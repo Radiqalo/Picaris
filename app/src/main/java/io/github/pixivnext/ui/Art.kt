@@ -3,6 +3,10 @@ package io.github.pixivnext.ui
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.getValue
@@ -30,9 +34,20 @@ val LocalWorkTransition = staticCompositionLocalOf<SharedTransitionScope?> { nul
 val LocalImageTransitionEnabled = staticCompositionLocalOf { true }
 
 @Composable
+private fun artworkBoundsMotion(): FiniteAnimationSpec<Rect> {
+    val motion = MaterialTheme.motionScheme.defaultSpatialSpec<Rect>()
+    // Preserve the theme's spring trajectory; stop when the remaining movement is subpixel.
+    return if (motion is SpringSpec<Rect>) spring(
+        dampingRatio = motion.dampingRatio,
+        stiffness = motion.stiffness,
+        visibilityThreshold = Rect(1f, 1f, 1f, 1f),
+    ) else motion
+}
+
+@Composable
 fun Modifier.workTransitionControls(): Modifier {
     val navigation = LocalNavAnimatedContentScope.current
-    val effects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+    val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val opacity by navigation.transition.animateFloat(
         transitionSpec = { effects }, label = "artwork controls opacity",
     ) { if (it == EnterExitState.Visible) 1f else 0f }
@@ -62,7 +77,7 @@ fun Modifier.authorTransition(id: Long, part: String, enabled: Boolean = true): 
     val transition = LocalWorkTransition.current
     if (!enabled || transition == null || id == 0L) return this
     val navigation = LocalNavAnimatedContentScope.current
-    val motion = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.geometry.Rect>()
+    val motion = artworkBoundsMotion()
     return with(transition) {
         val key = rememberSharedContentState("author:$id:$part")
         if (part == "avatar") this@authorTransition.sharedElement(key, navigation,
@@ -86,9 +101,9 @@ fun WorkImage(
     val transition = LocalWorkTransition.current
     val imageModifier = if (sharedTransition && LocalImageTransitionEnabled.current && transition != null) {
         val navigationScope = LocalNavAnimatedContentScope.current
-        val boundsAnimation = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.geometry.Rect>()
+        val boundsAnimation = artworkBoundsMotion()
         val shape = MaterialTheme.shapes.small
-        val cornerMotion = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+        val cornerMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
         val rounding by navigationScope.transition.animateFloat(
             transitionSpec = { cornerMotion }, label = "artwork corners",
         ) { visibility ->
