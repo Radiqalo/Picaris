@@ -404,7 +404,7 @@ private fun RelatedWorkStrip(
                             likedBusy = identity in busy,
                             showMetadata = false,
                             onLike = { vm.run { vm.bookmark(current) } },
-                            onClick = { vm.record(current); navigateRelatedDetail(Detail(current)) },
+                            onClick = { vm.record(current); navigateRelatedDetail(Detail(current, spec, index)) },
                         )
                     }
                 }

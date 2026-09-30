@@ -40,7 +40,7 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Serializable data class Comments(val work: Work) : NavKey
 
-@Serializable data class Detail(val work: Work) : NavKey
+@Serializable data class Detail(val work: Work, val source: FeedSpec? = null, val position: Int = 0) : NavKey
 
 @Serializable data class Reader(val work: Work) : NavKey
 
@@ -182,7 +182,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                 val entry = it
                                                 val isInteractive = { backStack.lastOrNull() == entry }
                                                 NavigationExitContent(isInteractive) {
-                                                    DetailScreen(entry.work, vm,
+                                                    DetailPagerScreen(entry, vm,
                                                         navigate = { route ->
                                                             if (isInteractive()) navigate(route)
                                                         },

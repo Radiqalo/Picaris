@@ -221,6 +221,7 @@ data class Ugoira(val zip_urls: ZipUrls = ZipUrls(), val frames: List<Frame> = e
 @Serializable
 data class NovelBody(val text: String = "", val images: Map<String, String> = emptyMap())
 
+@Serializable
 data class FeedSpec(
     val section: String = "recommended",
     val kind: String = "illust",

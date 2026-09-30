@@ -350,7 +350,7 @@ private fun DiscoveryTagWorks(tag: Tag, vm: AppViewModel, navigate: (NavKey) -> 
                         WorkCard(current, likedBusy = identity in busy,
                             showMetadata = settings.showHomeMetadata,
                             onLike = { vm.run { vm.bookmark(current) } },
-                            onClick = { vm.record(current); navigate(Detail(current)) })
+                            onClick = { vm.record(current); navigate(Detail(current, spec, index)) })
                     }
                 }
             }
@@ -750,7 +750,7 @@ fun FeedGrid(
                                 onLike = { vm.run { vm.bookmark(current) } },
                             ) {
                                 vm.record(current)
-                                navigate(Detail(current))
+                                navigate(Detail(current, spec, index))
                             }
                         }
                     }
