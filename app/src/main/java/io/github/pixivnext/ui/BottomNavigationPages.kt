@@ -64,7 +64,7 @@ internal fun BottomNavigationPages(
         }
         Surface(
             modifier = Modifier.fillMaxSize().graphicsLayer {
-                translationX = size.width * position.value
+                translationX = size.width * position.value * 0.6f
             },
             color = MaterialTheme.colorScheme.background,
         ) {
