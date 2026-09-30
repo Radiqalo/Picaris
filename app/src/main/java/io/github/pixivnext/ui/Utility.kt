@@ -349,7 +349,7 @@ private fun SettingChoiceBlock(
                         Modifier.size(40.dp).background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        AppIcon(Glyph.Settings, null, Modifier.size(20.dp),
+                        AppIcon(materialSymbol(MaterialSymbol.Theme), null, Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                     Text(title, style = MaterialTheme.typography.titleMedium)
@@ -403,6 +403,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_9d180a2c78),
                         strings.getString(R.string.ui_d80ba66133),
+                        icon = materialSymbol(MaterialSymbol.Wallpaper),
                         action = {
                             Switch(s.dynamicColor, { v -> vm.update { it.copy(dynamicColor = v) } })
                         },
@@ -413,6 +414,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_6f67371e05),
                         if (s.dynamicColor) strings.getString(R.string.ui_be728419d8)
                         else strings.getString(R.string.ui_f4564b0336),
+                        icon = materialSymbol(MaterialSymbol.Palette),
                         action = {
                             Surface(
                                 Modifier.size(24.dp),
@@ -431,6 +433,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         "显示作者与作品名",
                         "在图片流中显示作者与作品名",
+                        icon = materialSymbol(MaterialSymbol.Image),
                         action = {
                             Switch(
                                 s.showHomeMetadata,
@@ -446,7 +449,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_d5edf52f07),
                         strings.getString(R.string.ui_5b34213640),
-                        Glyph.Book,
+                        materialSymbol(MaterialSymbol.Contrast),
                         action = {
                             Switch(s.blackReader, { v -> vm.update { it.copy(blackReader = v) } })
                         },
@@ -457,6 +460,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_da33a1a4d5),
                         strings.getString(R.string.ui_9cc2ab8295),
+                        icon = materialSymbol(MaterialSymbol.Adult),
                         action = {
                             Switch(s.showAdult, { v -> vm.update { it.copy(showAdult = v) } })
                         },
@@ -466,6 +470,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_b7f564e542),
                         strings.getString(R.string.ui_2b1cc7450b),
+                        icon = materialSymbol(MaterialSymbol.Ai),
                         action = { Switch(s.hideAi, { v -> vm.update { it.copy(hideAi = v) } }) },
                     ) {
                         vm.update { it.copy(hideAi = !it.hideAi) }
@@ -473,6 +478,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_1a62da8063),
                         strings.getString(R.string.ui_df855f5c93),
+                        icon = materialSymbol(MaterialSymbol.BlockedTag),
                         position = SettingsRowPosition.Middle,
                     ) {
                         dialog = "tags"
@@ -480,7 +486,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_0ed0fdd725),
                         strings.getString(R.string.ui_4544c7e538),
-                        Glyph.Person,
+                        materialSymbol(MaterialSymbol.BlockedUser),
                         position = SettingsRowPosition.Last,
                     ) {
                         dialog = "users"
@@ -497,6 +503,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                             "direct" -> strings.getString(R.string.ui_7d7358e103)
                             else -> strings.getString(R.string.ui_8c99b2221d)
                         },
+                        icon = materialSymbol(MaterialSymbol.Network),
                         position = SettingsRowPosition.First,
                     ) {
                         dialog = "proxy"
@@ -536,6 +543,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_92ec4c46d9),
                         strings.getString(R.string.ui_698dc8c56e),
+                        icon = materialSymbol(MaterialSymbol.ClearCache),
                         position = SettingsRowPosition.Last,
                     ) {
                         dialog = "cache"

@@ -12,6 +12,16 @@ enum class MaterialSymbol(val resource: Int) {
     LockOpen(R.drawable.ms_lock_open),
     Inbox(R.drawable.ms_inbox),
     Calendar(R.drawable.ms_calendar_month),
+    Theme(R.drawable.ms_dark_mode),
+    Wallpaper(R.drawable.ms_wallpaper),
+    Palette(R.drawable.ms_palette),
+    Contrast(R.drawable.ms_contrast),
+    Adult(R.drawable.ms_18_up_rating),
+    Ai(R.drawable.ms_smart_toy),
+    BlockedTag(R.drawable.ms_label_off),
+    BlockedUser(R.drawable.ms_person_off),
+    Network(R.drawable.ms_public),
+    ClearCache(R.drawable.ms_cleaning_services),
 }
 
 @Composable
