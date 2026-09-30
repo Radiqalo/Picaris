@@ -72,6 +72,7 @@ class TransitionTapRouter {
 @Composable
 fun NavigationExitContent(isInteractive: () -> Boolean, content: @Composable () -> Unit) {
     val interactive = isInteractive()
+    val predictiveBack = LocalNavigationGestureActive.current
     val navigation = LocalNavAnimatedContentScope.current.transition
     val layer = rememberGraphicsLayer()
     var captured by remember { mutableStateOf(false) }
@@ -85,7 +86,7 @@ fun NavigationExitContent(isInteractive: () -> Boolean, content: @Composable () 
         content = { Box(Modifier.fillMaxSize()) { content() } },
         modifier = Modifier.fillMaxSize().then(input).then(semantics).drawWithContent {
             when {
-                interactive -> {
+                interactive || predictiveBack -> {
                     captured = false
                     drawContent()
                 }
@@ -104,7 +105,7 @@ fun NavigationExitContent(isInteractive: () -> Boolean, content: @Composable () 
     ) { measurables, constraints ->
         val child = measurables.single().measure(constraints)
         layout(child.width, child.height) {
-            if (interactive || !captured) child.place(0, 0)
+            if (interactive || predictiveBack || !captured) child.place(0, 0)
         }
     }
 }
@@ -170,6 +171,7 @@ private fun artworkBoundsMotion(): FiniteAnimationSpec<Rect> {
 
 @Composable
 fun Modifier.workTransitionControls(): Modifier {
+    val gestureActive = LocalNavigationGestureActive.current
     val navigation = LocalNavAnimatedContentScope.current
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val opacity by navigation.transition.animateFloat(
@@ -177,20 +179,24 @@ fun Modifier.workTransitionControls(): Modifier {
     ) { if (it == EnterExitState.Visible) 1f else 0f }
     val transition = LocalWorkTransition.current
     val overlay = if (transition != null) with(transition) {
-        this@workTransitionControls.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 2f)
+        this@workTransitionControls.renderInSharedTransitionScopeOverlay(
+            zIndexInOverlay = 2f,
+            renderInOverlay = { isTransitionActive && !gestureActive },
+        )
     } else this
-    return overlay.graphicsLayer { alpha = opacity.coerceIn(0f, 1f) }
+    return overlay.graphicsLayer { alpha = if (gestureActive) 1f else opacity.coerceIn(0f, 1f) }
 }
 
 @Composable
 fun Modifier.aboveWorkTransition(): Modifier {
+    val gestureActive = LocalNavigationGestureActive.current
     val transition = LocalWorkTransition.current ?: return this
     val navigation = LocalNavAnimatedContentScope.current
     return with(transition) {
         this@aboveWorkTransition.renderInSharedTransitionScopeOverlay(
             zIndexInOverlay = 1f,
             renderInOverlay = {
-                isTransitionActive && navigation.transition.targetState == EnterExitState.Visible
+                isTransitionActive && !gestureActive && navigation.transition.targetState == EnterExitState.Visible
             },
         )
     }
@@ -198,6 +204,7 @@ fun Modifier.aboveWorkTransition(): Modifier {
 
 @Composable
 fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier {
+    val gestureActive = LocalNavigationGestureActive.current
     val transition = LocalWorkTransition.current
     if (!enabled || transition == null || id == 0L) return this
     val navigation = LocalNavAnimatedContentScope.current
@@ -206,6 +213,7 @@ fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier
         val key = rememberSharedContentState("author:$id:avatar")
         this@authorAvatarTransition.sharedElement(key, navigation,
             boundsTransform = { _, _ -> motion },
+            renderInOverlayDuringTransition = !gestureActive,
             clipInOverlayDuringTransition = OverlayClip(CircleShape))
     }
 }
@@ -221,6 +229,7 @@ fun WorkImage(
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val transition = LocalWorkTransition.current
+    val gestureActive = LocalNavigationGestureActive.current
     val imageModifier = if (sharedTransition && LocalImageTransitionEnabled.current && transition != null) {
         val navigationScope = LocalNavAnimatedContentScope.current
         val boundsAnimation = artworkBoundsMotion()
@@ -247,6 +256,7 @@ fun WorkImage(
                 sharedContentState = rememberSharedContentState("work-image:${work.type}:${work.id}"),
                 animatedVisibilityScope = navigationScope,
                 boundsTransform = { _, _ -> boundsAnimation },
+                renderInOverlayDuringTransition = !gestureActive,
                 clipInOverlayDuringTransition = OverlayClip(animatedShape),
             ).clip(animatedShape)
         }

@@ -1,9 +1,6 @@
 package io.github.pixivnext.ui
 
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -143,17 +140,29 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                 LocalImageTransitionEnabled provides !authorNavigation,
                                 LocalTransitionTapRouter provides remember { TransitionTapRouter() },
                             ) {
-                                val navigationEffects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                                val navigationMotion = rememberNavigationMotion()
+                                val pageDecorator = remember(navigationMotion) {
+                                    NavEntryDecorator<NavKey> { entry ->
+                                        NavigationPage(navigationMotion::settled) { entry.Content() }
+                                    }
+                                }
                                 NavDisplay(
                                     backStack = backStack,
+                                    modifier = Modifier.fillMaxSize(),
+                                    sharedTransitionScope = this@SharedTransitionLayout,
                                     transitionSpec = {
-                                        fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)
+                                        navigationMotion.forward(this)
                                     },
                                     popTransitionSpec = {
-                                        fadeIn(navigationEffects) togetherWith fadeOut(navigationEffects)
+                                        navigationMotion.back()
+                                    },
+                                    predictivePopTransitionSpec = { swipeEdge ->
+                                        navigationMotion.predictiveBack(
+                                            if (swipeEdge == androidx.navigationevent.NavigationEvent.EDGE_RIGHT) -1 else 1,
+                                        )
                                     },
                                     entryDecorators =
-                                        listOf(rememberSaveableStateHolderNavEntryDecorator()),
+                                        listOf(rememberSaveableStateHolderNavEntryDecorator(), pageDecorator),
                                     onBack = back,
                                     sceneStrategies =
                                         if (backStack.lastOrNull() is Detail) listOf(strategy)
