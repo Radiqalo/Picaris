@@ -156,8 +156,7 @@ internal class NavigationMotion(
         when (style) {
             NavigationMotionStyle.Slide ->
                 slideInHorizontally(position) { direction * it } togetherWith (
-                    slideOutHorizontally(position) { -direction * it / 12 } +
-                        ExitTransition.KeepUntilTransitionsFinished
+                    ExitTransition.KeepUntilTransitionsFinished
                 )
             NavigationMotionStyle.Zoom ->
                 (scaleIn(scale, initialScale = 0.92f) + fadeIn(effects)) togetherWith (
