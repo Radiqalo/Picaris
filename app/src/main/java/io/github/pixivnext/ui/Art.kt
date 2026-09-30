@@ -31,8 +31,14 @@ val LocalImageTransitionEnabled = staticCompositionLocalOf { true }
 @Composable
 fun Modifier.aboveWorkTransition(): Modifier {
     val transition = LocalWorkTransition.current ?: return this
+    val navigation = LocalNavAnimatedContentScope.current
     return with(transition) {
-        this@aboveWorkTransition.renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
+        this@aboveWorkTransition.renderInSharedTransitionScopeOverlay(
+            zIndexInOverlay = 1f,
+            renderInOverlay = {
+                isTransitionActive && navigation.transition.targetState == EnterExitState.Visible
+            },
+        )
     }
 }
 
