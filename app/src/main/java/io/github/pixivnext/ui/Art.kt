@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -59,12 +60,15 @@ internal val LocalArtworkReturnFeedback = staticCompositionLocalOf<ArtworkReturn
 internal class ArtworkPreviewHandoff {
     var root: LayoutCoordinates? = null
     val bounds = mutableMapOf<String, Rect>()
+    val pendingHandoffs = mutableSetOf<String>()
+    val sampledHandoffs = mutableSetOf<String>()
 }
 internal val LocalArtworkPreviewHandoff = staticCompositionLocalOf<ArtworkPreviewHandoff?> { null }
 
 private class PreviewBoundsAnimationSpec(
     private val previewBounds: Rect,
     private val animationSpec: FiniteAnimationSpec<Rect>,
+    private val onSample: () -> Unit,
 ) : FiniteAnimationSpec<Rect> {
     override fun <Vector : AnimationVector> vectorize(
         converter: TwoWayConverter<Rect, Vector>,
@@ -74,7 +78,11 @@ private class PreviewBoundsAnimationSpec(
         return object : VectorizedFiniteAnimationSpec<Vector> by animation {
             override fun getValueFromNanos(
                 playTimeNanos: Long, initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
-            ): Vector = animation.getValueFromNanos(playTimeNanos, preview, targetValue, initialVelocity)
+            ): Vector {
+                val value = animation.getValueFromNanos(playTimeNanos, preview, targetValue, initialVelocity)
+                if (playTimeNanos > 0) onSample()
+                return value
+            }
 
             override fun getVelocityFromNanos(
                 playTimeNanos: Long, initialValue: Vector, targetValue: Vector, initialVelocity: Vector,
@@ -102,6 +110,8 @@ private fun Modifier.captureArtworkPreview(key: String): Modifier {
         val image = coordinates[0]
         if (preview && visible && root?.isAttached == true && image?.isAttached == true) {
             handoff.bounds[key] = root.localBoundingBoxOf(image, clipBounds = false)
+            handoff.pendingHandoffs.add(key)
+            handoff.sampledHandoffs.remove(key)
         }
         drawContent()
     }
@@ -114,7 +124,39 @@ private fun artworkHandoffMotion(key: String): () -> FiniteAnimationSpec<Rect> {
     val returningFromPreview = LocalNavigationGestureActive.current && !LocalNavigationGestureInProgress.current
     return {
         val bounds = if (returningFromPreview) handoff?.bounds?.get(key) else null
-        if (bounds != null) PreviewBoundsAnimationSpec(bounds, motion) else motion
+        if (bounds != null) PreviewBoundsAnimationSpec(bounds, motion) {
+            handoff?.sampledHandoffs?.add(key)
+        } else motion
+    }
+}
+
+@Composable
+private fun Modifier.guardArtworkHandoff(key: String): Modifier {
+    val handoff = LocalArtworkPreviewHandoff.current ?: return this
+    val visible = LocalNavigationSharedElementVisible.current
+    val returning = LocalNavigationGestureActive.current && !LocalNavigationGestureInProgress.current
+    val coordinates = remember(key) { arrayOfNulls<LayoutCoordinates>(1) }
+    return onGloballyPositioned { coordinates[0] = it }.drawWithContent {
+        val preview = handoff.bounds[key]
+        val root = handoff.root
+        val image = coordinates[0]
+        if (key in handoff.sampledHandoffs) handoff.pendingHandoffs.remove(key)
+        if (returning && visible && key in handoff.pendingHandoffs && preview != null &&
+            root?.isAttached == true && image?.isAttached == true
+        ) {
+            val current = root.localBoundingBoxOf(image, clipBounds = false)
+            if (current.width > preview.width + 1f || current.height > preview.height + 1f) {
+                withTransform({
+                    translate(preview.left - current.left, preview.top - current.top)
+                    scale(preview.width / current.width, preview.height / current.height, Offset.Zero)
+                }) {
+                    this@drawWithContent.drawContent()
+                }
+            } else {
+                handoff.pendingHandoffs.remove(key)
+                drawContent()
+            }
+        } else drawContent()
     }
 }
 
@@ -292,6 +334,7 @@ fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier
             boundsTransform = { _, _ -> motion() },
             renderInOverlayDuringTransition = !gestureActive,
             clipInOverlayDuringTransition = OverlayClip(CircleShape))
+            .guardArtworkHandoff(sharedKey)
     }
 }
 
@@ -345,7 +388,7 @@ fun WorkImage(
                 boundsTransform = { _, _ -> boundsAnimation() },
                 renderInOverlayDuringTransition = !gestureActive,
                 clipInOverlayDuringTransition = OverlayClip(animatedShape),
-            ).clip(animatedShape)
+            ).guardArtworkHandoff(sharedKey).clip(animatedShape)
         }
     } else modifier
     Box(imageModifier) {

@@ -92,7 +92,11 @@ internal fun NavigationPageDisplay(
     val handoff = remember { ArtworkPreviewHandoff() }
     var previousGestureInProgress by remember { mutableStateOf(false) }
     SideEffect {
-        if (gestureInProgress && !previousGestureInProgress) handoff.bounds.clear()
+        if (gestureInProgress && !previousGestureInProgress) {
+            handoff.bounds.clear()
+            handoff.pendingHandoffs.clear()
+            handoff.sampledHandoffs.clear()
+        }
         previousGestureInProgress = gestureInProgress
     }
     CompositionLocalProvider(
