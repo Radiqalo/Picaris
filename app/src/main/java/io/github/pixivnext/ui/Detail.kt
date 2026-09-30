@@ -193,7 +193,12 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                                 shape = MaterialTheme.shapes.large,
                                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                             ) {
-                                UserRow(work.user, { navigate(Author(work.user)) }) {
+                                UserRow(work.user, {
+                                    if (!navigationTransition.isRunning &&
+                                        navigationTransition.targetState == androidx.compose.animation.EnterExitState.Visible &&
+                                        imageTransition?.isTransitionActive != true
+                                    ) navigate(Author(work.user))
+                                }) {
                                     FilledTonalButton(
                                         onClick = {
                                             vm.run {
