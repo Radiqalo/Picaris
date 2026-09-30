@@ -200,7 +200,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
     }
     if (pageDialog) {
         val selectedPage = pageInput.toIntOrNull()?.takeIf { it in 1..count }
-        AlertDialog(
+        ActionSheet(
             onDismissRequest = { pageDialog = false },
             title = { Text("跳转页码") },
             text = {

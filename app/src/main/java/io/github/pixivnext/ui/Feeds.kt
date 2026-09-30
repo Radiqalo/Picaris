@@ -555,7 +555,7 @@ fun CollectionScreen(
                 override fun isSelectableYear(year: Int): Boolean = year <= lastDate.year
             },
         )
-        DatePickerDialog(
+        DateSelectionSheet(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(
@@ -1243,11 +1243,11 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit,
         }
     }
     if (filter)
-        AlertDialog(
+        ActionSheet(
             onDismissRequest = { filter = false },
             title = { Text(strings.getString(R.string.ui_1c31f74a1d)) },
             text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
+                Column {
                     Text(
                         strings.getString(R.string.ui_dc35af8d69),
                         style = MaterialTheme.typography.titleSmall,
@@ -1334,7 +1334,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit,
                                 .toEpochMilli()
                         }
             )
-        DatePickerDialog(
+        DateSelectionSheet(
             onDismissRequest = { dateField = null },
             confirmButton = {
                 TextButton({

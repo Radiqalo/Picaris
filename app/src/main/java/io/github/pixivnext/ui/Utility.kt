@@ -86,7 +86,7 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
         }
     }
     if (import)
-        AlertDialog(
+        ActionSheet(
             onDismissRequest = { if (!busy) import = false },
             title = { Text(strings.getString(R.string.ui_592bb1ace9)) },
             text = {
@@ -568,7 +568,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
     }
     when (dialog) {
         "color" ->
-            AlertDialog(
+            ActionSheet(
                 onDismissRequest = { dialog = null },
                 title = { Text(strings.getString(R.string.ui_6f67371e05)) },
                 text = {
@@ -610,7 +610,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
             var value by remember {
                 mutableStateOf(if (dialog == "tags") s.blockedTags else s.blockedUsers)
             }
-            AlertDialog(
+            ActionSheet(
                 onDismissRequest = { dialog = null },
                 title = {
                     Text(
@@ -653,7 +653,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
             }
         "history",
         "cache" ->
-            AlertDialog(
+            ActionSheet(
                 onDismissRequest = { dialog = null },
                 title = { Text(strings.getString(R.string.ui_21f227944e)) },
                 text = {
@@ -688,7 +688,7 @@ fun ProxyDialog(s: Settings, dismiss: () -> Unit, save: (String, String, Int) ->
     var port by remember { mutableStateOf(s.proxyPort.toString()) }
     val manual = type == "http" || type == "socks"
     val valid = !manual || (host.isNotBlank() && port.toIntOrNull() in 1..65535)
-    AlertDialog(
+    ActionSheet(
         onDismissRequest = dismiss,
         title = { Text(strings.getString(R.string.ui_999365fe74)) },
         text = {
@@ -821,7 +821,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
         }
     }
     if (add)
-        AlertDialog(
+        ActionSheet(
             onDismissRequest = {
                 add = false
                 tokenState.clearText()
@@ -856,7 +856,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
             },
         )
     remove?.let { a ->
-        AlertDialog(
+        ActionSheet(
             onDismissRequest = { remove = null },
             title = { Text("移除 ${a.user.name}？") },
             text = { Text(strings.getString(R.string.ui_ca05850133)) },
@@ -1145,7 +1145,7 @@ fun AboutScreen(back: () -> Unit) {
         }
     }
     if (notices)
-        AlertDialog(
+        ActionSheet(
             onDismissRequest = { notices = false },
             title = { Text(strings.getString(R.string.license_notices)) },
             text = {
@@ -1158,7 +1158,7 @@ fun AboutScreen(back: () -> Unit) {
                 }
                 Text(
                     text,
-                    Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()),
+                    Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodySmall,
                 )
             },

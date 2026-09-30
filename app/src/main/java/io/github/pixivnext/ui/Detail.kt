@@ -292,42 +292,42 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 IconButton(onClick = back) { AppIcon(Glyph.Back, "返回") }
-                Box {
-                    IconButton(onClick = { moreMenu = true }) {
-                        AppIcon(Glyph.More, "更多操作")
-                    }
-                    DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
-                            leadingIcon = { AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null) },
-                            onClick = { moreMenu = false; openReader(current) },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(strings.getString(R.string.ui_7a92434114)) },
-                            leadingIcon = { AppIcon(Glyph.Share, null) },
-                            onClick = { moreMenu = false; share() },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(strings.getString(R.string.ui_255d6cabdc)) },
-                            leadingIcon = { AppIcon(Glyph.Download, null) },
-                            onClick = {
-                                moreMenu = false
-                                permission.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            },
-                        )
-                        if (!current.is_bookmarked && !actionBusy)
-                            DropdownMenuItem(
-                                text = { Text("非公开收藏") },
-                                leadingIcon = { AppIcon(Glyph.Heart, null) },
-                                onClick = { moreMenu = false; privateDialog = true },
-                            )
-                    }
+                IconButton(onClick = { moreMenu = true }) {
+                    AppIcon(Glyph.More, "更多操作")
                 }
             }
         }
     }
+    if (moreMenu) ModalBottomSheet(onDismissRequest = { moreMenu = false }) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = PixivSpacing.content)) {
+            ListItem(
+                content = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
+                leadingContent = { AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null) },
+                onClick = { moreMenu = false; openReader(current) },
+            )
+            ListItem(
+                content = { Text(strings.getString(R.string.ui_7a92434114)) },
+                leadingContent = { AppIcon(Glyph.Share, null) },
+                onClick = { moreMenu = false; share() },
+            )
+            ListItem(
+                content = { Text(strings.getString(R.string.ui_255d6cabdc)) },
+                leadingContent = { AppIcon(Glyph.Download, null) },
+                onClick = {
+                    moreMenu = false
+                    permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                },
+            )
+            if (!current.is_bookmarked && !actionBusy)
+                ListItem(
+                    content = { Text("非公开收藏") },
+                    leadingContent = { AppIcon(Glyph.Heart, null) },
+                    onClick = { moreMenu = false; privateDialog = true },
+                )
+        }
+    }
     if (privateDialog)
-        AlertDialog(
+        ActionSheet(
             onDismissRequest = { privateDialog = false },
             title = { Text(strings.getString(R.string.ui_67c6787737)) },
             text = { Text(strings.getString(R.string.ui_b6fe094725)) },
