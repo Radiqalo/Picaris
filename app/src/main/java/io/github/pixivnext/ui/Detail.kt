@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import io.github.pixivnext.AppViewModel
@@ -272,26 +274,8 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                         }
                     }
                     if (!work.isNovel)
-                        item {
-                            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                                OutlinedButton(
-                                    {
-                                        navigate(
-                                            Collection(
-                                                strings.getString(R.string.ui_29ffbeb614),
-                                                "related",
-                                                userId = work.id,
-                                            )
-                                        )
-                                    },
-                                    Modifier.fillMaxWidth(),
-                                ) {
-                                    Text(strings.getString(R.string.ui_7c1af69922))
-                                    Spacer(Modifier.width(8.dp))
-                                    AppIcon(Glyph.Arrow, null)
-                                }
-                            }
-                        }
+                        item(key = "related") { RelatedWorkStrip(work, vm, navigate) }
+
                 }
             }
             Row(
@@ -353,6 +337,57 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                 }
             },
         )
+}
+
+@Composable
+private fun RelatedWorkStrip(work: Work, vm: AppViewModel, navigate: (NavKey) -> Unit) {
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val spec = remember(work.id) { FeedSpec(section = "related", userId = work.id) }
+    val flow = remember(spec, vm.accountId, settings.contentFilter()) { vm.feed(spec) }
+    val related = flow.collectAsLazyPagingItems()
+    val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
+    val busy by vm.bookmarkBusy.collectAsStateWithLifecycle()
+    val openAll = {
+        navigate(Collection(strings.getString(R.string.ui_29ffbeb614), "related", userId = work.id))
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
+        Text(strings.getString(R.string.ui_29ffbeb614),
+            Modifier.padding(horizontal = 20.dp), style = MaterialTheme.typography.titleMedium)
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (related.itemCount == 0 && related.loadState.refresh is LoadState.Loading)
+                items(5) {
+                    Spacer(Modifier.width(144.dp).height(200.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.small))
+                }
+            else items(minOf(5, related.itemCount), key = { index ->
+                related.peek(index)?.let { "${it.type}_${it.id}" } ?: "related_$index"
+            }) { index ->
+                related[index]?.let { artwork ->
+                    val identity = artwork.identity(vm.accountId)
+                    val current = bookmarks[identity]?.apply(artwork) ?: artwork
+                    Box(Modifier.width(144.dp)) {
+                        WorkCard(
+                            current,
+                            likedBusy = identity in busy,
+                            showMetadata = false,
+                            onLike = { vm.run { vm.bookmark(current) } },
+                            onClick = { vm.record(current); navigate(Detail(current)) },
+                        )
+                    }
+                }
+            }
+            item(key = "more") {
+                FilledTonalIconButton(onClick = openAll) {
+                    AppIcon(Glyph.Arrow, "查看全部相关作品")
+                }
+            }
+        }
+    }
 }
 
 @Composable
