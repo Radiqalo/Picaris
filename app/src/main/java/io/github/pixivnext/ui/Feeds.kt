@@ -290,8 +290,10 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                         modifier = Modifier.align(Alignment.BottomStart)
                                             .padding(start = 12.dp, bottom = 4.dp, end = 12.dp),
                                         border = null,
+                                        shape = MaterialTheme.shapes.extraSmall,
                                         colors = SuggestionChipDefaults.suggestionChipColors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            containerColor = Color.Black.copy(alpha = .52f),
+                                            labelColor = Color.White,
                                         ),
                                         label = {
                                             Text("#${trend.tag.translated_name ?: trend.tag.name}",
