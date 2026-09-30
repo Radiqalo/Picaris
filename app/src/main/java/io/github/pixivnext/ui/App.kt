@@ -2,6 +2,8 @@ package io.github.pixivnext.ui
 
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -306,9 +308,15 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         }
                 },
             ) { padding ->
-                val enterSpatial = MaterialTheme.motionScheme.slowSpatialSpec<IntOffset>()
                 val exitSpatial = MaterialTheme.motionScheme.fastSpatialSpec<IntOffset>()
-                val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                val enterSpatial = remember(exitSpatial) {
+                    if (exitSpatial is SpringSpec) spring(
+                        dampingRatio = exitSpatial.dampingRatio * 0.8f,
+                        stiffness = exitSpatial.stiffness,
+                        visibilityThreshold = exitSpatial.visibilityThreshold,
+                    ) else exitSpatial
+                }
+                val effects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 val exitEffects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
                 val layoutDirection = LocalLayoutDirection.current
                 AnimatedContent(
