@@ -652,6 +652,7 @@ fun FeedGrid(
     modifier: Modifier = Modifier,
     rank: Boolean = false,
     header: (@Composable () -> Unit)? = null,
+    afterHeader: (@Composable () -> Unit)? = null,
     gridState: LazyStaggeredGridState? = null,
     listState: LazyListState? = null,
     topPadding: Dp = PixivSpacing.content,
@@ -682,9 +683,9 @@ fun FeedGrid(
     val showFeedMetadata = spec.section != "ranking" && settings.showHomeMetadata
     val feedContent: @Composable () -> Unit = {
         when {
-            refreshing && items.itemCount == 0 -> FeedGridStatus(header, scrollHeaderWhileEmpty) { LoadingState() }
+            refreshing && items.itemCount == 0 -> FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty) { LoadingState() }
             error != null && items.itemCount == 0 ->
-                FeedGridStatus(header, scrollHeaderWhileEmpty) {
+                FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty) {
                     EmptyState(
                         strings.getString(R.string.ui_590a4df471),
                         error.error.message ?: strings.getString(R.string.ui_73a13d2b99),
@@ -695,7 +696,7 @@ fun FeedGrid(
                     }
                 }
             items.itemCount == 0 ->
-                FeedGridStatus(header, scrollHeaderWhileEmpty) {
+                FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty) {
                     EmptyState(
                         strings.getString(R.string.ui_37ce9e3518),
                         if (spec.section == "bookmarks") strings.getString(R.string.ui_408822a29e)
@@ -712,6 +713,7 @@ fun FeedGrid(
                     modifier = Modifier.fillMaxSize().testTag("novelList"),
                 ) {
                     if (header != null) item(key = "feed_header") { header() }
+                    if (afterHeader != null) item(key = "feed_after_header") { afterHeader() }
                     items(items.itemCount, key = items.itemKey { "${it.type}_${it.id}" }) { index ->
                         items[index]?.let { work ->
                             val identity = work.identity(vm.accountId)
@@ -743,6 +745,10 @@ fun FeedGrid(
                     if (header != null)
                         item(span = StaggeredGridItemSpan.FullLine, key = "feed_header") {
                             header()
+                        }
+                    if (afterHeader != null)
+                        item(span = StaggeredGridItemSpan.FullLine, key = "feed_after_header") {
+                            afterHeader()
                         }
                     items(items.itemCount, key = items.itemKey { "${it.type}_${it.id}" }) { index ->
                         items[index]?.let { work ->
@@ -843,20 +849,23 @@ private fun FeedAppendState(state: LoadState, count: Int, retry: () -> Unit) {
 @Composable
 private fun FeedGridStatus(
     header: (@Composable () -> Unit)?,
+    afterHeader: (@Composable () -> Unit)?,
     scrollHeader: Boolean,
     content: @Composable () -> Unit,
 ) {
     if (header == null) content()
     else if (scrollHeader)
         LazyColumn(Modifier.fillMaxSize()) {
-            item(key = "feed_header") { header() }
+            if (header != null) item(key = "feed_header") { header() }
+            if (afterHeader != null) item(key = "feed_after_header") { afterHeader() }
             item(key = "feed_status") {
                 Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) { content() }
             }
         }
     else
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.padding(horizontal = PixivSpacing.content)) { header() }
+            if (header != null) Box(Modifier.padding(horizontal = PixivSpacing.content)) { header() }
+            if (afterHeader != null) Box(Modifier.padding(horizontal = PixivSpacing.content)) { afterHeader() }
             Box(Modifier.weight(1f)) { content() }
         }
 }

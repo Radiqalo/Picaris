@@ -443,8 +443,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
             .setType("text/plain").putExtra(Intent.EXTRA_TEXT, "https://www.pixiv.net/users/${user.id}"), "分享作者"))
     }
     Box(Modifier.fillMaxSize()) {
-        // Keep the scrolling viewport below system status icons so a collapsed profile header
-        // cannot carry its tab row underneath them.
+        // Keep scrollable content below the status bar. Floating actions remain above it.
         HorizontalPager(pager, Modifier.fillMaxSize().statusBarsPadding(), key = { it }) { page ->
             FeedGrid(
                 FeedSpec(section = if (page == 2) "bookmarks" else "user",
@@ -508,6 +507,8 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                             }
                         }
                     }
+                },
+                afterHeader = {
                     PrimaryTabRow(selectedTabIndex = pager.currentPage) {
                         pageLabels.forEachIndexed { index, label ->
                             Tab(selected = pager.currentPage == index,
