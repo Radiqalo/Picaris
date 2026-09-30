@@ -1088,28 +1088,6 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit)
                         }
                     }
                 }
-                item {
-                    Surface(
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(
-                            Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                strings.getString(R.string.ui_6de6049a1f),
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            Text(
-                                strings.getString(R.string.ui_d26f35cd03),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
             }
     }
     ExpandedFullScreenSearchBar(state = searchState, inputField = searchField) {

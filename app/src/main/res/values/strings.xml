@@ -103,7 +103,6 @@
     <string name="ui_6a0b30d361">漫画</string>
     <string name="ui_6cbb7335b5">端口</string>
     <string name="ui_6d4dcd7cb8">本地数据</string>
-    <string name="ui_6de6049a1f">从一个关键词开始</string>
     <string name="ui_6eb705b4ce">小说</string>
     <string name="ui_6f67371e05">强调色</string>
     <string name="ui_7355147b10">收藏作品</string>
@@ -156,7 +155,6 @@
     <string name="ui_ca05850133">将移除此账号的本机登录凭据，下载文件仍然保留。</string>
     <string name="ui_d00981d6ce">排行榜</string>
     <string name="ui_d07cee786a">收藏</string>
-    <string name="ui_d26f35cd03">搜索作品标题、喜欢的标签，或者创作者的名字。</string>
     <string name="ui_d3657fb0a3">播放动图</string>
     <string name="ui_d5edf52f07">纯黑图片背景</string>
     <string name="ui_d6166d6460">Pixiv 服务条款</string>
