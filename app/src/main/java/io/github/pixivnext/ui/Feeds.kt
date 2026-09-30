@@ -1,6 +1,7 @@
 package io.github.pixivnext.ui
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
@@ -14,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
@@ -30,8 +32,6 @@ import io.github.pixivnext.core.*
 import io.github.pixivnext.designsystem.*
 
 private val WorkImageBadgeInset = 8.dp
-private val WorkImageBadgeShape = RoundedCornerShape(10.dp)
-private val WorkImageShape = RoundedCornerShape(14.dp)
 
 val LocalAppBarScrollBehavior = staticCompositionLocalOf<TopAppBarScrollBehavior?> { null }
 
@@ -95,47 +95,47 @@ fun ChoiceChips(
     modifier: Modifier = Modifier,
     showCheck: Boolean = false,
 ) {
-    Surface(
+    val sources = remember(options) { List(options.size) { MutableInteractionSource() } }
+    ButtonGroup(
+        overflowIndicator = { menu -> ButtonGroupDefaults.OverflowIndicator(menuState = menu) },
         modifier = modifier,
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        expandedRatio = 1f,
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
     ) {
-        Row(
-            Modifier.padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            options.forEachIndexed { index, (key, label) ->
-                val isSelected = selected == key
-                val chipShape =
-                    when (index) {
-                        0 ->
-                            RoundedCornerShape(
-                                topStart = 24.dp,
-                                bottomStart = 24.dp,
-                                topEnd = 8.dp,
-                                bottomEnd = 8.dp,
-                            )
-                        options.lastIndex ->
-                            RoundedCornerShape(
-                                topStart = 8.dp,
-                                bottomStart = 8.dp,
-                                topEnd = 24.dp,
-                                bottomEnd = 24.dp,
-                            )
-                        else -> RoundedCornerShape(8.dp)
+        options.forEachIndexed { index, (key, label) ->
+            customItem(
+                buttonGroupContent = {
+                    val padding = ButtonDefaults.ContentPadding
+                    ToggleButton(
+                        checked = selected == key,
+                        onCheckedChange = { onSelect(key) },
+                        shapes =
+                            when {
+                                options.size == 1 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                index == options.lastIndex ->
+                                    ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                        interactionSource = sources[index],
+                        modifier =
+                            Modifier.animateWidth(
+                                interactionSource = sources[index],
+                                compressionLimit =
+                                    padding.calculateEndPadding(LocalLayoutDirection.current),
+                            ),
+                    ) {
+                        if (showCheck && selected == key) {
+                            AppIcon(Glyph.Check, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
+                        }
+                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onSelect(key) },
-                    modifier = Modifier.weight(1f),
-                    label = { Text(label, maxLines = 1) },
-                    shape = chipShape,
-                    leadingIcon =
-                        if (showCheck && isSelected) {
-                            { AppIcon(Glyph.Check, null, Modifier.size(16.dp)) }
-                        } else null,
-                )
-            }
+                },
+                menuContent = {
+                    DropdownMenuItem(text = { Text(label) }, onClick = { onSelect(key) })
+                },
+            )
         }
     }
 }
@@ -433,16 +433,18 @@ fun WorkCard(
     onClick: () -> Unit,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
+    val imageShape = MaterialTheme.shapes.small
+    val badgeShape = MaterialTheme.shapes.extraSmall
 
     Column(
-        Modifier.clip(WorkImageShape)
+        Modifier.clip(imageShape)
             .clickable(onClick = onClick)
             .semantics {
                 if (!showMetadata) contentDescription = "${work.title}，${work.user.name}"
             }
             .padding(bottom = if (showMetadata) 2.dp else 0.dp)
     ) {
-        Box(Modifier.fillMaxWidth().clip(WorkImageShape)) {
+        Box(Modifier.fillMaxWidth().clip(imageShape)) {
             WorkImage(
                 work,
                 Modifier.fillMaxWidth().aspectRatio(if (work.isNovel) .9f else work.aspect),
@@ -462,7 +464,7 @@ fun WorkCard(
             if (work.page_count > 1 || work.type == "ugoira" || work.isNovel)
                 Surface(
                     Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset),
-                    shape = WorkImageBadgeShape,
+                    shape = badgeShape,
                     color = Color.Black.copy(alpha = .52f),
                     contentColor = Color.White,
                 ) {
@@ -489,7 +491,7 @@ fun WorkCard(
                 contentAlignment = Alignment.BottomEnd,
             ) {
                 Surface(
-                    shape = WorkImageBadgeShape,
+                    shape = badgeShape,
                     color = Color.Black.copy(alpha = .48f),
                     contentColor = Color.White,
                 ) {

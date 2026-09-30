@@ -299,14 +299,17 @@ fun UtilityScreen(page: String, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
 
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
         Text(
             title,
             Modifier.padding(start = 4.dp),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+        Column(
+            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
+            content = content,
+        )
     }
 }
 
@@ -326,52 +329,30 @@ fun SettingRow(
     position: SettingsRowPosition = SettingsRowPosition.Middle,
     onClick: () -> Unit = {},
 ) {
-    val shape =
+    val (index, count) =
         when (position) {
-            SettingsRowPosition.First ->
-                RoundedCornerShape(
-                    topStart = 32.dp,
-                    topEnd = 32.dp,
-                    bottomEnd = 8.dp,
-                    bottomStart = 8.dp,
-                )
-            SettingsRowPosition.Middle -> RoundedCornerShape(8.dp)
-            SettingsRowPosition.Last ->
-                RoundedCornerShape(
-                    topStart = 8.dp,
-                    topEnd = 8.dp,
-                    bottomEnd = 32.dp,
-                    bottomStart = 32.dp,
-                )
-            SettingsRowPosition.Only -> RoundedCornerShape(32.dp)
+            SettingsRowPosition.First -> 0 to 3
+            SettingsRowPosition.Middle -> 1 to 3
+            SettingsRowPosition.Last -> 2 to 3
+            SettingsRowPosition.Only -> 0 to 1
         }
-    Surface(
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-    ) {
-        ListItem(
-            onClick = onClick,
-            content = { Text(title, style = MaterialTheme.typography.titleMedium) },
-            supportingContent = {
-                Text(summary, style = MaterialTheme.typography.bodyMedium)
-            },
-            leadingContent = {
-                Box(
-                    Modifier.size(56.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AppIcon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
-            },
-            trailingContent = action ?: { AppIcon(Glyph.Arrow, null, Modifier.size(18.dp)) },
-            colors =
-                ListItemDefaults.colors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent
-                ),
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = ListItemDefaults.segmentedShapes(index, count),
+        content = { Text(title, style = MaterialTheme.typography.titleMedium) },
+        supportingContent = { Text(summary, style = MaterialTheme.typography.bodyMedium) },
+        leadingContent = {
+            Box(
+                Modifier.size(56.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                AppIcon(icon, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+        },
+        trailingContent = action ?: { AppIcon(Glyph.Arrow, null, Modifier.size(18.dp)) },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
