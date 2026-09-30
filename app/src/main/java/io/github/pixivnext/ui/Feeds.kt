@@ -653,6 +653,7 @@ fun FeedGrid(
     rank: Boolean = false,
     header: (@Composable () -> Unit)? = null,
     afterHeader: (@Composable () -> Unit)? = null,
+    itemsModifier: Modifier = Modifier,
     gridState: LazyStaggeredGridState? = null,
     listState: LazyListState? = null,
     topPadding: Dp = PixivSpacing.content,
@@ -722,6 +723,7 @@ fun FeedGrid(
                                 work = current,
                                 rank = index.takeIf { rank },
                                 likedBusy = identity in busy,
+                                modifier = itemsModifier,
                                 onLike = { vm.run { vm.bookmark(current) } },
                                 onClick = {
                                     vm.record(current)
@@ -759,6 +761,7 @@ fun FeedGrid(
                                 index.takeIf { rank },
                                 likedBusy = identity in busy,
                                 showMetadata = showFeedMetadata,
+                                modifier = itemsModifier,
                                 onLike = { vm.run { vm.bookmark(current) } },
                             ) {
                                 vm.record(current)
@@ -788,10 +791,12 @@ private fun NovelListItem(
     work: Work,
     rank: Int?,
     likedBusy: Boolean,
+    modifier: Modifier = Modifier,
     onLike: () -> Unit,
     onClick: () -> Unit,
 ) {
     ListItem(
+        modifier = modifier,
         onClick = onClick,
         leadingContent = {
             WorkImage(
@@ -877,6 +882,7 @@ fun WorkCard(
     likedBusy: Boolean = false,
     showMetadata: Boolean = true,
     sharedTransition: Boolean = true,
+    modifier: Modifier = Modifier,
     onLike: () -> Unit,
     onClick: () -> Unit,
 ) {
@@ -894,7 +900,7 @@ fun WorkCard(
     val feedback = toggleFeedback()
 
     Column(
-        Modifier.clip(imageShape)
+        modifier.clip(imageShape)
             .onGloballyPositioned {
                 if (registerTapTarget)
                     tapRouter?.update(tapTargetKey, it.boundsInWindow()) { currentOnClick() }
