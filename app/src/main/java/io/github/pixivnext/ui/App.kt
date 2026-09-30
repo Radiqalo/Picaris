@@ -20,6 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.*
@@ -303,16 +306,20 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         }
                 },
             ) { padding ->
-                val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                val enterSpatial = MaterialTheme.motionScheme.slowSpatialSpec<IntOffset>()
+                val exitSpatial = MaterialTheme.motionScheme.fastSpatialSpec<IntOffset>()
                 val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
                 val exitEffects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+                val layoutDirection = LocalLayoutDirection.current
                 AnimatedContent(
                     targetState = tab,
-                    modifier = Modifier.padding(padding).fillMaxSize(),
+                    modifier = Modifier.padding(padding).fillMaxSize().clipToBounds(),
                     transitionSpec = {
-                        val direction = if (targetState > initialState) 1 else -1
-                        ((slideInHorizontally(spatial) { direction * it / 12 } + fadeIn(effects)) togetherWith
-                            (slideOutHorizontally(spatial) { -direction * it / 12 } + fadeOut(exitEffects)))
+                        val tabDirection = if (targetState > initialState) 1 else -1
+                        val direction = tabDirection * if (layoutDirection == LayoutDirection.Ltr) 1 else -1
+                        ((slideInHorizontally(enterSpatial) { direction * it / 3 } + fadeIn(effects)) togetherWith
+                            (slideOutHorizontally(exitSpatial) { -direction * it / 6 } + fadeOut(exitEffects)))
+                            .apply { targetContentZIndex = 1f }
                             .using(null)
                     },
                     label = "bottom navigation page",
