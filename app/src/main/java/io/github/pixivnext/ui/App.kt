@@ -83,6 +83,11 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
             backStack[backStack.lastIndex] = it
         else backStack.add(it)
     }
+    // Related works are a genuine drill-down: retain the current detail so Back returns to it.
+    val navigateRelatedDetail: (Detail) -> Unit = {
+        authorNavigation = false
+        backStack.add(it)
+    }
     val back: () -> Unit = {
         if (backStack.size > 1) {
             authorNavigation = backStack.lastOrNull() is Author
@@ -184,6 +189,9 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                     DetailScreen(entry.work, vm,
                                                         navigate = { route ->
                                                             if (isInteractive()) navigate(route)
+                                                        },
+                                                        navigateRelatedDetail = { route ->
+                                                            if (isInteractive()) navigateRelatedDetail(route)
                                                         },
                                                         back = { if (isInteractive()) back() },
                                                     )

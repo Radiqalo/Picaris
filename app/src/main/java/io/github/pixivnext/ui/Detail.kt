@@ -37,7 +37,13 @@ import io.github.pixivnext.designsystem.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
+fun DetailScreen(
+    initial: Work,
+    vm: AppViewModel,
+    navigate: (NavKey) -> Unit,
+    navigateRelatedDetail: (Detail) -> Unit,
+    back: () -> Unit,
+) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val navigationTransition = LocalNavAnimatedContentScope.current.transition
     val imageTransition = LocalWorkTransition.current
@@ -299,7 +305,9 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                         }
                     }
                     if (!work.isNovel)
-                        item(key = "related") { RelatedWorkStrip(work, vm, navigate) }
+                        item(key = "related") {
+                            RelatedWorkStrip(work, vm, navigate, navigateRelatedDetail)
+                        }
 
                 }
             }
@@ -365,7 +373,12 @@ fun DetailScreen(initial: Work, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
 }
 
 @Composable
-private fun RelatedWorkStrip(work: Work, vm: AppViewModel, navigate: (NavKey) -> Unit) {
+private fun RelatedWorkStrip(
+    work: Work,
+    vm: AppViewModel,
+    navigate: (NavKey) -> Unit,
+    navigateRelatedDetail: (Detail) -> Unit,
+) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val spec = remember(work.id) { FeedSpec(section = "related", userId = work.id) }
@@ -401,7 +414,7 @@ private fun RelatedWorkStrip(work: Work, vm: AppViewModel, navigate: (NavKey) ->
                             likedBusy = identity in busy,
                             showMetadata = false,
                             onLike = { vm.run { vm.bookmark(current) } },
-                            onClick = { vm.record(current); navigate(Detail(current)) },
+                            onClick = { vm.record(current); navigateRelatedDetail(Detail(current)) },
                         )
                     }
                 }
