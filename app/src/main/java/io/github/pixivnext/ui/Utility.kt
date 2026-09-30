@@ -164,18 +164,6 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             AppIcon(Glyph.Arrow, strings.getString(R.string.ui_9d4ca7f307))
                         }
                     }
-                    Button(
-                        onClick = { navigate(Utility("bookmarks")) },
-                        modifier = Modifier.fillMaxWidth().height(ButtonDefaults.LargeContainerHeight),
-                        shapes = ButtonDefaults.shapesFor(ButtonDefaults.LargeContainerHeight),
-                        contentPadding = ButtonDefaults.LargeContentPadding,
-                    ) {
-                        AppIcon(Glyph.Heart, null, Modifier.size(ButtonDefaults.LargeIconSize))
-                        Spacer(Modifier.width(ButtonDefaults.LargeIconSpacing))
-                        Text(strings.getString(R.string.profile_bookmarks),
-                            Modifier.weight(1f), style = ButtonDefaults.textStyleFor(ButtonDefaults.LargeContainerHeight))
-                        AppIcon(Glyph.Arrow, null)
-                    }
                     ProfileLibraryActions(navigate)
                 }
             }
@@ -220,10 +208,11 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 private fun ProfileLibraryActions(navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val actions = listOf(
+        Triple("bookmarks", strings.getString(R.string.profile_bookmarks), Glyph.Heart),
         Triple("history", strings.getString(R.string.profile_history), Glyph.History),
         Triple("downloads", strings.getString(R.string.ui_18df1a67a2), Glyph.Download),
     )
-    val sources = remember { List(2) { androidx.compose.foundation.interaction.MutableInteractionSource() } }
+    val sources = remember { List(3) { androidx.compose.foundation.interaction.MutableInteractionSource() } }
     ButtonGroup(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
@@ -232,21 +221,29 @@ private fun ProfileLibraryActions(navigate: (NavKey) -> Unit) {
         actions.forEachIndexed { index, (page, label, icon) ->
             customItem(
                 buttonGroupContent = {
+                    val connectedShapes = when (index) {
+                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                        actions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                    }
                     FilledTonalButton(
                         onClick = { navigate(Utility(page)) },
                         modifier = Modifier.weight(1f).animateWidth(sources[index])
                             .height(ButtonDefaults.MediumContainerHeight),
                         interactionSource = sources[index],
                         shapes = ButtonDefaults.shapes(
-                            shape = if (index == 0) ButtonGroupDefaults.connectedLeadingButtonShape
-                                else ButtonGroupDefaults.connectedTrailingButtonShape,
-                            pressedShape = if (index == 0) ButtonGroupDefaults.connectedLeadingButtonPressShape
-                                else ButtonGroupDefaults.connectedTrailingButtonPressShape,
+                            shape = connectedShapes.shape,
+                            pressedShape = connectedShapes.pressedShape,
                         ),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
                     ) {
-                        AppIcon(icon, null, Modifier.size(ButtonDefaults.SmallIconSize))
-                        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                        Text(label, maxLines = 1)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
+                        ) {
+                            AppIcon(icon, null, Modifier.size(ButtonDefaults.SmallIconSize))
+                            Text(label, maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 },
                 menuContent = {
