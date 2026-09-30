@@ -852,12 +852,11 @@ fun WorkCard(
             }
             .padding(bottom = if (showMetadata) 2.dp else 0.dp)
     ) {
-        Box(Modifier.fillMaxWidth().clip(imageShape)) {
-            WorkImage(
-                work,
-                Modifier.fillMaxWidth().aspectRatio(if (work.isNovel) .9f else work.aspect),
-                sharedTransition = sharedTransition,
-            )
+        WorkImage(
+            work,
+            Modifier.fillMaxWidth().aspectRatio(if (work.isNovel) .9f else work.aspect).clip(imageShape),
+            sharedTransition = sharedTransition,
+        ) {
             val labels = buildList {
                 if (rank != null) add("${rank + 1}")
                 if (work.illust_ai_type == 2) add("AI")

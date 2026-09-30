@@ -52,6 +52,7 @@ fun WorkImage(
     url: String = work.cover,
     sharedTransition: Boolean = false,
     rounded: Boolean = true,
+    overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val transition = LocalWorkTransition.current
     val imageModifier = if (sharedTransition && LocalImageTransitionEnabled.current && transition != null) {
@@ -84,14 +85,16 @@ fun WorkImage(
             ).clip(animatedShape)
         }
     } else modifier
-    if (work.demo >= 0) DemoArt(work.demo, imageModifier)
-    else
-        AsyncImage(
+    Box(imageModifier) {
+        if (work.demo >= 0) DemoArt(work.demo, Modifier.matchParentSize())
+        else AsyncImage(
             url,
             work.title,
-            imageModifier.background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            Modifier.matchParentSize().background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentScale = scale,
         )
+        overlay()
+    }
 }
 
 @Composable
