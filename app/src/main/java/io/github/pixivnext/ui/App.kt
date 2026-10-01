@@ -324,15 +324,13 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
                     if (!wide)
-                        HomeNavigationBar(floating = settings.bottomBarStyle == "floating") {
-                            tabs.forEachIndexed { index, title ->
-                                ShortNavigationBarItem(
-                                    selected = tab == index,
-                                    onClick = { selectTab(index) },
-                                    icon = { FeedbackIcon(if (tab == index) selectedIcons[index] else icons[index], null, tab == index) },
-                                    label = { Text(title) },
-                                )
-                            }
+                        HomeNavigationBar(
+                            floating = settings.bottomBarStyle == "floating",
+                            labels = tabs,
+                            selectedIndex = tab,
+                            onSelect = selectTab,
+                        ) { index, selected ->
+                            FeedbackIcon(if (selected) selectedIcons[index] else icons[index], null, selected)
                         }
                 },
             ) { padding ->
