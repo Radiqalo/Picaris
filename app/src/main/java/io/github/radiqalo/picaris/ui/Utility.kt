@@ -1434,6 +1434,7 @@ fun AboutScreen(back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     val context = LocalContext.current
+    var licenses by remember { mutableStateOf(false) }
     Column {
         ScreenBar(strings.getString(R.string.ui_bed172efc9), back = back, scrollBehavior = null)
         Column(
@@ -1505,12 +1506,35 @@ fun AboutScreen(back: () -> Unit) {
             Spacer(Modifier.height(PixivSpacing.section))
             Text(
                 strings.getString(R.string.about_license_note),
-                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                Modifier.fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable { licenses = true }
+                    .padding(horizontal = PixivSpacing.content, vertical = PixivSpacing.compact),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
         }
     }
+    if (licenses)
+        ActionSheet(
+            onDismissRequest = { licenses = false },
+            title = { Text(strings.getString(R.string.about_license)) },
+            text = {
+                val text = remember {
+                    listOf("THIRD_PARTY_NOTICES.md", "GPL-3.0.txt", "Apache-2.0.txt", "MIT.txt")
+                        .joinToString("\n\n") { name ->
+                            runCatching {
+                                context.assets.open(name).bufferedReader().use { it.readText() }
+                            }.getOrDefault("")
+                        }
+                }
+                Text(text, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall)
+            },
+            confirmButton = {
+                TextButton({ licenses = false }) { Text(strings.getString(R.string.ui_33246f6a5e)) }
+            },
+        )
 }
 
 @Composable

@@ -205,4 +205,5 @@
     <string name="about_appearance_value">Material 3 Expressive</string>
     <string name="about_source_code">源代码</string>
     <string name="about_license_note">本项目以 GPL-3.0 许可发布。</string>
+    <string name="about_license">开源许可</string>
 </resources>
