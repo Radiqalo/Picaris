@@ -1,6 +1,7 @@
 package io.github.radiqalo.picaris.ui
 
 import android.Manifest
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -71,17 +72,18 @@ fun ReaderScreen(
     val count = localUris.size.takeIf { it > 0 } ?: work.originals.size
     val pager = rememberPagerState(pageCount = { count })
     val list = rememberLazyListState()
+    fun startDownload() {
+        val page = if (vertical) list.firstVisibleItemIndex else pager.currentPage
+        vm.download(
+            work,
+            if (count > 1 && work.type != "ugoira") setOf(page) else null,
+            ugoiraAsGif = work.type == "ugoira",
+        )
+    }
     val downloadPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) {
-            val page = if (vertical) list.firstVisibleItemIndex else pager.currentPage
-            vm.download(
-                work,
-                if (count > 1 && work.type != "ugoira") setOf(page) else null,
-                ugoiraAsGif = work.type == "ugoira",
-            )
-        }
+        if (granted) startDownload()
     }
     val bg = if (s.blackReader) Color.Black else MaterialTheme.colorScheme.background
     val text = if (s.blackReader) Color.White else MaterialTheme.colorScheme.onBackground
@@ -160,7 +162,11 @@ fun ReaderScreen(
                                 if (showOriginal) "原图已开启，点击切换预览图" else "查看原图")
                         }
                         if (localUris.isEmpty()) IconButton(onClick = {
-                            downloadPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                downloadPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                startDownload()
+                            }
                         }) {
                             AppIcon(materialSymbol(MaterialSymbol.Download), strings.getString(R.string.ui_255d6cabdc))
                         }

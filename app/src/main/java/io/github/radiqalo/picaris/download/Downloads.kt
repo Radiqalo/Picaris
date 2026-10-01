@@ -4,6 +4,7 @@ import android.app.*
 import android.app.job.*
 import android.content.*
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -154,12 +155,13 @@ constructor(
         }
 
     fun schedule() {
-        val info =
-            JobInfo.Builder(1001, ComponentName(context, DownloadService::class.java))
-                .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                .setUserInitiated(true)
-                .setEstimatedNetworkBytes(10_000_000, 0)
-                .build()
+        val builder = JobInfo.Builder(1001, ComponentName(context, DownloadService::class.java))
+            .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+            .setEstimatedNetworkBytes(10_000_000, 0)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            builder.setUserInitiated(true)
+        }
+        val info = builder.build()
         val scheduler = context.getSystemService(JobScheduler::class.java)
         if (scheduler.getPendingJob(1001) != null) return
         check(scheduler.schedule(info) == JobScheduler.RESULT_SUCCESS) { "无法启动下载，请保持应用在前台后重试" }

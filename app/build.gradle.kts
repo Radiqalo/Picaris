@@ -11,7 +11,7 @@ android {
     compileSdk { version = release(37) { minorApiLevel = 2 } }
     defaultConfig {
         applicationId = "io.github.radiqalo.picaris"
-        minSdk = 37
+        minSdk = 30
         targetSdk = 37
         versionCode = 5
         versionName = "0.3.0"

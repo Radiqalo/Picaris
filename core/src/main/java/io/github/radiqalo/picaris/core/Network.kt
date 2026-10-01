@@ -248,7 +248,7 @@ class PixivOAuth @Inject constructor(private val network: Network) : OAuthExchan
                     fields.forEach { (k, v) -> append(k, v) }
                 },
             ) {
-                header("User-Agent", "PixivAndroidApp/6.170.0 (Android 17; Picaris)")
+                header("User-Agent", "PixivAndroidApp/6.170.0 (Android; Picaris)")
             }
         val json = AppJson.parseToJsonElement(response.bodyAsText()).jsonObject
         if (!response.status.isSuccess())
@@ -313,7 +313,7 @@ class PixivApi @Inject constructor(private val auth: AuthRepository, private val
             val response =
                 network.client().get("https://app-api.pixiv.net/$path") {
                     header(HttpHeaders.Authorization, "Bearer $token")
-                    header(HttpHeaders.UserAgent, "PixivAndroidApp/6.170.0 (Android 17; Picaris)")
+                    header(HttpHeaders.UserAgent, "PixivAndroidApp/6.170.0 (Android; Picaris)")
                     params.forEach { (k, v) -> parameter(k, v) }
                 }
             if (response.status.value == 401 && attempt == 0) {
@@ -348,7 +348,7 @@ class PixivApi @Inject constructor(private val auth: AuthRepository, private val
                         header(HttpHeaders.Authorization, "Bearer $token")
                         header(
                             HttpHeaders.UserAgent,
-                            "PixivAndroidApp/6.170.0 (Android 17; Picaris)",
+                            "PixivAndroidApp/6.170.0 (Android; Picaris)",
                         )
                     }
                 else
@@ -357,7 +357,7 @@ class PixivApi @Inject constructor(private val auth: AuthRepository, private val
                         header(HttpHeaders.AcceptLanguage, "zh-CN")
                         header(
                             HttpHeaders.UserAgent,
-                            "PixivAndroidApp/6.170.0 (Android 17; Picaris)",
+                            "PixivAndroidApp/6.170.0 (Android; Picaris)",
                         )
                         values.forEach { (k, v) -> parameter(k, v) }
                     }

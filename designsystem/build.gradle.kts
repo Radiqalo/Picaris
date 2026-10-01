@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "io.github.radiqalo.picaris.designsystem"
     compileSdk { version = release(37) { minorApiLevel = 2 } }
-    defaultConfig { minSdk = 37 }
+    defaultConfig { minSdk = 30 }
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21

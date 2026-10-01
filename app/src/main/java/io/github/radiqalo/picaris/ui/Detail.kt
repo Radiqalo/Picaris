@@ -2,6 +2,7 @@ package io.github.radiqalo.picaris.ui
 
 import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.text.Html
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -93,7 +94,12 @@ fun DetailScreen(
         }
     fun requestDownload(pages: Set<Int>? = null) {
         pendingDownloadPages = pages
-        permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            pendingDownloadPages = null
+            vm.download(work, pages, pendingUgoiraGif)
+        }
     }
     fun requestUgoiraDownload(asGif: Boolean) {
         pendingUgoiraGif = asGif

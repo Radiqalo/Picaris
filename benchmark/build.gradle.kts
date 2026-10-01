@@ -4,7 +4,7 @@ android {
     namespace = "io.github.radiqalo.picaris.benchmark"
     compileSdk { version = release(37) { minorApiLevel = 2 } }
     defaultConfig {
-        minSdk = 37
+        minSdk = 30
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
