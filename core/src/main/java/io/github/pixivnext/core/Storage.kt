@@ -216,6 +216,17 @@ interface LibraryDao {
     @Query("UPDATE downloads SET status=:status, error='' WHERE id=:id")
     suspend fun status(id: Long, status: String)
 
+    @Query("UPDATE downloads SET status='failed', error=:error WHERE id=:id AND status='running'")
+    suspend fun failDownload(id: Long, error: String): Int
+
+    @Query(
+        "UPDATE downloads SET status=:status,error='' WHERE id=:id AND " +
+            "((:status='queued' AND status IN ('paused','failed','cancelled')) OR " +
+            "(:status='paused' AND status IN ('queued','running')) OR " +
+            "(:status='cancelled' AND status IN ('queued','running','paused','failed')))"
+    )
+    suspend fun changeDownloadStatus(id: Long, status: String): Int
+
     @Query("UPDATE downloads SET status='queued' WHERE status='running'")
     suspend fun recoverDownloads()
 
@@ -225,6 +236,9 @@ interface LibraryDao {
     suspend fun finishedIds(): List<Long>
 
     @Query("DELETE FROM downloads WHERE id=:id") suspend fun deleteDownload(id: Long)
+
+    @Query("DELETE FROM downloads WHERE id=:id AND accountId=:account AND status IN ('complete','failed','cancelled')")
+    suspend fun deleteFinishedDownload(account: Long, id: Long): Int
 }
 
 @Database(

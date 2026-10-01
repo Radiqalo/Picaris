@@ -26,7 +26,12 @@ constructor(
     private val dao: LibraryDao,
     private val repo: WorkRepository,
 ) {
-    suspend fun enqueue(account: Long, work: Work) {
+    suspend fun enqueue(account: Long, initial: Work) {
+        val missingOriginals = !initial.isNovel && initial.type != "ugoira" &&
+            (if (initial.page_count > 1) initial.meta_pages.size < initial.page_count ||
+                initial.meta_pages.any { it.image_urls.original.isBlank() }
+            else initial.meta_single_page.original_image_url.isBlank() && initial.image_urls.original.isBlank())
+        val work = if (missingOriginals) repo.detail(account, initial.id) else initial
         val metadata = AppJson.encodeToString(work)
         if (work.isNovel) {
             queue(
@@ -118,8 +123,27 @@ constructor(
     }
 
     suspend fun action(id: Long, status: String) {
-        dao.status(id, status)
-        if (status == "queued") schedule()
+        require(status in setOf("queued", "paused", "cancelled")) { "无效的下载操作" }
+        if (dao.changeDownloadStatus(id, status) > 0 && status == "queued") schedule()
+    }
+
+    suspend fun batchAction(account: Long, ids: Set<Long>, status: String) {
+        require(status in setOf("queued", "paused", "cancelled")) { "无效的下载操作" }
+        var changed = false
+        for (id in ids) {
+            if (dao.download(id)?.accountId == account)
+                changed = dao.changeDownloadStatus(id, status) > 0 || changed
+        }
+        if (changed && status == "queued") schedule()
+    }
+
+    suspend fun removeRecords(account: Long, ids: Set<Long>) {
+        withContext(Dispatchers.IO) {
+            for (id in ids) {
+                if (dao.deleteFinishedDownload(account, id) > 0)
+                    File(context.filesDir, "transfer/$account/$id.part").delete()
+            }
+        }
     }
 }
 
@@ -153,9 +177,7 @@ class DownloadService : JobService() {
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        val current = dao.download(task.id) ?: continue
-                        if (current.status == "running")
-                            dao.update(current.copy(status = "failed", error = e.message ?: "下载失败"))
+                        dao.failDownload(task.id, e.message ?: "下载失败")
                     }
                 }
             } finally {

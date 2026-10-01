@@ -284,6 +284,16 @@ constructor(
 
     fun downloadAction(id: Long, status: String) = run { downloads.action(id, status) }
 
+    fun downloadBatchAction(ids: Set<Long>, status: String) {
+        val account = accountId
+        run { downloads.batchAction(account, ids, status) }
+    }
+
+    fun removeDownloadRecords(ids: Set<Long>) {
+        val account = accountId
+        run { downloads.removeRecords(account, ids) }
+    }
+
     suspend fun authorDetails(initial: User): AuthorDetails {
         val account = accountId
         if (authorProfiles[account to initial.id]?.isCancelled == true)

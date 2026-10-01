@@ -19,6 +19,8 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
@@ -971,22 +973,80 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
     }
 }
 
+private fun downloadProgressText(bytes: Long, total: Long): String {
+    fun format(size: Long): String = when {
+        size >= 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.1f MB", size / (1024.0 * 1024))
+        size >= 1024 -> String.format(java.util.Locale.ROOT, "%.1f KB", size / 1024.0)
+        else -> "$size B"
+    }
+    return if (total > 0) "${format(bytes)} / ${format(total)}" else format(bytes)
+}
+
 @Composable
 fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     val tasks by vm.downloadList.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var filter by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("all") }
+    var selecting by remember(vm.accountId) { mutableStateOf(false) }
+    var selected by remember(vm.accountId) { mutableStateOf(emptySet<Long>()) }
+    var confirmRemoval by remember(vm.accountId) { mutableStateOf(false) }
+    val filtered = tasks.filter { task ->
+        when (filter) {
+            "active" -> task.status in setOf("queued", "running")
+            "paused" -> task.status == "paused"
+            "failed" -> task.status == "failed"
+            "complete" -> task.status == "complete"
+            "cancelled" -> task.status == "cancelled"
+            else -> true
+        }
+    }
+    val chosen = tasks.filter { it.id in selected }
+    LaunchedEffect(tasks) { selected = selected.intersect(tasks.map { it.id }.toSet()) }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(
             strings.getString(R.string.ui_18df1a67a2),
             back,
             scrollBehavior = null,
         )
-        if (tasks.isEmpty())
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(listOf("all" to "全部", "active" to "下载中", "paused" to "已暂停",
+                "failed" to "失败", "complete" to "已完成", "cancelled" to "已取消")) { (key, label) ->
+                FilterChip(selected = filter == key, onClick = { filter = key }, label = { Text(label) })
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("${filtered.size} 条记录" + if (selecting) " · 已选 ${chosen.size}" else "", Modifier.weight(1f))
+            if (selecting) TextButton(onClick = {
+                val visibleIds = filtered.map { it.id }.toSet()
+                selected = if (visibleIds.isNotEmpty() && selected.containsAll(visibleIds))
+                    selected - visibleIds else selected + visibleIds
+            }) { Text(if (filtered.isNotEmpty() && selected.containsAll(filtered.map { it.id })) "取消全选" else "全选") }
+            TextButton(onClick = { selecting = !selecting; selected = emptySet() }) {
+                Text(if (selecting) "完成" else "管理")
+            }
+        }
+        if (selecting) FlowRow(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TextButton(onClick = { vm.downloadBatchAction(selected, "paused") },
+                enabled = chosen.any { it.status in setOf("queued", "running") }) { Text("暂停") }
+            TextButton(onClick = { vm.downloadBatchAction(selected, "queued") },
+                enabled = chosen.any { it.status in setOf("paused", "failed", "cancelled") }) { Text("继续／重试") }
+            TextButton(onClick = { vm.downloadBatchAction(selected, "cancelled") },
+                enabled = chosen.any { it.status in setOf("queued", "running", "paused", "failed") }) { Text("取消下载") }
+            TextButton(onClick = { confirmRemoval = true },
+                enabled = chosen.any { it.status in setOf("complete", "failed", "cancelled") }) { Text("清理记录") }
+        }
+        if (filtered.isEmpty())
             EmptyState(
-                strings.getString(R.string.ui_92024c1013),
-                strings.getString(R.string.ui_ed6ecba3e8),
+                if (tasks.isEmpty()) strings.getString(R.string.ui_92024c1013) else "没有匹配的下载",
+                if (tasks.isEmpty()) strings.getString(R.string.ui_ed6ecba3e8) else "可以切换其他状态查看",
                 materialSymbol(MaterialSymbol.Download),
             )
         else
@@ -995,7 +1055,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(tasks, key = { it.id }) { task ->
+                items(filtered, key = { it.id }) { task ->
                     Surface(
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -1008,6 +1068,13 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
+                                if (selecting) Checkbox(
+                                    checked = task.id in selected,
+                                    modifier = Modifier.semantics { contentDescription = "选择下载记录 ${task.name}" },
+                                    onCheckedChange = { checked ->
+                                        selected = if (checked) selected + task.id else selected - task.id
+                                    },
+                                )
                                 AppIcon(
                                     if (task.status == "complete") materialSymbol(MaterialSymbol.Check) else materialSymbol(MaterialSymbol.Download),
                                     null,
@@ -1024,9 +1091,17 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
+                                    Text(
+                                        remember(task.createdAt) {
+                                            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                                                .format(java.util.Date(task.createdAt))
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 }
                                 when (task.status) {
-                                    "running" ->
+                                    "running", "queued" ->
                                         IconButton({
                                             vm.downloadAction(task.id, "paused")
                                         }) {
@@ -1035,7 +1110,6 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                                 strings.getString(R.string.ui_130448bce6),
                                             )
                                         }
-                                    "queued",
                                     "paused",
                                     "failed",
                                     "cancelled" ->
@@ -1080,20 +1154,22 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                         }
                                 }
                             }
-                            if (task.status == "running" && task.total > 0)
+                            if (task.status in setOf("running", "paused", "failed") && task.total > 0)
                                 LinearWavyProgressIndicator(
                                     progress = {
                                         (task.bytes.toFloat() / task.total).coerceIn(0f, 1f)
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
+                            else if (task.status == "running")
+                                LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     when (task.status) {
-                                        "complete" -> strings.getString(R.string.ui_e99b48a29b)
-                                        "paused" -> strings.getString(R.string.ui_fcbae46bf8)
-                                        "running" -> "下载中 · ${task.bytes/1024} KB"
-                                        "failed" -> task.error
+                                        "complete" -> "${strings.getString(R.string.ui_e99b48a29b)} · ${downloadProgressText(task.bytes, task.total)}"
+                                        "paused" -> "已暂停 · ${downloadProgressText(task.bytes, task.total)}"
+                                        "running" -> "下载中 · ${downloadProgressText(task.bytes, task.total)}"
+                                        "failed" -> "${task.error.ifBlank { "下载失败，请重试" }} · ${downloadProgressText(task.bytes, task.total)}"
                                         "cancelled" -> strings.getString(R.string.ui_a5ffdc95ee)
                                         else -> strings.getString(R.string.ui_e575faa045)
                                     },
@@ -1123,6 +1199,19 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                 }
             }
     }
+    if (confirmRemoval) AlertDialog(
+        onDismissRequest = { confirmRemoval = false },
+        title = { Text("清理下载记录？") },
+        text = { Text("仅移除选中的已完成、失败和已取消记录，不删除已保存文件。已完成记录移除后，应用内离线读取关联也会移除；进行中和已暂停的任务不受影响。") },
+        confirmButton = {
+            TextButton(onClick = {
+                vm.removeDownloadRecords(chosen.filter { it.status in setOf("complete", "failed", "cancelled") }.map { it.id }.toSet())
+                confirmRemoval = false
+                selected = emptySet()
+            }) { Text("清理") }
+        },
+        dismissButton = { TextButton(onClick = { confirmRemoval = false }) { Text("取消") } },
+    )
 }
 
 @Composable
