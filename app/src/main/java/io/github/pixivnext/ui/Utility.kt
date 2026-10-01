@@ -322,6 +322,7 @@ fun SettingRow(
         colors = PixivContainerDefaults.listItemColors(),
         onClick = { feedback(); onClick() },
         shapes = ListItemDefaults.segmentedShapes(index, count),
+        verticalAlignment = Alignment.CenterVertically,
         content = { Text(title, style = MaterialTheme.typography.titleMedium) },
         supportingContent = { Text(summary, style = MaterialTheme.typography.bodyMedium) },
         leadingContent = {
@@ -420,7 +421,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     )
                     SettingRow(
                         "Floating 底栏",
-                        "启用悬浮底栏；关闭后使用标准底栏",
+                        "启用悬浮底栏",
                         icon = materialSymbol(MaterialSymbol.Home),
                         action = {
                             FeedbackSwitch(s.bottomBarStyle == "floating", { enabled ->
