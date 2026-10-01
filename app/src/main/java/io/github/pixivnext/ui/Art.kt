@@ -127,8 +127,8 @@ fun Modifier.aboveWorkTransition(zIndexInOverlay: Float = 1f, artworkKey: String
         this@aboveWorkTransition.renderInSharedTransitionScopeOverlay(
             zIndexInOverlay = zIndexInOverlay,
             renderInOverlay = {
-                artwork?.isActive == true && artwork.recordingSnapshot != true && !gestureActive && visible &&
-                    (artworkKey == null || artwork.hasFlight(artworkKey, owner))
+                artwork?.isActive == true && artwork.recordingSnapshot != true && !gestureActive &&
+                    if (artworkKey == null) visible else artwork.hasFlight(artworkKey, owner)
             },
         )
     }
