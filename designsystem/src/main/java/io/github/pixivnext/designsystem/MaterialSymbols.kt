@@ -31,6 +31,22 @@ enum class MaterialSymbol(val resource: Int) {
     BlockedUser(R.drawable.ms_person_off),
     Network(R.drawable.ms_public),
     ClearCache(R.drawable.ms_cleaning_services),
+    Search(R.drawable.ms_search),
+    Favorite(R.drawable.ms_favorite),
+    FavoriteFilled(R.drawable.ms_favorite_filled),
+    Comment(R.drawable.ms_chat_bubble),
+    ArrowBack(R.drawable.ms_arrow_back),
+    Download(R.drawable.ms_download),
+    MoreHoriz(R.drawable.ms_more_horiz),
+    Settings(R.drawable.ms_settings),
+    ChevronRight(R.drawable.ms_chevron_right),
+    Close(R.drawable.ms_close),
+    Leaderboard(R.drawable.ms_leaderboard),
+    History(R.drawable.ms_history),
+    Share(R.drawable.ms_share),
+    Check(R.drawable.ms_check),
+    Pause(R.drawable.ms_pause),
+    PlayArrow(R.drawable.ms_play_arrow),
 }
 
 @Composable

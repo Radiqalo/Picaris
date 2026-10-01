@@ -44,7 +44,7 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
             settings,
             Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 12.dp),
         ) {
-            AppIcon(Glyph.Settings, strings.getString(R.string.ui_7debf9cb03))
+            AppIcon(materialSymbol(MaterialSymbol.Settings), strings.getString(R.string.ui_7debf9cb03))
         }
         Column(
             Modifier.align(Alignment.Center)
@@ -69,7 +69,7 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
                 Modifier.fillMaxWidth().height(56.dp),
                 enabled = !busy,
             ) {
-                AppIcon(Glyph.Person, null)
+                AppIcon(materialSymbol(MaterialSymbol.Person), null)
                 Spacer(Modifier.width(10.dp))
                 Text(strings.getString(R.string.ui_77373439fa))
             }
@@ -170,7 +170,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             )
                         }
                         FilledTonalIconButton(onClick = { navigate(Utility("accounts")) }) {
-                            AppIcon(Glyph.Arrow, strings.getString(R.string.ui_9d4ca7f307))
+                            AppIcon(materialSymbol(MaterialSymbol.ChevronRight), strings.getString(R.string.ui_9d4ca7f307))
                         }
                     }
                     ProfileLibraryActions(navigate)
@@ -188,8 +188,8 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             onClick = action,
                             shapes = ListItemDefaults.segmentedShapes(index, 2),
                             content = { Text(label, style = MaterialTheme.typography.titleMedium) },
-                            leadingContent = { AppIcon(Glyph.Person, null) },
-                            trailingContent = { AppIcon(Glyph.Arrow, null) },
+                            leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Person), null) },
+                            trailingContent = { AppIcon(materialSymbol(MaterialSymbol.ChevronRight), null) },
                         )
                     }
                 }
@@ -198,8 +198,8 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                     listOf(
-                        Triple("settings", strings.getString(R.string.ui_7debf9cb03), Glyph.Settings),
-                        Triple("about", strings.getString(R.string.ui_272209c708), Glyph.Discover),
+                        Triple("settings", strings.getString(R.string.ui_7debf9cb03), materialSymbol(MaterialSymbol.Settings)),
+                        Triple("about", strings.getString(R.string.ui_272209c708), materialSymbol(MaterialSymbol.Explore)),
                     ).forEachIndexed { index, (page, label, icon) ->
                         SegmentedListItem(
                             colors = PixivContainerDefaults.listItemColors(),
@@ -207,7 +207,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             shapes = ListItemDefaults.segmentedShapes(index, 2),
                             content = { Text(label) },
                             leadingContent = { AppIcon(icon, null) },
-                            trailingContent = { AppIcon(Glyph.Arrow, null) },
+                            trailingContent = { AppIcon(materialSymbol(MaterialSymbol.ChevronRight), null) },
                         )
                     }
                 }
@@ -219,9 +219,9 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 private fun ProfileLibraryActions(navigate: (NavKey) -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val actions = listOf(
-        Triple("bookmarks", strings.getString(R.string.profile_bookmarks), Glyph.Heart),
-        Triple("history", strings.getString(R.string.profile_history), Glyph.History),
-        Triple("downloads", strings.getString(R.string.ui_18df1a67a2), Glyph.Download),
+        Triple("bookmarks", strings.getString(R.string.profile_bookmarks), materialSymbol(MaterialSymbol.Favorite)),
+        Triple("history", strings.getString(R.string.profile_history), materialSymbol(MaterialSymbol.History)),
+        Triple("downloads", strings.getString(R.string.ui_18df1a67a2), materialSymbol(MaterialSymbol.Download)),
     )
     val sources = remember { List(3) { androidx.compose.foundation.interaction.MutableInteractionSource() } }
     ButtonGroup(
@@ -305,7 +305,7 @@ enum class SettingsRowPosition {
 fun SettingRow(
     title: String,
     summary: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector = Glyph.Settings,
+    icon: androidx.compose.ui.graphics.vector.ImageVector = materialSymbol(MaterialSymbol.Settings),
     action: @Composable (() -> Unit)? = null,
     position: SettingsRowPosition = SettingsRowPosition.Middle,
     onClick: () -> Unit = {},
@@ -334,7 +334,7 @@ fun SettingRow(
                 AppIcon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         },
-        trailingContent = action ?: { AppIcon(Glyph.Arrow, null, Modifier.size(18.dp)) },
+        trailingContent = action ?: { AppIcon(materialSymbol(MaterialSymbol.ChevronRight), null, Modifier.size(18.dp)) },
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -463,7 +463,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         "显示标签翻译",
                         "显示译名和原标签；关闭后只显示原标签",
-                        icon = Glyph.Search,
+                        icon = materialSymbol(MaterialSymbol.Search),
                         action = {
                             FeedbackSwitch(s.showTagTranslations, { value ->
                                 vm.update { it.copy(showTagTranslations = value) }
@@ -559,7 +559,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_4cd5da4f1c),
                         if (s.downloadTree.isEmpty()) strings.getString(R.string.ui_ef4c6139ae)
                         else strings.getString(R.string.ui_218f19435d),
-                        Glyph.Download,
+                        materialSymbol(MaterialSymbol.Download),
                         position =
                             if (s.downloadTree.isEmpty()) SettingsRowPosition.Last
                             else SettingsRowPosition.Middle,
@@ -570,7 +570,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         SettingRow(
                             strings.getString(R.string.ui_7e9cc10823),
                             strings.getString(R.string.ui_50c005951d),
-                            Glyph.Download,
+                            materialSymbol(MaterialSymbol.Download),
                             position = SettingsRowPosition.Last,
                         ) {
                             vm.update { it.copy(downloadTree = "") }
@@ -582,7 +582,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     SettingRow(
                         strings.getString(R.string.ui_0a7bef0788),
                         strings.getString(R.string.ui_be6850c1b8),
-                        Glyph.History,
+                        materialSymbol(MaterialSymbol.History),
                         position = SettingsRowPosition.First,
                     ) {
                         dialog = "history"
@@ -632,7 +632,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                                     if (s.seed == color)
                                         Box(contentAlignment = Alignment.Center) {
                                             AppIcon(
-                                                Glyph.Check,
+                                                materialSymbol(MaterialSymbol.Check),
                                                 null,
                                                 tint = androidx.compose.ui.graphics.Color.White,
                                             )
@@ -826,12 +826,12 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                                 Row {
                                     if (data.activeId == a.user.id)
                                         AppIcon(
-                                            Glyph.Check,
+                                            materialSymbol(MaterialSymbol.Check),
                                             strings.getString(R.string.ui_922c94aae3),
                                         )
                                     IconButton({ remove = a }) {
                                         AppIcon(
-                                            Glyph.Close,
+                                            materialSymbol(MaterialSymbol.Close),
                                             strings.getString(R.string.ui_63fd41f453),
                                         )
                                     }
@@ -927,7 +927,7 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
             EmptyState(
                 strings.getString(R.string.ui_f1fd08eeb6),
                 strings.getString(R.string.ui_4a5a8a9f75),
-                Glyph.History,
+                materialSymbol(MaterialSymbol.History),
             )
         else
             LazyColumn(
@@ -963,7 +963,7 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            AppIcon(Glyph.Arrow, null)
+                            AppIcon(materialSymbol(MaterialSymbol.ChevronRight), null)
                         }
                     }
                 }
@@ -987,7 +987,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             EmptyState(
                 strings.getString(R.string.ui_92024c1013),
                 strings.getString(R.string.ui_ed6ecba3e8),
-                Glyph.Download,
+                materialSymbol(MaterialSymbol.Download),
             )
         else
             LazyColumn(
@@ -1009,7 +1009,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 AppIcon(
-                                    if (task.status == "complete") Glyph.Check else Glyph.Download,
+                                    if (task.status == "complete") materialSymbol(MaterialSymbol.Check) else materialSymbol(MaterialSymbol.Download),
                                     null,
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -1031,7 +1031,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                             vm.downloadAction(task.id, "paused")
                                         }) {
                                             AppIcon(
-                                                Glyph.Pause,
+                                                materialSymbol(MaterialSymbol.Pause),
                                                 strings.getString(R.string.ui_130448bce6),
                                             )
                                         }
@@ -1043,7 +1043,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                             vm.downloadAction(task.id, "queued")
                                         }) {
                                             AppIcon(
-                                                Glyph.Play,
+                                                materialSymbol(MaterialSymbol.PlayArrow),
                                                 strings.getString(R.string.ui_3f9550508b),
                                             )
                                         }
@@ -1074,7 +1074,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                             }
                                         }) {
                                             AppIcon(
-                                                Glyph.Arrow,
+                                                materialSymbol(MaterialSymbol.ChevronRight),
                                                 strings.getString(R.string.ui_38820b3dc3),
                                             )
                                         }

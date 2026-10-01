@@ -277,9 +277,9 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             strings.getString(R.string.ui_a82c993d73),
         )
     val icons = listOf(materialSymbol(MaterialSymbol.Home), materialSymbol(MaterialSymbol.Explore),
-        materialSymbol(MaterialSymbol.Feed), Glyph.Search, materialSymbol(MaterialSymbol.Person))
+        materialSymbol(MaterialSymbol.Feed), materialSymbol(MaterialSymbol.Search), materialSymbol(MaterialSymbol.Person))
     val selectedIcons = listOf(materialSymbol(MaterialSymbol.HomeFilled), materialSymbol(MaterialSymbol.ExploreFilled),
-        materialSymbol(MaterialSymbol.FeedFilled), Glyph.Search, materialSymbol(MaterialSymbol.PersonFilled))
+        materialSymbol(MaterialSymbol.FeedFilled), materialSymbol(MaterialSymbol.Search), materialSymbol(MaterialSymbol.PersonFilled))
     val holder = rememberSaveableStateHolder()
     val homeReselection = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val feedback = selectionFeedback()

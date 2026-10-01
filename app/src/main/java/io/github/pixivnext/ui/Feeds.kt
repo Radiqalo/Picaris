@@ -72,7 +72,7 @@ fun ScreenBar(
     }
     val navigationContent: @Composable () -> Unit = {
         if (back != null)
-            IconButton(back) { AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540)) }
+            IconButton(back) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), strings.getString(R.string.ui_11d0241540)) }
     }
     TopAppBar(
         modifier = modifier,
@@ -154,7 +154,7 @@ fun ChoiceChips(
                             ),
                     ) {
                         if (showCheck && selected == key) {
-                            AppIcon(Glyph.Check, null, Modifier.size(16.dp))
+                            AppIcon(materialSymbol(MaterialSymbol.Check), null, Modifier.size(16.dp))
                             Spacer(Modifier.width(ToggleButtonDefaults.IconSpacing))
                         }
                         Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -250,7 +250,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     shapes = ButtonDefaults.shapes(),
                 ) {
-                    AppIcon(Glyph.Rank, null)
+                    AppIcon(materialSymbol(MaterialSymbol.Leaderboard), null)
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(strings.getString(R.string.ui_d00981d6ce))
                 }
@@ -512,7 +512,7 @@ fun CollectionScreen(
                 },
                 navigationIcon = {
                     IconButton(back) {
-                        AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540))
+                        AppIcon(materialSymbol(MaterialSymbol.ArrowBack), strings.getString(R.string.ui_11d0241540))
                     }
                 },
                 actions = {
@@ -674,7 +674,7 @@ fun FeedGrid(
                     EmptyState(
                         strings.getString(R.string.ui_590a4df471),
                         error.error.message ?: strings.getString(R.string.ui_73a13d2b99),
-                        Glyph.Discover,
+                        materialSymbol(MaterialSymbol.Explore),
                         strings.getString(R.string.ui_e2d53a6d3a),
                     ) {
                         items.retry()
@@ -687,7 +687,7 @@ fun FeedGrid(
                         strings.getString(R.string.ui_37ce9e3518),
                         if (spec.section == "bookmarks") strings.getString(R.string.ui_408822a29e)
                         else strings.getString(R.string.ui_a588489241),
-                        Glyph.Book,
+                        materialSymbol(MaterialSymbol.Book),
                     )
                 }
             spec.kind == "novel" ->
@@ -806,7 +806,7 @@ private fun NovelListItem(
             IconButton(onClick = onLike, enabled = !likedBusy,
                 modifier = Modifier.testTag("like_${work.type}_${work.id}")) {
                 AppIcon(
-                    if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                    if (work.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite),
                     if (work.is_bookmarked) "取消喜欢 ${work.title}" else "喜欢 ${work.title}",
                     tint = if (work.is_bookmarked) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1000,7 +1000,7 @@ fun WorkCard(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         FeedbackIcon(
-                            if (work.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                            if (work.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite),
                             null,
                             selected = work.is_bookmarked,
                             modifier = Modifier.size(20.dp),
@@ -1152,14 +1152,14 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
             searchBarState = searchState,
             onSearch = { submit(it) },
             placeholder = { Text("关键词、ID 或 Pixiv 链接") },
-            leadingIcon = { AppIcon(Glyph.Search, null) },
+            leadingIcon = { AppIcon(materialSymbol(MaterialSymbol.Search), null) },
             trailingIcon = {
                 if (word.text.isNotEmpty())
                     IconButton({
                         word.setTextAndPlaceCursorAtEnd("")
                         if (initialQuery == null) submitted = ""
                     }) {
-                        AppIcon(Glyph.Close, strings.getString(R.string.ui_7b15e5e8e7))
+                        AppIcon(materialSymbol(MaterialSymbol.Close), strings.getString(R.string.ui_7b15e5e8e7))
                     }
             },
         )
@@ -1177,7 +1177,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                     onClick = { submit(input, SearchJump.Artist(id)) },
                     enabled = !jumping,
                     label = { Text("作者 ID") },
-                    icon = { AppIcon(Glyph.Person, null) },
+                    icon = { AppIcon(materialSymbol(MaterialSymbol.Person), null) },
                 )
                 SuggestionChip(
                     onClick = { submit(input, SearchJump.Artwork(id, settings.contentKind == "novel")) },
@@ -1194,7 +1194,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
             back = back,
             actions = {
                 if (initialQuery != null) IconButton({ filter = true }) {
-                    AppIcon(Glyph.Settings, strings.getString(R.string.ui_1c31f74a1d))
+                    AppIcon(materialSymbol(MaterialSymbol.Settings), strings.getString(R.string.ui_1c31f74a1d))
                 }
             },
         )
@@ -1235,7 +1235,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                             userRetry++
                         }
                     else if (users.isEmpty())
-                        EmptyState("没有找到作者", "", Glyph.Person)
+                        EmptyState("没有找到作者", "", materialSymbol(MaterialSymbol.Person))
                     else
                         LazyColumn(Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = LocalHomeNavigationInset.current)) {
@@ -1287,7 +1287,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                                 SuggestionChip(
                                     { submit(h.word) },
                                     label = { Text(h.word) },
-                                    icon = { AppIcon(Glyph.History, null, Modifier.size(16.dp)) },
+                                    icon = { AppIcon(materialSymbol(MaterialSymbol.History), null, Modifier.size(16.dp)) },
                                 )
                             }
                         }
@@ -1315,7 +1315,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
         idSuggestions()
         history.take(8).forEach { entry ->
             ListItem(
-                leadingContent = { AppIcon(Glyph.History, null) },
+                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.History), null) },
                 modifier = Modifier.clickable { submit(entry.word) },
             ) {
                 Text(entry.word)

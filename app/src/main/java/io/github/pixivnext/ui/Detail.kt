@@ -187,7 +187,7 @@ fun DetailScreen(
                                 { openReader(current) },
                                 Modifier.fillMaxWidth().height(52.dp),
                             ) {
-                                AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null)
+                                AppIcon(if (work.isNovel) materialSymbol(MaterialSymbol.Book) else materialSymbol(MaterialSymbol.PlayArrow), null)
                                 Spacer(Modifier.width(8.dp))
                                 Text(
                                     if (work.isNovel) strings.getString(R.string.ui_f3be3e4b09)
@@ -247,7 +247,7 @@ fun DetailScreen(
                         onClick = { navigate(Comments(current)) },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                     ) {
-                        AppIcon(Glyph.Comment, null)
+                        AppIcon(materialSymbol(MaterialSymbol.Comment), null)
                         Spacer(Modifier.width(8.dp))
                         Text("查看评论")
                     }
@@ -308,7 +308,7 @@ fun DetailScreen(
                                 interactionSource = bookmarkInteraction,
                             ) {
                                 FeedbackIcon(
-                                    if (current.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                                    if (current.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite),
                                     if (current.is_bookmarked) "取消收藏" else "收藏",
                                     selected = current.is_bookmarked,
                                 )
@@ -331,7 +331,7 @@ fun DetailScreen(
                         interactionSource = bookmarkInteraction,
                     ) {
                         FeedbackIcon(
-                            if (current.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                            if (current.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite),
                             if (current.is_bookmarked) "取消收藏" else "收藏",
                             selected = current.is_bookmarked,
                         )
@@ -355,9 +355,9 @@ fun DetailScreen(
                 .statusBarsPadding().padding(12.dp).workTransitionControls(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            IconButton(onClick = { detailBack() }) { AppIcon(Glyph.Back, "返回") }
+            IconButton(onClick = { detailBack() }) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回") }
             IconButton(onClick = { if (canOpenReader) moreMenu = true }) {
-                AppIcon(Glyph.More, "更多操作")
+                AppIcon(materialSymbol(MaterialSymbol.MoreHoriz), "更多操作")
             }
         }
     }
@@ -365,17 +365,17 @@ fun DetailScreen(
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = PixivSpacing.content)) {
             ListItem(
                 content = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
-                leadingContent = { AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null) },
+                leadingContent = { AppIcon(if (work.isNovel) materialSymbol(MaterialSymbol.Book) else materialSymbol(MaterialSymbol.PlayArrow), null) },
                 onClick = { moreMenu = false; openReader(current) },
             )
             ListItem(
                 content = { Text(strings.getString(R.string.ui_7a92434114)) },
-                leadingContent = { AppIcon(Glyph.Share, null) },
+                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Share), null) },
                 onClick = { moreMenu = false; share() },
             )
             ListItem(
                 content = { Text(strings.getString(R.string.ui_255d6cabdc)) },
-                leadingContent = { AppIcon(Glyph.Download, null) },
+                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Download), null) },
                 onClick = {
                     moreMenu = false
                     permission.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -384,7 +384,7 @@ fun DetailScreen(
             if (!current.is_bookmarked && !actionBusy)
                 ListItem(
                     content = { Text("非公开收藏") },
-                    leadingContent = { AppIcon(Glyph.Heart, null) },
+                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Favorite), null) },
                     onClick = { moreMenu = false; privateDialog = true },
                 )
         }
@@ -514,7 +514,7 @@ private fun RelatedWorkStrip(
             }
             item(key = "more") {
                 FilledTonalIconButton(onClick = openAll) {
-                    AppIcon(Glyph.Arrow, "查看全部相关作品")
+                    AppIcon(materialSymbol(MaterialSymbol.ChevronRight), "查看全部相关作品")
                 }
             }
         }
@@ -661,8 +661,8 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         }
         Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween) {
-            IconButton(onClick = back) { AppIcon(Glyph.Back, "返回") }
-            IconButton(onClick = ::shareAuthor) { AppIcon(Glyph.Share, "分享作者") }
+            IconButton(onClick = back) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回") }
+            IconButton(onClick = ::shareAuthor) { AppIcon(materialSymbol(MaterialSymbol.Share), "分享作者") }
         }
     }
     if (showProfile && navigationPermission()()) ModalBottomSheet(onDismissRequest = { showProfile = false }) {

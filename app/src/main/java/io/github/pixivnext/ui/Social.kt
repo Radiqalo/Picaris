@@ -50,12 +50,12 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                     EmptyState(
                         "加载失败",
                         (people.loadState.refresh as LoadState.Error).error.message ?: "请重试",
-                        Glyph.Person,
+                        materialSymbol(MaterialSymbol.Person),
                         "重试",
                         { people.retry() },
                     )
                 people.itemCount == 0 ->
-                    EmptyState("还没有用户", "这里会显示${route.title}的用户。", Glyph.Person)
+                    EmptyState("还没有用户", "这里会显示${route.title}的用户。", materialSymbol(MaterialSymbol.Person))
                 else ->
                     LazyColumn(
                         state = list,
@@ -134,7 +134,7 @@ fun CommentPreview(work: Work, vm: AppViewModel, navigate: (NavKey) -> Unit) {
         }
         if (state.comments.isEmpty()) CommentFooter(state) { vm.comments.load(vm.accountId, work) }
         OutlinedButton({ navigate(Comments(work)) }, Modifier.fillMaxWidth()) {
-            AppIcon(Glyph.Comment, null)
+            AppIcon(materialSymbol(MaterialSymbol.Comment), null)
             Spacer(Modifier.width(8.dp))
             Text("写评论")
         }
@@ -173,7 +173,7 @@ private fun ThreadScreen(
             TopAppBar(
                 scrollBehavior = LocalAppBarScrollBehavior.current,
                 title = { Text(if (parent == null) "评论区" else "评论回复") },
-                navigationIcon = { IconButton(back) { AppIcon(Glyph.Back, "返回") } },
+                navigationIcon = { IconButton(back) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回") } },
                 actions = {
                     IconButton(
                         { vm.comments.load(vm.accountId, work, parent?.id, refresh = true) },
@@ -325,7 +325,7 @@ private fun CommentInputBar(
             if (replyName.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("回复 $replyName", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
                 if (cancelReply != null) IconButton(cancelReply, enabled = !state.sending) {
-                    AppIcon(Glyph.Close, "取消回复")
+                    AppIcon(materialSymbol(MaterialSymbol.Close), "取消回复")
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically,

@@ -119,7 +119,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
                     title = { Text(work.title, maxLines = 1) },
                     navigationIcon = {
                         IconButton(back) {
-                            AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540))
+                            AppIcon(materialSymbol(MaterialSymbol.ArrowBack), strings.getString(R.string.ui_11d0241540))
                         }
                     },
                     actions = {
@@ -140,7 +140,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
                         IconButton(onClick = {
                             downloadPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }) {
-                            AppIcon(Glyph.Download, strings.getString(R.string.ui_255d6cabdc))
+                            AppIcon(materialSymbol(MaterialSymbol.Download), strings.getString(R.string.ui_255d6cabdc))
                         }
                     },
                     colors =
@@ -170,7 +170,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
                             vertical = !vertical
                         }) {
                             AppIcon(
-                                Glyph.Book,
+                                materialSymbol(MaterialSymbol.Book),
                                 if (vertical) strings.getString(R.string.ui_86380149bb)
                                 else strings.getString(R.string.ui_4a58070031),
                             )
@@ -183,7 +183,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
                                 }
                             },
                             enabled = page > 0,
-                        ) { AppIcon(Glyph.Back, "上一张") }
+                        ) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "上一张") }
                         TextButton(onClick = { pageInput = "${page + 1}"; pageDialog = true }) {
                             Text("${page + 1} / $count", style = MaterialTheme.typography.labelLarge)
                         }
@@ -195,7 +195,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
                                 }
                             },
                             enabled = page < count - 1,
-                        ) { AppIcon(Glyph.Arrow, "下一张") }
+                        ) { AppIcon(materialSymbol(MaterialSymbol.ChevronRight), "下一张") }
                     }
                 }
         }
@@ -318,7 +318,7 @@ fun UgoiraPlayer(work: Work, vm: AppViewModel, toggle: () -> Unit) {
                     .padding(bottom = 24.dp),
             ) {
                 AppIcon(
-                    if (playing) Glyph.Pause else Glyph.Play,
+                    if (playing) materialSymbol(MaterialSymbol.Pause) else materialSymbol(MaterialSymbol.PlayArrow),
                     if (playing) strings.getString(R.string.ui_130448bce6)
                     else strings.getString(R.string.ui_21925350de),
                 )
@@ -364,12 +364,12 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
                 title = { Text(work.title, maxLines = 1) },
                 navigationIcon = {
                     IconButton(back) {
-                        AppIcon(Glyph.Back, strings.getString(R.string.ui_11d0241540))
+                        AppIcon(materialSymbol(MaterialSymbol.ArrowBack), strings.getString(R.string.ui_11d0241540))
                     }
                 },
                 actions = {
                     IconButton({ controls = true }) {
-                        AppIcon(Glyph.Settings, strings.getString(R.string.ui_bc0832465e))
+                        AppIcon(materialSymbol(MaterialSymbol.Settings), strings.getString(R.string.ui_bc0832465e))
                     }
                 },
             )
@@ -381,7 +381,7 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
                     EmptyState(
                         strings.getString(R.string.ui_5c3b597ab6),
                         error!!,
-                        Glyph.Book,
+                        materialSymbol(MaterialSymbol.Book),
                         strings.getString(R.string.ui_e2d53a6d3a),
                     ) {
                         retry++
