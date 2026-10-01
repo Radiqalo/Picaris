@@ -19,8 +19,6 @@ Picaris 是独立开发的开源 Pixiv 客户端，支持浏览和阅读插画�
 - **阅读**：多页作品横向翻页或纵向阅读、原图缩放、动图播放，以及小说排版调整。
 - **离线下载**：下载队列、并发数设置、暂停/继续/重试、进度显示，以及列表和图片流视图。动图可保存为 GIF，或选择目录保存源 ZIP。
 - **内容管理**：收藏、浏览历史、追更系列和下载作品。
-- **个性化**：主题、种子色、底栏样式、内容过滤和网络设置。
-- **账号安全**：加密保存登录凭据，支持多账号管理。
 
 ## 开始使用
 
@@ -49,8 +47,6 @@ sdk.dir=/path/to/Android/Sdk
 ```sh
 ./gradlew :app:testDebugUnitTest :core:testDebugUnitTest :designsystem:testDebugUnitTest
 ```
-
-Debug 版本使用独立包名 `io.github.radiqalo.picaris.qa`，可与正式包并行安装。Release 构建需要自行配置签名。
 
 ## 项目结构
 
