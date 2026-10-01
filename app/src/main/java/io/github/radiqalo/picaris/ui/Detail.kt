@@ -297,14 +297,14 @@ fun DetailScreen(
             floatingActionButton = {
                 FloatingActionButton(
                     onClick = { if (canOpenReader && !actionBusy) bookmark() },
-                    modifier = Modifier.navigationBarsPadding().expressivePress(bookmarkInteraction),
+                    modifier = Modifier.navigationBarsPadding().expressivePress(bookmarkInteraction)
+                        .workBookmarkTransition(current, circular = true),
                     interactionSource = bookmarkInteraction,
                 ) {
                     FeedbackIcon(
                         if (current.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite),
                         if (current.is_bookmarked) "取消收藏" else "收藏",
                         selected = current.is_bookmarked,
-                        modifier = Modifier.workBookmarkTransition(current),
                     )
                 }
             },

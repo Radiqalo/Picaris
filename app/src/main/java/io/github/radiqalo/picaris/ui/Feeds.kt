@@ -988,6 +988,7 @@ fun WorkCard(
                     modifier = Modifier.align(Alignment.BottomEnd)
                         .padding(WorkImageBadgeInset)
                         .size(32.dp)
+                        .workBookmarkTransition(work)
                         .expressivePress(likeInteraction)
                         .testTag("like_${work.type}_${work.id}")
                         .semantics {
@@ -1004,7 +1005,7 @@ fun WorkCard(
                             if (work.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite),
                             null,
                             selected = work.is_bookmarked,
-                            modifier = Modifier.size(20.dp).workBookmarkTransition(work),
+                            modifier = Modifier.size(20.dp),
                             tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
                         )
                     }
