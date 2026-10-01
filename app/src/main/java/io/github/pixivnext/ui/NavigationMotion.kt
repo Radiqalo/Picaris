@@ -202,15 +202,11 @@ internal class NavigationMotion(
         if (matchesPreview(scope)) predictiveDirection?.let { return@with backPreview(it) }
         when (style(targetState)) {
             NavigationMotionStyle.Slide -> {
+                val slideFrame = frame?.takeIf { kotlin.math.abs(it.scale - 1f) < 0.001f }
                 val slide = slideInHorizontally(handoffSpec(position,
-                    IntOffset(frame?.offsetVelocity?.toInt() ?: 0, 0), IntOffset.Zero,
-                )) { frame?.offset ?: (direction * it) }
-                val enter = if (frame?.preview != true) slide else slide +
-                    scaleIn(handoffSpec(scale, frame.scaleVelocity, 0f),
-                        initialScale = frame.scale.coerceIn(0.01f, 1.5f)) +
-                    fadeIn(handoffSpec(effects, frame.opacityVelocity, 0f),
-                        initialAlpha = frame.opacity.coerceIn(0f, 1f))
-                enter togetherWith ExitTransition.KeepUntilTransitionsFinished
+                    IntOffset(slideFrame?.offsetVelocity?.toInt() ?: 0, 0), IntOffset.Zero,
+                )) { slideFrame?.offset ?: (direction * it) }
+                slide togetherWith ExitTransition.KeepUntilTransitionsFinished
             }
             NavigationMotionStyle.Zoom ->
                 (scaleIn(handoffSpec(scale, frame?.scaleVelocity ?: 0f, 0f),
@@ -338,7 +334,6 @@ internal fun NavigationPage(
     val pageRadius = remember { floatArrayOf(0f) }
     val sampledRounding = rememberUpdatedState(renderedRounding)
     val previewing = rememberUpdatedState(seeking)
-    val previewFrame = rememberUpdatedState(seeking || coordinator.returningTransitionId == id)
     val sampledVisibility = rememberUpdatedState(
         if (seeking || (!coordinator.usesZoom(entryIds) && coordinator.returningTransitionId != id))
             1f else opacity,
@@ -354,7 +349,7 @@ internal fun NavigationPage(
                 val scale = bounds.width / root.size.width
                 NavigationSceneFrame(
                     scale, (bounds.left - (1f - scale) * root.size.width / 2f).toInt(),
-                    sampledVisibility.value, sampledRounding.value, preview = previewFrame.value,
+                    sampledVisibility.value, sampledRounding.value,
                 )
             }
         }

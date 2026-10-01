@@ -30,7 +30,6 @@ internal data class NavigationSceneFrame(
     val offsetVelocity: Float = 0f,
     val opacityVelocity: Float = 0f,
     val roundingVelocity: Float = 0f,
-    val preview: Boolean = false,
 )
 
 internal class NavigationTransitionCoordinator(
