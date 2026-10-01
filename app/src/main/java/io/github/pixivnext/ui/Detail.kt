@@ -91,6 +91,7 @@ fun DetailScreen(
         val firstImageHeight = (maxHeight - topInset - bottomInset - 180.dp).coerceAtLeast(160.dp)
         var expandedPages by androidx.compose.runtime.saveable.rememberSaveable(work.id) { mutableStateOf(false) }
         val listState = rememberLazyListState()
+        val informationGap = if (!wide && !work.isNovel) 16.dp else 0.dp
         val information: @Composable (Modifier) -> Unit = { modifier ->
             LazyColumn(
                 modifier.testTag("detailList"),
@@ -99,7 +100,7 @@ fun DetailScreen(
                     top = if (wide) 64.dp else topInset,
                     bottom = bottomInset + 96.dp,
                 ),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+                verticalArrangement = Arrangement.spacedBy(if (!wide && !work.isNovel) 4.dp else 20.dp),
             ) {
                 if (!wide) {
                     item(key = "firstImage") {
@@ -112,7 +113,9 @@ fun DetailScreen(
                                 rounded = false,
                             )
                         } else {
-                            DetailArtworkPage(work, 0, Modifier.fillMaxWidth().height(firstImageHeight)) { page ->
+                            val imageModifier = if (work.previews.size > 1) Modifier.fillMaxWidth()
+                                else Modifier.fillMaxWidth().height(firstImageHeight)
+                            DetailArtworkPage(work, 0, imageModifier) { page ->
                                 if (permitted()) navigate(Reader(current, page))
                             }
                         }
@@ -135,7 +138,7 @@ fun DetailScreen(
                                         } else expandedPages = true
                                     }
                                 },
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                             ) {
                                 Text(if (expandedPages) "收起图片" else "展开全部 ${work.previews.size} 张")
                             }
@@ -143,7 +146,7 @@ fun DetailScreen(
                     }
                 }
                 item {
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                    Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap)) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(work.title, style = MaterialTheme.typography.headlineMedium)
                             Text(
@@ -172,7 +175,7 @@ fun DetailScreen(
                     }
                 }
                 item {
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                    Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap)) {
                         Surface(
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -201,7 +204,7 @@ fun DetailScreen(
                 }
                 if (work.isNovel)
                     item {
-                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                        Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap)) {
                             FilledTonalButton(
                                 { openReader(current) },
                                 Modifier.fillMaxWidth().height(52.dp),
@@ -219,7 +222,7 @@ fun DetailScreen(
                     }
                 if (work.tags.isNotEmpty())
                     item {
-                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                        Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap)) {
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 work.tags.forEach { tag ->
                                     AssistChip(
@@ -242,7 +245,7 @@ fun DetailScreen(
                     }
                 if (work.caption.isNotBlank())
                     item {
-                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                        Box(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap)) {
                             Text(
                                 Html.fromHtml(work.caption, Html.FROM_HTML_MODE_COMPACT).toString(),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -256,7 +259,7 @@ fun DetailScreen(
                             onClick = {
                                 navigate(Collection(work.series!!.title, "series", "novel", work.series!!.id))
                             },
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                            modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap),
                         ) {
                             Text("系列 · ${work.series!!.title}")
                         }
@@ -264,7 +267,7 @@ fun DetailScreen(
                 item(key = "comments") {
                     OutlinedButton(
                         onClick = { navigate(Comments(current)) },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap),
                     ) {
                         AppIcon(materialSymbol(MaterialSymbol.Comment), null)
                         Spacer(Modifier.width(8.dp))
@@ -273,7 +276,9 @@ fun DetailScreen(
                 }
                 if (!work.isNovel)
                     item(key = "related") {
-                        RelatedWorkStrip(work, vm, navigate, navigateRelatedDetail)
+                        Box(Modifier.padding(top = informationGap)) {
+                            RelatedWorkStrip(work, vm, navigate, navigateRelatedDetail)
+                        }
                     }
             }
         }
