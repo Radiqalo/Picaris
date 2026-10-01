@@ -1258,11 +1258,6 @@ fun AboutScreen(back: () -> Unit) {
                         strings.getString(R.string.about_version),
                         io.github.radiqalo.picaris.BuildConfig.VERSION_NAME,
                     )
-                    AboutInfoRow(strings.getString(R.string.about_package), context.packageName)
-                    AboutInfoRow(
-                        strings.getString(R.string.about_platform),
-                        strings.getString(R.string.about_platform_value),
-                    )
                     AboutInfoRow(
                         strings.getString(R.string.about_appearance),
                         strings.getString(R.string.about_appearance_value),
@@ -1277,40 +1272,27 @@ fun AboutScreen(back: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(PixivSpacing.section))
-            Text(
-                strings.getString(R.string.ui_4b03f9aeb2),
-                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
-                style = MaterialTheme.typography.titleMedium,
-            )
             Column(
-                Modifier.fillMaxWidth().padding(
-                    start = PixivSpacing.content,
-                    end = PixivSpacing.content,
-                    top = PixivSpacing.related,
-                ),
+                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
             ) {
-                listOf(
-                        "Pixiv-Shaft" to "https://github.com/CeuiLiSA/Pixiv-Shaft",
-                        "MaterialFiles" to "https://github.com/zhanghai/MaterialFiles",
-                        "FooIbar/EhViewer" to "https://github.com/FooIbar/EhViewer",
-                        strings.getString(R.string.about_source_code) to "https://github.com/Radiqalo/Picaris",
-                    )
-                    .forEach { (title, url) ->
-                        OutlinedButton(
-                            { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) },
-                            Modifier.fillMaxWidth(),
-                        ) {
-                            Text(title)
-                        }
-                    }
+                OutlinedButton(
+                    {
+                        context.startActivity(
+                            Intent(Intent.ACTION_VIEW, "https://github.com/Radiqalo/Picaris".toUri()),
+                        )
+                    },
+                    Modifier.fillMaxWidth(),
+                ) {
+                    Text(strings.getString(R.string.about_source_code))
+                }
                 OutlinedButton({ notices = true }, Modifier.fillMaxWidth()) {
                     Text(strings.getString(R.string.license_notices))
                 }
             }
             Spacer(Modifier.height(PixivSpacing.section))
             Text(
-                strings.getString(R.string.ui_0b6361b284),
+                strings.getString(R.string.about_license_note),
                 Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -25,7 +25,6 @@
     <string name="ui_0aa214d301">加载更多失败 · 点击重试</string>
     <string name="ui_0b554f5235">月榜</string>
     <string name="ui_0b5c557e9d">幻想</string>
-    <string name="ui_0b6361b284">使用 Kotlin、Jetpack Compose、Navigation 3、Ktor、Coil、Telephoto、Room、DataStore 和 Hilt 构建。界面与图标为独立实现。本项目以 Apache-2.0 许可发布，依赖许可详见源码中的 THIRD_PARTY_NOTICES。</string>
     <string name="ui_0c955150ac">已下载</string>
     <string name="ui_0ed0fdd725">屏蔽作者</string>
     <string name="ui_10ea138040">阅读与内容</string>
@@ -73,7 +72,6 @@
     <string name="ui_47c1321036">列表缓存</string>
     <string name="ui_4a58070031">纵向阅读</string>
     <string name="ui_4a5a8a9f75">打开作品后，会自动记住你走过的地方</string>
-    <string name="ui_4b03f9aeb2">设计与交互参考</string>
     <string name="ui_4b65d10385">— 正文结束 —</string>
     <string name="ui_4cd5da4f1c">下载目录</string>
     <string name="ui_4d0b4688c7">取消</string>
@@ -204,10 +202,8 @@
     <string name="license_notices">开源许可证</string>
     <string name="about_tagline">非官方 Pixiv 客户端</string>
     <string name="about_version">版本</string>
-    <string name="about_package">包名</string>
-    <string name="about_platform">运行要求</string>
-    <string name="about_platform_value">Android 17（API 37）及以上</string>
     <string name="about_appearance">界面</string>
     <string name="about_appearance_value">Material 3 Expressive</string>
     <string name="about_source_code">源代码</string>
+    <string name="about_license_note">本项目以 Apache-2.0 许可发布。</string>
 </resources>
