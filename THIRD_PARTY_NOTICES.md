@@ -19,4 +19,6 @@ Picaris uses the following libraries through Gradle. Versions and the complete r
 
 Upstream license terms and notices remain applicable to the bundled dependencies. The source archive includes the Apache-2.0 license text used by the dependency families above in `licenses/Apache-2.0.txt`.
 
+The Picaris project itself is released under the Apache License 2.0; see `LICENSE` for the license text and `NOTICE` for the attribution.
+
 Reference projects are identified for design/function attribution only: [CeuiLiSA/Pixiv-Shaft](https://github.com/CeuiLiSA/Pixiv-Shaft), [zhanghai/MaterialFiles](https://github.com/zhanghai/MaterialFiles), [FooIbar/EhViewer](https://github.com/FooIbar/EhViewer). Their source files were not incorporated into this project. Pixiv names, services and user-uploaded works belong to their respective rights holders.

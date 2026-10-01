@@ -146,6 +146,8 @@ Pixiv 没有为本项目授权公开 API。OAuth 与应用接口采用第三方�
 
 ## 许可
 
-本仓库目前未声明自身开源许可证；第三方依赖的许可证与声明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) 与 [`licenses/Apache-2.0.txt`](licenses/Apache-2.0.txt)。Pixiv、PIXIVISION 等名称与商标归其各自所有者。
+本项目以 [Apache License 2.0](LICENSE) 发布，版权归 `Copyright 2026 Radiqalo`；署名信息见 [`NOTICE`](NOTICE)。
+
+第三方依赖的许可证与声明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)，随源码归档的许可文本位于 [`licenses/Apache-2.0.txt`](licenses/Apache-2.0.txt)。Apache-2.0 不授予任何商标权；Pixiv、PIXIVISION 等名称与商标归其各自所有者。
 
 版本变更记录见 [`CHANGELOG.md`](CHANGELOG.md)。

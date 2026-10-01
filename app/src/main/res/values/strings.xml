@@ -25,7 +25,7 @@
     <string name="ui_0aa214d301">加载更多失败 · 点击重试</string>
     <string name="ui_0b554f5235">月榜</string>
     <string name="ui_0b5c557e9d">幻想</string>
-    <string name="ui_0b6361b284">使用 Kotlin、Jetpack Compose、Navigation 3、Ktor、Coil、Telephoto、Room、DataStore 和 Hilt 构建。界面与图标为独立实现，依赖许可详见源码中的 THIRD_PARTY_NOTICES。</string>
+    <string name="ui_0b6361b284">使用 Kotlin、Jetpack Compose、Navigation 3、Ktor、Coil、Telephoto、Room、DataStore 和 Hilt 构建。界面与图标为独立实现。本项目以 Apache-2.0 许可发布，依赖许可详见源码中的 THIRD_PARTY_NOTICES。</string>
     <string name="ui_0c955150ac">已下载</string>
     <string name="ui_0ed0fdd725">屏蔽作者</string>
     <string name="ui_10ea138040">阅读与内容</string>
