@@ -2,6 +2,8 @@ package io.github.pixivnext.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -30,8 +32,18 @@ internal fun BottomNavigationPages(
     content: @Composable (Int) -> Unit,
 ) {
     // Both directions share the theme's fast spatial tier so tab motion keeps the same
-    // rhythm as every other fast spatial animation on screen.
+    // rhythm as every other fast spatial animation on screen. A spring has no fixed
+    // duration: Compose derives one from the convergence threshold, and the theme default
+    // (0.01f) ends the entry early with a small visible snap. Only that threshold is
+    // tightened here; the spring parameters still come from the theme.
     val spatial = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    val entrySpatial = remember(spatial) {
+        if (spatial is SpringSpec) spring(
+            dampingRatio = spatial.dampingRatio,
+            stiffness = spatial.stiffness,
+            visibilityThreshold = 0.0005f,
+        ) else spatial
+    }
     val effects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     val layoutDirection = LocalLayoutDirection.current
     val coordinator = LocalNavigationCoordinator.current
@@ -57,7 +69,7 @@ internal fun BottomNavigationPages(
             coordinator?.animationStarted(animationKey, id)
             try {
                 if (entering) {
-                    position.animateTo(0f, spatial, velocity[0]) { velocity[0] = this.velocity }
+                    position.animateTo(0f, entrySpatial, velocity[0]) { velocity[0] = this.velocity }
                 } else {
                     position.animateTo(-direction / 6f, spatial, velocity[0]) { velocity[0] = this.velocity }
                 }
