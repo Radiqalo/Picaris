@@ -440,9 +440,22 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                                 color = androidx.compose.ui.graphics.Color(s.seed),
                             ) {}
                         },
-                        position = SettingsRowPosition.Last,
+                        position = SettingsRowPosition.Middle,
                     ) {
                         dialog = "color"
+                    }
+                    SettingRow(
+                        "显示标签翻译",
+                        "显示译名和原标签；关闭后只显示原标签",
+                        icon = Glyph.Search,
+                        action = {
+                            FeedbackSwitch(s.showTagTranslations, { value ->
+                                vm.update { it.copy(showTagTranslations = value) }
+                            })
+                        },
+                        position = SettingsRowPosition.Last,
+                    ) {
+                        vm.update { it.copy(showTagTranslations = !it.showTagTranslations) }
                     }
                 }
             }

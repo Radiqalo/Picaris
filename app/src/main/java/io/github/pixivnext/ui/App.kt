@@ -170,6 +170,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                 LocalNavigationCoordinator provides coordinator,
                                 LocalNavigationArtwork provides artwork,
                                 LocalArtworkReturnFeedback provides artworkReturn,
+                                LocalTagTranslationEnabled provides settings.showTagTranslations,
                             ) {
                                 val navigationMotion = rememberNavigationMotion()
                                 val imageNavigation = remember(navigationMotion) {

@@ -6,16 +6,20 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.pixivnext.core.Tag
 
+internal val LocalTagTranslationEnabled = staticCompositionLocalOf { true }
+
 @Composable
 internal fun TagLabel(tag: Tag, translationFirst: Boolean = true) {
     val name = tag.name.trim()
+    val enabled = LocalTagTranslationEnabled.current
     val translation = tag.translated_name?.trim()?.takeIf {
-        it.isNotEmpty() && !it.equals(name, ignoreCase = true)
+        enabled && it.isNotEmpty() && !it.equals(name, ignoreCase = true)
     }
     if (translation == null) {
         Text("#$name", maxLines = 1, overflow = TextOverflow.Ellipsis)

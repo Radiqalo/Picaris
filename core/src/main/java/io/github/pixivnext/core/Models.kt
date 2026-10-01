@@ -242,6 +242,7 @@ data class Settings(
     val seed: Long = 0xFF6256CA,
     val blackReader: Boolean = true,
     val showHomeMetadata: Boolean = false,
+    val showTagTranslations: Boolean = true,
     val showAdult: Boolean = false,
     val hideAi: Boolean = false,
     val blockedTags: String = "",

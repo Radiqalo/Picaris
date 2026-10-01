@@ -334,7 +334,7 @@ private fun DiscoveryTagWorks(tag: Tag, vm: AppViewModel, navigate: (NavKey) -> 
     val busy by vm.bookmarkBusy.collectAsStateWithLifecycle()
     Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("#${tag.translated_name ?: tag.name} · 相关作品", Modifier.weight(1f),
+            Text("#${if (settings.showTagTranslations) tag.translated_name ?: tag.name else tag.name} · 相关作品", Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             TextButton(onClick = { navigate(Collection(tag.name, "search", word = tag.name)) }) { Text("查看全部") }
         }

@@ -36,6 +36,7 @@ fun DetailScreen(
     val strings = androidx.compose.ui.platform.LocalResources.current
     val permitted = navigationPermission()
     val canOpenReader = permitted()
+    val tagTranslations = LocalTagTranslationEnabled.current
 
     fun openReader(work: Work) {
         if (permitted()) navigate(Reader(work))
@@ -238,7 +239,8 @@ fun DetailScreen(
                                             {
                                                 navigate(
                                                     Collection(
-                                                        tag.translated_name ?: tag.name,
+                                                        if (tagTranslations)
+                                                            tag.translated_name ?: tag.name else tag.name,
                                                         "search",
                                                         if (work.isNovel) "novel" else "illust",
                                                         word = tag.name,
