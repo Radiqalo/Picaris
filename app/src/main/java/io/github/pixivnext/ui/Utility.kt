@@ -134,7 +134,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     LaunchedEffect(account?.user?.id) { vm.syncAccountProfile() }
     LazyColumn(
         modifier = Modifier.fillMaxSize().testTag("profileList"),
-        contentPadding = PaddingValues(bottom = PixivSpacing.content),
+        contentPadding = PaddingValues(bottom = PixivSpacing.content + LocalHomeNavigationInset.current),
         verticalArrangement = Arrangement.spacedBy(PixivSpacing.section),
     ) {
         item(key = "title") {

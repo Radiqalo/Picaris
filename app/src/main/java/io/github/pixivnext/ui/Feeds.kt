@@ -694,7 +694,7 @@ fun FeedGrid(
                 LazyColumn(
                     state = list,
                     contentPadding = PaddingValues(start = PixivSpacing.content, end = PixivSpacing.content,
-                        top = topPadding, bottom = PixivSpacing.content),
+                        top = topPadding, bottom = PixivSpacing.content + LocalHomeNavigationInset.current),
                     verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
                     modifier = Modifier.fillMaxSize().testTag("novelList"),
                 ) {
@@ -726,7 +726,7 @@ fun FeedGrid(
                     horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
                     verticalItemSpacing = PixivSpacing.compact,
                     contentPadding = PaddingValues(start = PixivSpacing.content, end = PixivSpacing.content,
-                        top = topPadding, bottom = PixivSpacing.content),
+                        top = topPadding, bottom = PixivSpacing.content + LocalHomeNavigationInset.current),
                     modifier = Modifier.fillMaxSize().testTag("feedGrid"),
                 ) {
                     if (header != null)
@@ -857,7 +857,7 @@ private fun FeedGridStatus(
                 start = PixivSpacing.content,
                 end = PixivSpacing.content,
                 top = topPadding,
-                bottom = PixivSpacing.content,
+                bottom = PixivSpacing.content + LocalHomeNavigationInset.current,
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -874,7 +874,7 @@ private fun FeedGridStatus(
                 start = PixivSpacing.content,
                 end = PixivSpacing.content,
                 top = topPadding,
-                bottom = PixivSpacing.content,
+                bottom = PixivSpacing.content + LocalHomeNavigationInset.current,
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -1237,7 +1237,8 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                     else if (users.isEmpty())
                         EmptyState("没有找到作者", "", Glyph.Person)
                     else
-                        LazyColumn(Modifier.fillMaxSize()) {
+                        LazyColumn(Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = LocalHomeNavigationInset.current)) {
                             items(users, key = { it.id }) { user ->
                                 UserRow(user, { navigate(Author(user)) })
                             }
@@ -1260,7 +1261,8 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
             }
         } else
             LazyColumn(
-                contentPadding = PaddingValues(20.dp),
+                contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp,
+                    bottom = 20.dp + LocalHomeNavigationInset.current),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (history.isNotEmpty()) {

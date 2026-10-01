@@ -1,48 +1,56 @@
 package io.github.pixivnext.ui
 
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.requiredWidth
-import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.animateColor
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationItemIconPosition
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarArrangement
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.ShortNavigationBarItemDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+
+internal val LocalHomeNavigationInset = staticCompositionLocalOf { 0.dp }
+internal val FloatingNavigationHeight = 68.dp
+
+@Composable
+internal fun floatingNavigationBottomSpacing() =
+    (WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 12.dp).coerceAtLeast(36.dp)
 
 @Composable
 internal fun HomeNavigationBar(
@@ -67,81 +75,88 @@ internal fun HomeNavigationBar(
             }
         }
     } else {
-        BoxWithConstraints(
+        Box(
             modifier = Modifier.fillMaxWidth().aboveWorkTransition()
                 .windowInsetsPadding(WindowInsets.navigationBars.only(
-                    WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom,
+                    WindowInsetsSides.Horizontal,
                 ))
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            contentAlignment = Alignment.Center,
+                .padding(start = 12.dp, end = 12.dp, bottom = floatingNavigationBottomSpacing()),
+            contentAlignment = Alignment.BottomCenter,
         ) {
-            val selectedWidth = (maxWidth - 16.dp - 48.dp * (labels.size - 1)).coerceAtLeast(48.dp)
-            val transition = updateTransition(selectedIndex, label = "floating navigation")
-            val textMeasurer = rememberTextMeasurer()
-            val density = LocalDensity.current
-            val labelStyle = MaterialTheme.typography.labelLarge
-            val labelWidth = with(density) {
-                labels.maxOf { textMeasurer.measure(it, labelStyle).size.width }.toDp()
-            }
-            val extraWidth = (labelWidth + 8.dp).coerceAtMost(selectedWidth - 48.dp)
-            val spatial = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-            val effects = MaterialTheme.motionScheme.fastEffectsSpec<Color>()
-            Surface(
+            HorizontalFloatingToolbar(
+                expanded = true,
+                modifier = Modifier.animateContentSize(
+                    spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+                ).height(FloatingNavigationHeight),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shadowElevation = 6.dp,
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                colors = FloatingToolbarDefaults.standardFloatingToolbarColors(
+                    toolbarContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                ),
             ) {
-                Row(
-                    modifier = Modifier.padding(8.dp).selectableGroup(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    labels.forEachIndexed { index, title ->
-                        val selected = selectedIndex == index
-                        val expansion by transition.animateFloat(
-                            transitionSpec = { spatial }, label = "item $index expansion",
-                        ) { target -> if (target == index) 1f else 0f }
-                        val progress = expansion.coerceIn(0f, 1f)
-                        val containerColor by transition.animateColor(
-                            transitionSpec = { effects }, label = "item $index container",
-                        ) { target ->
-                            if (target == index) MaterialTheme.colorScheme.primary else Color.Transparent
-                        }
-                        val contentColor by transition.animateColor(
-                            transitionSpec = { effects }, label = "item $index content",
-                        ) { target ->
-                            if (target == index) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onPrimaryContainer
-                        }
-                        Surface(
-                            modifier = Modifier.height(56.dp)
-                                .width(48.dp + extraWidth * progress)
-                                .clip(CircleShape)
-                                .selectable(selected, role = Role.Tab, onClick = { onSelect(index) })
-                                .semantics { contentDescription = title },
-                            shape = CircleShape,
-                            color = containerColor,
-                            contentColor = contentColor,
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
+                labels.forEachIndexed { index, title ->
+                    val selected = selectedIndex == index
+                    val iconHeight by animateDpAsState(
+                        targetValue = if (selected) 42.dp else 26.dp,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessLow,
+                        ),
+                        label = "floating indicator height $index",
+                    )
+                    ShortNavigationBarItem(
+                        selected = selected,
+                        onClick = { onSelect(index) },
+                        modifier = Modifier.fillMaxHeight().semantics { contentDescription = title },
+                        iconPosition = NavigationItemIconPosition.Start,
+                        icon = {
+                            Box(Modifier.height(iconHeight), contentAlignment = Alignment.Center) {
                                 icon(index, selected)
-                                Spacer(Modifier.width(8.dp * progress))
-                                Box(Modifier.width((extraWidth - 8.dp).coerceAtLeast(0.dp) * progress)
-                                    .clipToBounds().clearAndSetSemantics {}) {
-                                    Text(title, style = labelStyle,
-                                        modifier = Modifier.requiredWidth(labelWidth).graphicsLayer {
-                                            alpha = progress
-                                            translationX = (1f - progress) * 8.dp.toPx()
-                                        },
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
                             }
-                        }
-                    }
+                        },
+                        label = {
+                            AnimatedVisibility(
+                                visible = selected,
+                                enter = fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                                    expandHorizontally(
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessLow,
+                                        ),
+                                        expandFrom = Alignment.Start,
+                                    ) + slideInHorizontally(
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessLow,
+                                        ),
+                                        initialOffsetX = { -it / 2 },
+                                    ),
+                                exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                                    shrinkHorizontally(
+                                        animationSpec = spring(stiffness = Spring.StiffnessLow),
+                                        shrinkTowards = Alignment.Start,
+                                    ) + slideOutHorizontally(
+                                        animationSpec = spring(stiffness = Spring.StiffnessLow),
+                                        targetOffsetX = { -it / 2 },
+                                    ),
+                            ) {
+                                Text(
+                                    title,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(start = 2.dp, end = 4.dp).clearAndSetSemantics {},
+                                )
+                            }
+                        },
+                        colors = ShortNavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                            selectedTextColorStartIconPosition = MaterialTheme.colorScheme.onPrimary,
+                            selectedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            unselectedTextColor = Color.Transparent,
+                        ),
+                    )
                 }
             }
         }

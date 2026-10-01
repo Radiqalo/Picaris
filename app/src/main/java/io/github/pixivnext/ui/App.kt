@@ -296,6 +296,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         val wide =
             androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width /
                 androidx.compose.ui.platform.LocalDensity.current.density >= 840f
+        val floating = !wide && settings.bottomBarStyle == "floating"
         Row(Modifier.fillMaxSize()) {
             if (wide)
                 WideNavigationRail(
@@ -319,49 +320,69 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         )
                     }
                 }
-            Scaffold(
-                contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = {
-                    if (!wide)
+            Box(Modifier.weight(1f)) {
+                Scaffold(
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                    containerColor = MaterialTheme.colorScheme.background,
+                    bottomBar = {
+                        if (!wide && !floating)
+                            HomeNavigationBar(
+                                floating = false,
+                                labels = tabs,
+                                selectedIndex = tab,
+                                onSelect = selectTab,
+                            ) { index, selected ->
+                                FeedbackIcon(if (selected) selectedIcons[index] else icons[index], null, selected)
+                            }
+                    },
+                ) { padding ->
+                    CompositionLocalProvider(
+                        LocalHomeNavigationInset provides if (floating)
+                            FloatingNavigationHeight + floatingNavigationBottomSpacing()
+                        else 0.dp,
+                    ) {
+                        BottomNavigationPages(
+                            tab = tab,
+                            modifier = Modifier.padding(padding),
+                        ) { currentTab ->
+                            holder.SaveableStateProvider(currentTab) {
+                                val tabNavigate = guardedNavigation(navigate)
+                                val homeGrid = rememberLazyStaggeredGridState()
+                                val homeList = rememberLazyListState()
+                                ScrollingScreen(
+                                    scrollBehaviorEnabled = false
+                                ) {
+                                    if (currentTab == 0) {
+                                        LaunchedEffect(settings.contentKind) {
+                                            homeReselection.collectLatest {
+                                                if (settings.contentKind == "novel")
+                                                    homeList.animateScrollToItem(0)
+                                                else homeGrid.animateScrollToItem(0)
+                                            }
+                                        }
+                                    }
+                                    when (currentTab) {
+                                        0 ->
+                                            RecommendedHomeScreen(vm, tabNavigate, homeGrid, homeList)
+                                        1 -> DiscoverScreen(vm, tabNavigate)
+                                        2 -> FollowScreen(vm, tabNavigate)
+                                        3 -> SearchScreen(vm, tabNavigate, back = null)
+                                        else -> ProfileScreen(vm, tabNavigate)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (floating) {
+                    Box(Modifier.align(androidx.compose.ui.Alignment.BottomCenter)) {
                         HomeNavigationBar(
-                            floating = settings.bottomBarStyle == "floating",
+                            floating = true,
                             labels = tabs,
                             selectedIndex = tab,
                             onSelect = selectTab,
                         ) { index, selected ->
                             FeedbackIcon(if (selected) selectedIcons[index] else icons[index], null, selected)
-                        }
-                },
-            ) { padding ->
-                BottomNavigationPages(
-                    tab = tab,
-                    modifier = Modifier.padding(padding),
-                ) { currentTab ->
-                    holder.SaveableStateProvider(currentTab) {
-                        val tabNavigate = guardedNavigation(navigate)
-                        val homeGrid = rememberLazyStaggeredGridState()
-                        val homeList = rememberLazyListState()
-                        ScrollingScreen(
-                            scrollBehaviorEnabled = false
-                        ) {
-                            if (currentTab == 0) {
-                                LaunchedEffect(settings.contentKind) {
-                                    homeReselection.collectLatest {
-                                        if (settings.contentKind == "novel")
-                                            homeList.animateScrollToItem(0)
-                                        else homeGrid.animateScrollToItem(0)
-                                    }
-                                }
-                            }
-                            when (currentTab) {
-                                0 ->
-                                    RecommendedHomeScreen(vm, tabNavigate, homeGrid, homeList)
-                                1 -> DiscoverScreen(vm, tabNavigate)
-                                2 -> FollowScreen(vm, tabNavigate)
-                                3 -> SearchScreen(vm, tabNavigate, back = null)
-                                else -> ProfileScreen(vm, tabNavigate)
-                            }
                         }
                     }
                 }
