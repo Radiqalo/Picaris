@@ -35,10 +35,15 @@ import io.github.radiqalo.picaris.designsystem.*
 import coil3.compose.AsyncImage
 import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -1014,6 +1019,7 @@ private data class DownloadGroup(val workId: Long, val tasks: List<DownloadEntit
     val total get() = tasks.sumOf { it.total }
     val createdAt get() = tasks.minOfOrNull { it.createdAt } ?: 0L
     val imageCount get() = tasks.count { it.kind == "illust" || it.kind == "manga" }
+    val pageCount get() = work?.page_count?.takeIf { it > 0 } ?: imageCount
     val title get() = work?.title ?: tasks.firstOrNull()?.title.orEmpty()
 }
 
@@ -1090,13 +1096,23 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                 FilterChip(selected = filter == key, onClick = { filter = key }, label = { Text(label) })
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 "${filtered.size} 个作品" + if (selecting) " · 已选 ${selected.size}" else "",
                 Modifier.weight(1f),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
-            if (selecting) IconButton(onClick = { selecting = false; selected = emptySet() }) {
-                AppIcon(materialSymbol(MaterialSymbol.Close), "退出选择")
+            Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                if (selecting) IconButton(
+                    onClick = { selecting = false; selected = emptySet() },
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    AppIcon(materialSymbol(MaterialSymbol.Close), "退出选择", Modifier.size(18.dp))
+                }
             }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -1136,7 +1152,10 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                         ) {
                             Row(Modifier.fillMaxWidth().height(124.dp)) {
                                 val work = group.work
-                                Box(Modifier.width(88.dp).fillMaxHeight()) {
+                                Box(
+                                    Modifier.width(88.dp).fillMaxHeight().clip(MaterialTheme.shapes.medium)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                                ) {
                                     if (work != null && !work.isNovel) {
                                         AsyncImage(
                                             model = work.previews.firstOrNull() ?: work.cover,
@@ -1146,7 +1165,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                                     navigate(Reader(work))
                                                 } else Modifier
                                             ),
-                                            contentScale = ContentScale.Crop,
+                                            contentScale = ContentScale.Fit,
                                         )
                                     } else {
                                         Box(
@@ -1156,51 +1175,29 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                             AppIcon(materialSymbol(MaterialSymbol.Book), null)
                                         }
                                     }
-                                    if (selecting) Checkbox(
-                                        checked = selectedGroup,
-                                        onCheckedChange = { toggleSelection(group.workId) },
-                                        modifier = Modifier.align(Alignment.TopStart)
-                                            .padding(4.dp)
-                                            .background(MaterialTheme.colorScheme.surface.copy(alpha = .82f), CircleShape),
-                                    )
                                 }
                                 Column(
-                                    Modifier.weight(1f).fillMaxHeight().padding(horizontal = 12.dp, vertical = 10.dp),
+                                    Modifier.weight(1f).fillMaxHeight().padding(start = 12.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
                                     verticalArrangement = Arrangement.SpaceBetween,
                                 ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(group.title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                                            Text(
-                                                when {
-                                                    group.imageCount > 1 -> "${group.imageCount} 张图片"
-                                                    group.tasks.any { it.kind == "ugoira" } -> "动图"
-                                                    group.tasks.any { it.kind == "novel" } -> "小说"
-                                                    else -> group.tasks.firstOrNull()?.name.orEmpty()
-                                                },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                            )
-                                        }
-                                        if (group.status == "complete")
-                                            Text(downloadSizeText(group.bytes), style = MaterialTheme.typography.labelLarge)
-                                    }
-                                    val statusLabel = when (group.status) {
-                                        "complete" -> "已完成"
-                                        "running" -> "下载中 · ${downloadSizeText(groupSpeed)}/s"
-                                        "queued" -> "等待下载"
-                                        "paused" -> "已暂停"
-                                        "failed" -> group.tasks.firstOrNull { it.status == "failed" }?.error
-                                            ?.ifBlank { "下载失败" } ?: "下载失败"
-                                        else -> "已取消"
+                                            Text(group.title, style = MaterialTheme.typography.titleSmall, maxLines = 2,
+                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    val author = work?.user?.name.orEmpty()
+                                    val size = if (group.bytes > 0) downloadSizeText(group.bytes) else ""
+                                    val time = remember(group.createdAt) {
+                                        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                                            .format(java.util.Date(group.createdAt))
                                     }
                                     Text(
-                                        statusLabel,
+                                        listOf(
+                                            author,
+                                            size,
+                                            time,
+                                            if (group.status == "running") "${downloadSizeText(groupSpeed)}/s" else "",
+                                        ).filter { it.isNotBlank() }.joinToString(" · "),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (group.status == "failed") MaterialTheme.colorScheme.error
-                                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
                                     )
                                     if (group.status in setOf("running", "queued", "paused")) {
                                         if (group.total > 0) LinearWavyProgressIndicator(
@@ -1208,6 +1205,68 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                             modifier = Modifier.fillMaxWidth(),
                                         ) else if (group.status == "running")
                                             LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                    }
+                                    val statusLabel = when (group.status) {
+                                        "complete" -> "点击重试下载"
+                                        "running" -> "暂停下载 · ${downloadSizeText(groupSpeed)}/s"
+                                        "queued" -> "暂停下载"
+                                        "paused" -> "继续下载"
+                                        "failed" -> "点击重试下载"
+                                        else -> "继续下载"
+                                    }
+                                }
+                                Column(
+                                    Modifier.width(44.dp).fillMaxHeight().padding(end = 4.dp, top = 4.dp, bottom = 4.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+                                        if (selecting)
+                                            Checkbox(
+                                                checked = selectedGroup,
+                                                onCheckedChange = { toggleSelection(group.workId) },
+                                                modifier = Modifier.size(30.dp),
+                                            )
+                                    }
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        if (group.pageCount > 0)
+                                            Text("${group.pageCount}P", style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        val statusLabel = when (group.status) {
+                                            "complete", "failed" -> "点击重试下载"
+                                            "running", "queued" -> "暂停下载"
+                                            else -> "继续下载"
+                                        }
+                                        val statusIcon = when (group.status) {
+                                            "running", "queued" -> MaterialSymbol.Pause
+                                            "paused", "cancelled" -> MaterialSymbol.PlayArrow
+                                            else -> MaterialSymbol.Refresh
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                when (group.status) {
+                                                    "running", "queued" -> vm.downloadBatchAction(
+                                                        group.tasks.filter { it.status in setOf("running", "queued") }
+                                                            .map { it.id }.toSet(), "paused",
+                                                    )
+                                                    "paused", "cancelled" -> vm.downloadBatchAction(
+                                                        group.tasks.filter { it.status in setOf("paused", "cancelled") }
+                                                            .map { it.id }.toSet(), "queued",
+                                                    )
+                                                    else -> vm.retryDownloads(
+                                                        if (group.status == "complete") group.tasks.map { it.id }.toSet()
+                                                        else group.tasks.filter { it.status in setOf("failed", "cancelled") }
+                                                            .map { it.id }.toSet(),
+                                                    )
+                                                }
+                                            },
+                                            modifier = Modifier.size(32.dp),
+                                            enabled = !selecting,
+                                        ) {
+                                            AppIcon(materialSymbol(statusIcon), statusLabel, Modifier.size(19.dp),
+                                                tint = if (group.status == "failed") MaterialTheme.colorScheme.error
+                                                    else MaterialTheme.colorScheme.primary)
+                                        }
                                     }
                                 }
                             }
@@ -1222,54 +1281,63 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             ) {
                 AnimatedVisibility(
                     actionsExpanded,
-                    enter = fadeIn() + slideInVertically { it / 2 },
-                    exit = fadeOut() + slideOutVertically { it / 2 },
+                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom) +
+                        scaleIn(initialScale = 0.8f, animationSpec = spring()),
+                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom) +
+                        scaleOut(targetScale = 0.8f, animationSpec = spring()),
                 ) {
                     Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilledTonalButton(onClick = {
+                        FilledTonalIconButton(onClick = {
                             val visible = filtered.map { it.workId }.toSet()
                             selected = if (selected.containsAll(visible)) selected - visible else selected + visible
                             selecting = selected.isNotEmpty()
                             actionsExpanded = false
-                        }) {
-                            AppIcon(materialSymbol(MaterialSymbol.Check), null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("全选")
+                        }, modifier = Modifier.size(48.dp)) {
+                            AppIcon(materialSymbol(MaterialSymbol.Check), "全选")
                         }
-                        FilledTonalButton(
+                        FilledTonalIconButton(
                             enabled = chosen.any { it.tasks.any { task -> task.status in setOf("paused", "failed", "cancelled") } },
                             onClick = {
                                 vm.downloadBatchAction(selectedTaskIds, "queued")
                                 actionsExpanded = false
                             },
+                            modifier = Modifier.size(48.dp),
                         ) {
-                            AppIcon(materialSymbol(MaterialSymbol.PlayArrow), null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("开始")
+                            AppIcon(materialSymbol(MaterialSymbol.PlayArrow), "开始")
                         }
-                        FilledTonalButton(
+                        FilledTonalIconButton(
                             enabled = chosen.any { it.tasks.any { task -> task.status in setOf("queued", "running") } },
                             onClick = {
                                 vm.downloadBatchAction(selectedTaskIds, "paused")
                                 actionsExpanded = false
                             },
+                            modifier = Modifier.size(48.dp),
                         ) {
-                            AppIcon(materialSymbol(MaterialSymbol.Pause), null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("暂停")
+                            AppIcon(materialSymbol(MaterialSymbol.Pause), "暂停")
                         }
-                        FilledTonalButton(
+                        FilledTonalIconButton(
                             enabled = selected.isNotEmpty(),
                             onClick = { confirmRemoval = true; actionsExpanded = false },
+                            modifier = Modifier.size(48.dp),
                         ) {
-                            AppIcon(materialSymbol(MaterialSymbol.Close), null, tint = MaterialTheme.colorScheme.error)
-                            Spacer(Modifier.width(8.dp))
-                            Text("删除")
+                            AppIcon(materialSymbol(MaterialSymbol.Delete), "删除", tint = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
                 FloatingActionButton(onClick = { actionsExpanded = !actionsExpanded }) {
-                    Text(if (actionsExpanded) "×" else "+", style = MaterialTheme.typography.headlineMedium)
+                    AnimatedContent(
+                        targetState = actionsExpanded,
+                        transitionSpec = {
+                            (scaleIn(animationSpec = spring()) + fadeIn()) togetherWith
+                                (scaleOut(animationSpec = spring()) + fadeOut())
+                        },
+                        label = "downloadActionsFabIcon",
+                    ) { expanded ->
+                        AppIcon(
+                            materialSymbol(if (expanded) MaterialSymbol.Close else MaterialSymbol.Add),
+                            if (expanded) "关闭操作" else "下载操作",
+                        )
+                    }
                 }
             }
         }

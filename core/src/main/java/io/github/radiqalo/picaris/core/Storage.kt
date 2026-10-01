@@ -233,6 +233,9 @@ interface LibraryDao {
     @Query("UPDATE downloads SET status='queued' WHERE status='running'")
     suspend fun recoverDownloads()
 
+    @Query("UPDATE downloads SET status='queued',error='',bytes=0,total=0,uri='',etag='' WHERE id=:id AND status='complete'")
+    suspend fun retryCompletedDownload(id: Long): Int
+
     @Query("DELETE FROM CachedFeed WHERE savedAt<:before") suspend fun expireCache(before: Long)
 
     @Query("SELECT id FROM downloads WHERE status IN ('cancelled','complete')")

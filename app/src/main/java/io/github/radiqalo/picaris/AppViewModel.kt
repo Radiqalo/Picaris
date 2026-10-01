@@ -299,6 +299,11 @@ constructor(
         run { downloads.batchAction(account, ids, status) }
     }
 
+    fun retryDownloads(ids: Set<Long>) {
+        val account = accountId
+        run { downloads.retry(account, ids) }
+    }
+
     fun removeDownloadRecords(ids: Set<Long>, deleteFiles: Boolean) {
         val account = accountId
         run { downloads.removeRecords(account, ids, deleteFiles) }

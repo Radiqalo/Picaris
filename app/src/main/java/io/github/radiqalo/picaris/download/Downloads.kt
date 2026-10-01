@@ -148,6 +148,22 @@ constructor(
         if (changed && status == "queued") schedule()
     }
 
+    suspend fun retry(account: Long, ids: Set<Long>) {
+        var changed = false
+        for (id in ids) {
+            val task = dao.download(id)?.takeIf { it.accountId == account } ?: continue
+            changed = when (task.status) {
+                "complete" -> {
+                    dao.retryCompletedDownload(id) > 0 || changed
+                }
+                "paused", "failed", "cancelled" ->
+                    dao.changeDownloadStatus(id, "queued") > 0 || changed
+                else -> changed
+            }
+        }
+        if (changed) schedule()
+    }
+
     suspend fun removeRecords(account: Long, ids: Set<Long>, deleteFiles: Boolean) {
         withContext(Dispatchers.IO) {
             for (id in ids) {

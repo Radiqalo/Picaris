@@ -47,6 +47,8 @@ enum class MaterialSymbol(val resource: Int) {
     Check(R.drawable.ms_check),
     Pause(R.drawable.ms_pause),
     PlayArrow(R.drawable.ms_play_arrow),
+    Add(R.drawable.ms_add),
+    Delete(R.drawable.ms_delete),
 }
 
 @Composable
