@@ -245,7 +245,7 @@ fun DetailScreen(
                                                     )
                                                 )
                                             },
-                                            label = { Text("#${tag.translated_name ?: tag.name}") },
+                                            label = { TagLabel(tag) },
                                         )
                                     }
                                 }

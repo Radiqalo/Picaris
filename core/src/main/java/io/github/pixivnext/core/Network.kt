@@ -332,6 +332,7 @@ class PixivApi @Inject constructor(private val auth: AuthRepository, private val
                 else
                     network.client().get(url) {
                         header(HttpHeaders.Authorization, "Bearer $token")
+                        header(HttpHeaders.AcceptLanguage, "zh-CN")
                         header(
                             HttpHeaders.UserAgent,
                             "PixivAndroidApp/6.170.0 (Android 17; PixivNext)",

@@ -262,7 +262,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         items(recommendedTags, key = { it.name }) { tag ->
                             SuggestionChip(
                                 onClick = { navigate(Collection(tag.name, "search", word = tag.name)) },
-                                label = { Text("#${tag.translated_name ?: tag.name}") },
+                                label = { TagLabel(tag) },
                             )
                         }
                     }
@@ -294,8 +294,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                             labelColor = Color.White,
                                         ),
                                         label = {
-                                            Text("#${trend.tag.translated_name ?: trend.tag.name}",
-                                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            TagLabel(trend.tag, translationFirst = false)
                                         },
                                     )
                                 }
@@ -1303,7 +1302,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                         tags.forEach { tag ->
                             SuggestionChip(
                                 { submit(tag.name) },
-                                label = { Text("# ${tag.translated_name ?: tag.name}") },
+                                label = { TagLabel(tag) },
                             )
                         }
                     }
