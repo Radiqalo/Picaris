@@ -1005,7 +1005,7 @@ fun WorkCard(
                             if (work.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite),
                             null,
                             selected = work.is_bookmarked,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(20.dp).workBookmarkTransition(work),
                             tint = if (work.is_bookmarked) Color(0xFFFF80A2) else Color.White,
                         )
                     }

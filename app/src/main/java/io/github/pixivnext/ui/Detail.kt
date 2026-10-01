@@ -304,6 +304,7 @@ fun DetailScreen(
                         if (current.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite),
                         if (current.is_bookmarked) "取消收藏" else "收藏",
                         selected = current.is_bookmarked,
+                        modifier = Modifier.workBookmarkTransition(current),
                     )
                 }
             },

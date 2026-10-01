@@ -142,6 +142,17 @@ fun Modifier.authorAvatarTransition(id: Long, enabled: Boolean = true): Modifier
 }
 
 @Composable
+fun Modifier.workBookmarkTransition(work: Work): Modifier {
+    if (LocalWorkTransition.current == null) return this
+    val density = LocalDensity.current
+    val radius = MaterialTheme.shapes.extraSmall.topStart.toPx(Size.Zero, density)
+    return navigationArtwork(
+        "work-like:${work.type}:${work.id}",
+        Rect(radius, radius, radius, radius),
+    )
+}
+
+@Composable
 fun WorkImage(
     work: Work,
     modifier: Modifier = Modifier,

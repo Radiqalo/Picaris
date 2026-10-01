@@ -389,7 +389,10 @@ internal class NavigationArtwork(
 
 internal fun artworkKeys(route: androidx.navigation3.runtime.NavKey?): Set<String> =
     when (route) {
-        is Detail -> setOf("work-image:${route.work.type}:${route.work.id}")
+        is Detail -> setOf(
+            "work-image:${route.work.type}:${route.work.id}",
+            "work-like:${route.work.type}:${route.work.id}",
+        )
         is Reader -> setOf("work-image:${route.work.type}:${route.work.id}")
         is Author -> setOf("author:${route.user.id}:avatar")
         else -> emptySet()
