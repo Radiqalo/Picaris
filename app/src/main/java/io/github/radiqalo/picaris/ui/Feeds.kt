@@ -1280,7 +1280,7 @@ fun WorkCard(
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
     val imageShape = MaterialTheme.shapes.small
-    val badgeShape = MaterialTheme.shapes.extraSmall
+    val badgeShape = MaterialTheme.shapes.small
     val permitted = navigationPermission()
     val likeInteraction = remember { MutableInteractionSource() }
     val artworkReturn = LocalArtworkReturnFeedback.current

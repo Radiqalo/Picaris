@@ -272,6 +272,7 @@ data class Settings(
     val proxyType: String = "system",
     val proxyHost: String = "",
     val proxyPort: Int = 7890,
+    val downloadConcurrency: Int = 1,
     val downloadTree: String = "",
     val novelFont: Int = 20,
     val novelSpacing: Int = 32,

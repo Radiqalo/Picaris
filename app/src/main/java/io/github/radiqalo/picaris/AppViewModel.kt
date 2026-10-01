@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.*
 import androidx.paging.*
 import coil3.SingletonImageLoader
@@ -511,8 +512,67 @@ constructor(
 
     fun download(work: Work, pages: Set<Int>? = null, ugoiraAsGif: Boolean = false) {
         run {
-            downloads.enqueue(accountId, work, pages, ugoiraAsGif)
-            message.emit("已加入下载队列")
+            val result = downloads.enqueue(accountId, work, pages, ugoiraAsGif)
+            when {
+                result.queued == 0 && result.alreadyDownloaded > 0 ->
+                    message.emit("已下载")
+                result.queued == 0 && result.alreadyQueued > 0 ->
+                    message.emit("${work.title} 已在下载队列中")
+                result.alreadyDownloaded > 0 ->
+                    message.emit("${work.title}：${result.alreadyDownloaded} 张已下载，其余已加入队列")
+                else -> message.emit("已加入下载队列")
+            }
+        }
+    }
+
+    fun saveUgoiraSource(work: Work, directory: android.net.Uri) {
+        run {
+            val metadata = repo.ugoira(accountId, work.id)
+            val url = metadata.zip_urls.original.ifEmpty { metadata.zip_urls.medium }
+            require(url.toUri().scheme == "https" && url.toUri().host?.endsWith(".pximg.net") == true) {
+                "无效的动图源文件地址"
+            }
+            val folder = DocumentFile.fromTreeUri(appContext, directory)?.takeIf { it.isDirectory }
+                ?: error("所选目录不可用")
+            val name = "${work.id}_ugoira.zip"
+            var targetName = name
+            var suffix = 1
+            while (folder.findFile(targetName) != null) {
+                targetName = "${work.id}_ugoira_${suffix++}.zip"
+            }
+            val temporaryName = "${work.id}_ugoira.zip.part"
+            folder.findFile(temporaryName)?.delete()
+            val document = folder.createFile("application/octet-stream", temporaryName)
+                ?: error("无法在所选目录创建临时文件")
+            try {
+                withContext(Dispatchers.IO) {
+                    val call = network.okHttp().newCall(Request.Builder().url(url).build())
+                    val cancellation = launch(start = CoroutineStart.UNDISPATCHED) {
+                        try {
+                            awaitCancellation()
+                        } finally {
+                            call.cancel()
+                        }
+                    }
+                    try {
+                        call.execute().use { response ->
+                            check(response.isSuccessful) { "源文件下载失败（${response.code}）" }
+                            val output = appContext.contentResolver.openOutputStream(document.uri, "w")
+                                ?: error("无法写入所选目录")
+                            response.body.byteStream().use { input ->
+                                output.use { input.copyTo(it) }
+                            }
+                        }
+                    } finally {
+                        cancellation.cancel()
+                    }
+                }
+                check(document.renameTo(targetName)) { "ZIP 已下载，但无法在所选目录完成重命名" }
+                message.emit("${work.title} 源文件已保存")
+            } catch (error: Exception) {
+                document.delete()
+                throw error
+            }
         }
     }
 

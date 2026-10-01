@@ -24,6 +24,14 @@ class DownloadEvents @Inject constructor() {
     val completed = MutableSharedFlow<String>(extraBufferCapacity = 4)
 }
 
+data class DownloadEnqueueResult(
+    val queued: Int = 0,
+    val alreadyDownloaded: Int = 0,
+    val alreadyQueued: Int = 0,
+)
+
+private enum class QueueDisposition { QUEUED, DOWNLOADED, ACTIVE }
+
 @Singleton
 class DownloadManager
 @Inject
@@ -32,7 +40,12 @@ constructor(
     private val dao: LibraryDao,
     private val repo: WorkRepository,
 ) {
-    suspend fun enqueue(account: Long, initial: Work, pages: Set<Int>? = null, ugoiraAsGif: Boolean = false) {
+    suspend fun enqueue(
+        account: Long,
+        initial: Work,
+        pages: Set<Int>? = null,
+        ugoiraAsGif: Boolean = false,
+    ): DownloadEnqueueResult {
         require(pages == null || pages.isNotEmpty()) { "请至少选择一张图片" }
         val missingOriginals = !initial.isNovel && initial.type != "ugoira" &&
             (if (initial.page_count > 1) initial.meta_pages.size < initial.page_count ||
@@ -40,8 +53,18 @@ constructor(
             else initial.meta_single_page.original_image_url.isBlank() && initial.image_urls.original.isBlank())
         val work = if (missingOriginals) repo.detail(account, initial.id) else initial
         val metadata = AppJson.encodeToString(work)
+        var queued = 0
+        var alreadyDownloaded = 0
+        var alreadyQueued = 0
+        suspend fun add(item: DownloadEntity) {
+            when (queue(item)) {
+                QueueDisposition.QUEUED -> queued++
+                QueueDisposition.DOWNLOADED -> alreadyDownloaded++
+                QueueDisposition.ACTIVE -> alreadyQueued++
+            }
+        }
         if (work.isNovel) {
-            queue(
+            add(
                 DownloadEntity(
                     accountId = account,
                     workId = work.id,
@@ -55,7 +78,7 @@ constructor(
             )
         } else if (work.type == "ugoira") {
             val u = repo.ugoira(account, work.id)
-            queue(
+            add(
                 DownloadEntity(
                     accountId = account,
                     workId = work.id,
@@ -72,7 +95,7 @@ constructor(
             require(requestedPages.all { it in work.originals.indices }) { "所选图片不可用，请刷新作品详情后重试" }
             requestedPages.forEach { index ->
                 val url = work.originals[index]
-                queue(
+                add(
                     DownloadEntity(
                         accountId = account,
                         workId = work.id,
@@ -87,44 +110,48 @@ constructor(
                 )
             }
         }
-        schedule()
+        if (queued > 0) schedule()
+        return DownloadEnqueueResult(queued, alreadyDownloaded, alreadyQueued)
     }
 
-    private suspend fun queue(item: DownloadEntity) {
-        if (dao.enqueue(item) > 0) return
+    private suspend fun queue(item: DownloadEntity): QueueDisposition {
+        if (dao.enqueue(item) > 0) return QueueDisposition.QUEUED
         val existing =
-            dao.existingDownload(item.accountId, item.workId, item.kind, item.page) ?: return
+            dao.existingDownload(item.accountId, item.workId, item.kind, item.page)
+                ?: return QueueDisposition.ACTIVE
         if (existing.status == "complete") {
-            val readable =
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        when {
-                            existing.uri.startsWith("saf-folder|") -> {
-                                val (_, tree, name) = existing.uri.split("|", limit = 3)
-                                DocumentFile.fromTreeUri(context, tree.toUri())?.findFile(name)?.isDirectory == true
-                            }
-                            existing.uri.startsWith("media-folder|") -> {
-                                val path = existing.uri.substringAfter('|')
-                                context.contentResolver.query(
-                                    MediaStore.Files.getContentUri("external"),
-                                    arrayOf(MediaStore.MediaColumns._ID),
-                                    "${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
-                                    arrayOf(path),
-                                    null,
-                                )?.use { it.moveToFirst() } == true
-                            }
-                            else ->
-                            context.contentResolver
-                                .openAssetFileDescriptor(existing.uri.toUri(), "r")
-                                ?.use { true } ?: false
-                        }
-                    }
-                        .getOrDefault(false)
-                }
-            if (readable) return
+            if (downloadedFileExists(existing)) return QueueDisposition.DOWNLOADED
+            if (dao.retryCompletedDownload(existing.id) > 0) return QueueDisposition.QUEUED
         }
-        dao.requeueDownload(existing.id, item.url, item.workJson, item.name)
+        if (existing.status in setOf("queued", "running")) return QueueDisposition.ACTIVE
+        return if (dao.requeueDownload(existing.id, item.url, item.workJson, item.name) > 0)
+            QueueDisposition.QUEUED else QueueDisposition.ACTIVE
     }
+
+    private suspend fun downloadedFileExists(task: DownloadEntity): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                when {
+                    task.uri.startsWith("saf-folder|") -> {
+                        val (_, tree, name) = task.uri.split("|", limit = 3)
+                        DocumentFile.fromTreeUri(context, tree.toUri())?.findFile(name)?.isDirectory == true
+                    }
+                    task.uri.startsWith("media-folder|") -> {
+                        val path = task.uri.substringAfter('|')
+                        context.contentResolver.query(
+                            MediaStore.Files.getContentUri("external"),
+                            arrayOf(MediaStore.MediaColumns._ID),
+                            "${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
+                            arrayOf(path),
+                            null,
+                        )?.use { it.moveToFirst() } == true
+                    }
+                    else -> context.contentResolver
+                        .openAssetFileDescriptor(task.uri.toUri(), "r")
+                        ?.use { true } ?: false
+                }
+            }.getOrDefault(false)
+        }
 
     fun schedule() {
         val info =
@@ -159,7 +186,8 @@ constructor(
             val task = dao.download(id)?.takeIf { it.accountId == account } ?: continue
             changed = when (task.status) {
                 "complete" -> {
-                    dao.retryCompletedDownload(id) > 0 || changed
+                    if (downloadedFileExists(task)) changed
+                    else dao.retryCompletedDownload(id) > 0 || changed
                 }
                 "paused", "failed", "cancelled" ->
                     dao.changeDownloadStatus(id, "queued") > 0 || changed
@@ -251,13 +279,21 @@ class DownloadService : JobService() {
             try {
                 dao.recoverDownloads()
                 while (isActive) {
-                    val task = dao.nextDownload() ?: break
-                    try {
-                        transfer(task, params)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        dao.failDownload(task.id, e.message ?: "下载失败")
+                    val concurrency = settings.flow.first().downloadConcurrency.coerceIn(1, 10)
+                    val batch = dao.queuedDownloads(concurrency)
+                    if (batch.isEmpty()) break
+                    coroutineScope {
+                        batch.map { task ->
+                            async {
+                                try {
+                                    transfer(task, params)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    dao.failDownload(task.id, e.message ?: "下载失败")
+                                }
+                            }
+                        }.awaitAll()
                     }
                 }
             } finally {

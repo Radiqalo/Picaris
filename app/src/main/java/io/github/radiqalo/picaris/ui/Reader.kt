@@ -31,7 +31,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
 
 @Composable
-fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: Int? = null) {
+fun ReaderScreen(
+    work: Work,
+    vm: AppViewModel,
+    back: () -> Unit,
+    initialPage: Int? = null,
+    localUris: List<String> = emptyList(),
+) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     if (work.isNovel) {
@@ -43,19 +49,26 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
     var vertical by rememberSaveable { mutableStateOf(false) }
     var showOriginal by rememberSaveable(work.id) { mutableStateOf(false) }
     val originalFeedback = toggleFeedback()
-    val imagePages = if (showOriginal) work.originals else work.previews
+    val imagePages = when {
+        localUris.isNotEmpty() -> localUris
+        showOriginal -> work.originals
+        else -> work.previews
+    }
     var pageDialog by rememberSaveable { mutableStateOf(false) }
     var pageInput by rememberSaveable { mutableStateOf("") }
     var localPages by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
-    fun pageUrl(page: Int): String =
-        if (showOriginal) localPages[page] ?: imagePages[page] else imagePages[page]
+    fun pageUrl(page: Int): String = when {
+        localUris.isNotEmpty() -> localUris[page]
+        showOriginal -> localPages[page] ?: imagePages[page]
+        else -> imagePages[page]
+    }
     LaunchedEffect(work.id) {
         localPages =
             vm.completed(work)
                 .filter { it.kind in listOf("illust", "manga") }
                 .associate { it.page to it.uri }
     }
-    val count = work.originals.size
+    val count = localUris.size.takeIf { it > 0 } ?: work.originals.size
     val pager = rememberPagerState(pageCount = { count })
     val list = rememberLazyListState()
     val downloadPermission = rememberLauncherForActivityResult(
@@ -132,7 +145,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
                         }
                     },
                     actions = {
-                        if (work.type != "ugoira") IconToggleButton(
+                        if (localUris.isEmpty() && work.type != "ugoira") IconToggleButton(
                             checked = showOriginal,
                             onCheckedChange = {
                                 originalFeedback(it)
@@ -146,7 +159,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
                             Icon(materialSymbol(MaterialSymbol.Image),
                                 if (showOriginal) "原图已开启，点击切换预览图" else "查看原图")
                         }
-                        IconButton(onClick = {
+                        if (localUris.isEmpty()) IconButton(onClick = {
                             downloadPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
                         }) {
                             AppIcon(materialSymbol(MaterialSymbol.Download), strings.getString(R.string.ui_255d6cabdc))

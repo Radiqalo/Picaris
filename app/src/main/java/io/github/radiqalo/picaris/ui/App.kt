@@ -39,7 +39,11 @@ import kotlinx.coroutines.flow.collectLatest
 
 @Serializable data class Detail(val work: Work, val source: FeedSpec? = null, val position: Int = 0) : NavKey
 
-@Serializable data class Reader(val work: Work, val initialPage: Int? = null) : NavKey
+@Serializable data class Reader(
+    val work: Work,
+    val initialPage: Int? = null,
+    val localUris: List<String> = emptyList(),
+) : NavKey
 
 @Serializable data class Author(val user: User) : NavKey
 
@@ -236,7 +240,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                                 )
                                             }
                                             entry<Reader>(metadata = imageNavigation) {
-                                                ScrollingScreen { ReaderScreen(it.work, vm, guardedBack(back), it.initialPage) }
+                                                ScrollingScreen { ReaderScreen(it.work, vm, guardedBack(back), it.initialPage, it.localUris) }
                                             }
                                             entry<Author>(metadata = ListDetailSceneStrategy.listPane()) {
                                                 AuthorScreen(it.user, vm, guardedNavigation(navigate), guardedBack(back))

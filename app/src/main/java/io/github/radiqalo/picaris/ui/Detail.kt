@@ -68,13 +68,23 @@ fun DetailScreen(
     var selectedDownloadPages by remember(work.id) { mutableStateOf(emptySet<Int>()) }
     var pendingDownloadPages by remember(work.id) { mutableStateOf<Set<Int>?>(null) }
     var pendingUgoiraGif by remember(work.id) { mutableStateOf(false) }
-    var ugoiraFormatSelection by remember(work.id) { mutableStateOf(false) }
     var estimatedDownloadBytes by remember(work.id) { mutableStateOf<Long?>(null) }
     var estimatingDownloadBytes by remember(work.id) { mutableStateOf(false) }
     var followBusy by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val bookmarkFeedback = toggleFeedback()
     val bookmarkInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val ugoiraSourceDirectory = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
+            vm.saveUgoiraSource(work, uri)
+        }
+    }
     val permission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val pages = pendingDownloadPages
@@ -87,7 +97,6 @@ fun DetailScreen(
     }
     fun requestUgoiraDownload(asGif: Boolean) {
         pendingUgoiraGif = asGif
-        ugoiraFormatSelection = false
         requestDownload()
     }
     LaunchedEffect(moreMenu, work.id, work.page_count) {
@@ -411,31 +420,44 @@ fun DetailScreen(
                 leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Share), null) },
                 onClick = { moreMenu = false; share() },
             )
-            ListItem(
-                colors = menuItemColors,
-                content = {
-                    Text(if (work.page_count > 1 && !work.isNovel) "下载全部图片" else "下载作品")
-                },
-                trailingContent = {
-                    Text(
-                        when {
-                            estimatingDownloadBytes -> "正在估算大小…"
-                            estimatedDownloadBytes != null -> formatDownloadEstimate(estimatedDownloadBytes!!)
-                            work.isNovel -> "下载后显示实际大小"
-                            else -> "大小暂不可用"
-                        },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                },
-                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Download), null) },
-                onClick = {
-                    moreMenu = false
-                    if (work.type == "ugoira") ugoiraFormatSelection = true
-                    else requestDownload()
-                },
-            )
+            if (work.type == "ugoira") {
+                ListItem(
+                    colors = menuItemColors,
+                    content = { Text("下载源文件") },
+                    supportingContent = { Text("选择保存目录") },
+                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Download), null) },
+                    onClick = { moreMenu = false; ugoiraSourceDirectory.launch(null) },
+                )
+                ListItem(
+                    colors = menuItemColors,
+                    content = { Text("下载 GIF") },
+                    supportingContent = { Text("合成为可循环播放的 GIF") },
+                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), null) },
+                    onClick = { moreMenu = false; requestUgoiraDownload(asGif = true) },
+                )
+            } else {
+                ListItem(
+                    colors = menuItemColors,
+                    content = {
+                        Text(if (work.page_count > 1 && !work.isNovel) "下载全部图片" else "下载作品")
+                    },
+                    trailingContent = {
+                        Text(
+                            when {
+                                estimatingDownloadBytes -> "正在估算大小…"
+                                estimatedDownloadBytes != null -> formatDownloadEstimate(estimatedDownloadBytes!!)
+                                work.isNovel -> "下载后显示实际大小"
+                                else -> "大小暂不可用"
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    },
+                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Download), null) },
+                    onClick = { moreMenu = false; requestDownload() },
+                )
+            }
             if (work.page_count > 1 && !work.isNovel)
                 ListItem(
                     colors = menuItemColors,
@@ -454,26 +476,6 @@ fun DetailScreen(
                     leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Favorite), null) },
                     onClick = { moreMenu = false; privateDialog = true },
                 )
-        }
-    }
-    if (ugoiraFormatSelection && permitted()) ModalBottomSheet(
-        onDismissRequest = { ugoiraFormatSelection = false },
-    ) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = PixivSpacing.content)) {
-            Text("下载动图", Modifier.padding(horizontal = PixivSpacing.content, vertical = 8.dp),
-                style = MaterialTheme.typography.titleLarge)
-            ListItem(
-                content = { Text("下载原文件") },
-                supportingContent = { Text("在作品文件夹中保存 ZIP 原档和帧时序 JSON") },
-                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Image), null) },
-                onClick = { requestUgoiraDownload(asGif = false) },
-            )
-            ListItem(
-                content = { Text("下载 GIF") },
-                supportingContent = { Text("合成为可循环播放的 GIF 文件") },
-                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), null) },
-                onClick = { requestUgoiraDownload(asGif = true) },
-            )
         }
     }
     if (downloadPageSelection && permitted()) {

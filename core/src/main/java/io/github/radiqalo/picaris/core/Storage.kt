@@ -175,8 +175,8 @@ interface LibraryDao {
     @Query("SELECT * FROM downloads WHERE accountId=:account ORDER BY createdAt DESC")
     fun downloads(account: Long): Flow<List<DownloadEntity>>
 
-    @Query("SELECT * FROM downloads WHERE status='queued' ORDER BY createdAt ASC LIMIT 1")
-    suspend fun nextDownload(): DownloadEntity?
+    @Query("SELECT * FROM downloads WHERE status='queued' ORDER BY createdAt ASC LIMIT :limit")
+    suspend fun queuedDownloads(limit: Int): List<DownloadEntity>
 
     @Query("SELECT COUNT(*) FROM downloads WHERE accountId=:account AND workId=:work AND status IN ('queued','running')")
     suspend fun activeDownloadsForWork(account: Long, work: Long): Int

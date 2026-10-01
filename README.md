@@ -1,6 +1,6 @@
 # Picaris
 
-独立实现的 Android 17 / Material 3 Expressive Pixiv 客户端。包名 `io.github.radiqalo.picaris`，当前版本 `0.2.2`。
+独立实现的 Android 17 / Material 3 Expressive Pixiv 客户端。包名 `io.github.radiqalo.picaris`，当前版本 `0.3.0`。
 
 只接受 Android 17（API 37）及以上，不包含旧系统兼容分支；浏览内容需要登录 Pixiv 账号。
 

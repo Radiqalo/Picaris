@@ -21,10 +21,9 @@ internal object GifEncoder {
             require(width in 1..65535 && height in 1..65535) { "动图尺寸超出 GIF 格式范围" }
             writeShort(output, width)
             writeShort(output, height)
-            output.write(0xF7)
+            output.write(0x70)
             output.write(0)
             output.write(0)
-            writePalette(output)
             output.write(byteArrayOf(0x21, 0xFF.toByte(), 0x0B, 0x4E, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, 0x32, 0x2E, 0x30, 0x03, 0x01, 0x00, 0x00, 0x00))
             first.recycle()
 
@@ -40,9 +39,11 @@ internal object GifEncoder {
                     writeShort(output, 0)
                     writeShort(output, width)
                     writeShort(output, height)
-                    output.write(0)
+                    output.write(0x87)
+                    val indexed = quantize(bitmap)
+                    writePalette(output, indexed.palette)
                     output.write(8)
-                    writeImageData(output, quantize(bitmap))
+                    writeImageData(output, indexed.pixels)
                 } finally {
                     bitmap.recycle()
                 }
@@ -51,14 +52,11 @@ internal object GifEncoder {
         }
     }
 
-    private fun writePalette(output: OutputStream) {
-        repeat(256) { index ->
-            val red = ((index shr 5) and 7) * 255 / 7
-            val green = ((index shr 2) and 7) * 255 / 7
-            val blue = (index and 3) * 255 / 3
-            output.write(red)
-            output.write(green)
-            output.write(blue)
+    private fun writePalette(output: OutputStream, palette: IntArray) {
+        palette.forEach { color ->
+            output.write((color shr 16) and 0xFF)
+            output.write((color shr 8) and 0xFF)
+            output.write(color and 0xFF)
         }
     }
 
@@ -72,14 +70,123 @@ internal object GifEncoder {
         output.write(0)
     }
 
-    private fun quantize(bitmap: android.graphics.Bitmap): ByteArray {
+    private fun quantize(bitmap: android.graphics.Bitmap): IndexedImage {
         val colors = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(colors, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
-        return ByteArray(colors.size) { index ->
-            val color = colors[index]
-            ((((color shr 16) and 0xE0) or ((color shr 11) and 0x1C) or ((color shr 6) and 0x03))).toByte()
+        val counts = IntArray(1 shl 15)
+        val redSums = LongArray(counts.size)
+        val greenSums = LongArray(counts.size)
+        val blueSums = LongArray(counts.size)
+        colors.forEach { color ->
+            val red = (color shr 16) and 0xFF
+            val green = (color shr 8) and 0xFF
+            val blue = color and 0xFF
+            val key = ((red shr 3) shl 10) or ((green shr 3) shl 5) or (blue shr 3)
+            counts[key]++
+            redSums[key] += red
+            greenSums[key] += green
+            blueSums[key] += blue
         }
+        val bins = counts.indices.mapNotNull { key ->
+            val count = counts[key]
+            if (count == 0) null else ColorBin(
+                red = (key shr 10) and 31,
+                green = (key shr 5) and 31,
+                blue = key and 31,
+                count = count,
+                redSum = redSums[key],
+                greenSum = greenSums[key],
+                blueSum = blueSums[key],
+            )
+        }
+        val boxes = java.util.PriorityQueue<ColorBox>(compareByDescending { it.score })
+        boxes += colorBox(bins)
+        while (boxes.size < 256) {
+            val box = boxes.poll() ?: break
+            if (box.bins.size < 2 || box.range == 0) {
+                boxes += box
+                break
+            }
+            val sorted = when (box.axis) {
+                0 -> box.bins.sortedBy { it.red }
+                1 -> box.bins.sortedBy { it.green }
+                else -> box.bins.sortedBy { it.blue }
+            }
+            val halfWeight = box.weight / 2
+            var accumulated = 0
+            var splitAt = 1
+            while (splitAt < sorted.lastIndex && accumulated < halfWeight) {
+                accumulated += sorted[splitAt - 1].count
+                splitAt++
+            }
+            boxes += colorBox(sorted.subList(0, splitAt))
+            boxes += colorBox(sorted.subList(splitAt, sorted.size))
+        }
+        val palette = IntArray(256)
+        boxes.toList().take(256).forEachIndexed { index, box ->
+            val red = box.bins.sumOf { it.redSum } / box.weight
+            val green = box.bins.sumOf { it.greenSum } / box.weight
+            val blue = box.bins.sumOf { it.blueSum } / box.weight
+            palette[index] = (red.toInt() shl 16) or (green.toInt() shl 8) or blue.toInt()
+        }
+        val lookup = IntArray(1 shl 12)
+        for (key in lookup.indices) {
+            val red = (((key shr 8) and 15) shl 4) + 8
+            val green = (((key shr 4) and 15) shl 4) + 8
+            val blue = ((key and 15) shl 4) + 8
+            var nearest = 0
+            var nearestDistance = Int.MAX_VALUE
+            palette.forEachIndexed { index, candidate ->
+                val redDelta = red - ((candidate shr 16) and 0xFF)
+                val greenDelta = green - ((candidate shr 8) and 0xFF)
+                val blueDelta = blue - (candidate and 0xFF)
+                val distance = redDelta * redDelta + greenDelta * greenDelta + blueDelta * blueDelta
+                if (distance < nearestDistance) {
+                    nearestDistance = distance
+                    nearest = index
+                }
+            }
+            lookup[key] = nearest
+        }
+        val indices = ByteArray(colors.size) { index ->
+            val color = colors[index]
+            val key = ((((color shr 16) and 0xFF) shr 4) shl 8) or
+                ((((color shr 8) and 0xFF) shr 4) shl 4) or ((color and 0xFF) shr 4)
+            lookup[key].toByte()
+        }
+        return IndexedImage(palette, indices)
     }
+
+    private fun colorBox(bins: List<ColorBin>): ColorBox {
+        val redRange = bins.maxOf { it.red } - bins.minOf { it.red }
+        val greenRange = bins.maxOf { it.green } - bins.minOf { it.green }
+        val blueRange = bins.maxOf { it.blue } - bins.minOf { it.blue }
+        val (axis, range) = when (maxOf(redRange, greenRange, blueRange)) {
+            redRange -> 0 to redRange
+            greenRange -> 1 to greenRange
+            else -> 2 to blueRange
+        }
+        val weight = bins.sumOf { it.count }
+        return ColorBox(bins, weight, axis, range, range.toDouble() * kotlin.math.sqrt(weight.toDouble()))
+    }
+
+    private data class IndexedImage(val palette: IntArray, val pixels: ByteArray)
+    private data class ColorBin(
+        val red: Int,
+        val green: Int,
+        val blue: Int,
+        val count: Int,
+        val redSum: Long,
+        val greenSum: Long,
+        val blueSum: Long,
+    )
+    private data class ColorBox(
+        val bins: List<ColorBin>,
+        val weight: Int,
+        val axis: Int,
+        val range: Int,
+        val score: Double,
+    )
 
     private fun writeImageData(output: OutputStream, pixels: ByteArray) {
         val clearCode = 256
@@ -99,8 +206,9 @@ internal object GifEncoder {
             } else {
                 bytes.write(prefix, codeSize)
                 if (nextCode < 4096) {
-                    dictionary[key] = nextCode++
-                    if (nextCode == (1 shl codeSize) && codeSize < 12) codeSize++
+                    val addedCode = nextCode++
+                    dictionary[key] = addedCode
+                    if (addedCode == (1 shl codeSize) && codeSize < 12) codeSize++
                 } else {
                     bytes.write(clearCode, codeSize)
                     dictionary.clear()
