@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -103,7 +104,7 @@ fun DetailScreen(
                 androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width /
                     androidx.compose.ui.platform.LocalDensity.current.density >= 840f
             val previewHeight = (maxHeight * .55f).coerceIn(200.dp, 360.dp)
-            Row {
+            Row(Modifier.fillMaxSize().statusBarsPadding().clipToBounds()) {
                 if (wide)
                     Box(
                         Modifier.weight(1f).fillMaxHeight(),
@@ -122,7 +123,7 @@ fun DetailScreen(
                 LazyColumn(
                     Modifier.weight(1f).testTag("detailList"),
                     contentPadding = PaddingValues(
-                        top = if (wide) WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp else 0.dp,
+                        top = if (wide) 64.dp else 0.dp,
                         bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 96.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
