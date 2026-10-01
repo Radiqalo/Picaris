@@ -19,6 +19,7 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -31,6 +32,8 @@ import io.github.radiqalo.picaris.AppViewModel
 import io.github.radiqalo.picaris.R
 import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
+import coil3.compose.AsyncImage
+import android.os.SystemClock
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -981,16 +984,39 @@ private fun downloadProgressText(bytes: Long, total: Long): String {
     return if (total > 0) "${format(bytes)} / ${format(total)}" else format(bytes)
 }
 
+private fun downloadSizeText(size: Long): String = when {
+    size >= 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.1f MB", size / (1024.0 * 1024))
+    size >= 1024 -> String.format(java.util.Locale.ROOT, "%.1f KB", size / 1024.0)
+    else -> "$size B"
+}
+
+private data class DownloadSpeedSample(val bytes: Long, val time: Long)
+
 @Composable
 fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     val tasks by vm.downloadList.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     var filter by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("all") }
     var selecting by remember(vm.accountId) { mutableStateOf(false) }
     var selected by remember(vm.accountId) { mutableStateOf(emptySet<Long>()) }
     var confirmRemoval by remember(vm.accountId) { mutableStateOf(false) }
+    var speeds by remember(vm.accountId) { mutableStateOf(emptyMap<Long, Long>()) }
+    val speedSamples = remember(vm.accountId) { mutableMapOf<Long, DownloadSpeedSample>() }
+    LaunchedEffect(tasks) {
+        val now = SystemClock.elapsedRealtime()
+        val nextSpeeds = mutableMapOf<Long, Long>()
+        tasks.filter { it.status == "running" }.forEach { task ->
+            val previous = speedSamples[task.id]
+            if (previous != null && now > previous.time) {
+                nextSpeeds[task.id] = ((task.bytes - previous.bytes).coerceAtLeast(0L) * 1000L) /
+                    (now - previous.time)
+            }
+            speedSamples[task.id] = DownloadSpeedSample(task.bytes, now)
+        }
+        speedSamples.keys.retainAll(tasks.filter { it.status == "running" }.map { it.id }.toSet())
+        speeds = nextSpeeds
+    }
     val filtered = tasks.filter { task ->
         when (filter) {
             "active" -> task.status in setOf("queued", "running")
@@ -1055,7 +1081,15 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(filtered, key = { it.id }) { task ->
+                    val work = remember(task.workJson) {
+                        runCatching { AppJson.decodeFromString<Work>(task.workJson) }.getOrNull()
+                    }
                     Surface(
+                        modifier = Modifier.then(
+                            if (!selecting && work != null) Modifier.clickable {
+                                navigate(Detail(work))
+                            } else Modifier
+                        ),
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                     ) {
@@ -1074,6 +1108,28 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                         selected = if (checked) selected + task.id else selected - task.id
                                     },
                                 )
+                                if (work != null && !work.isNovel) {
+                                    AsyncImage(
+                                        model = work.previews.getOrNull(task.page) ?: work.cover,
+                                        contentDescription = "预览 ${task.title} 第 ${task.page + 1} 张",
+                                        modifier = Modifier.size(64.dp, 80.dp)
+                                            .clip(MaterialTheme.shapes.small)
+                                            .then(if (!selecting) Modifier.clickable {
+                                                navigate(Reader(work, task.page))
+                                            } else Modifier),
+                                        contentScale = ContentScale.Crop,
+                                    )
+                                } else if (work?.isNovel == true) {
+                                    Box(
+                                        Modifier.size(64.dp, 80.dp)
+                                            .clip(MaterialTheme.shapes.small)
+                                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                                            .clickable { navigate(Detail(work)) },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        AppIcon(materialSymbol(MaterialSymbol.Book), null)
+                                    }
+                                }
                                 AppIcon(
                                     if (task.status == "complete") materialSymbol(MaterialSymbol.Check) else materialSymbol(MaterialSymbol.Download),
                                     null,
@@ -1120,37 +1176,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                                 strings.getString(R.string.ui_3f9550508b),
                                             )
                                         }
-                                    "complete" ->
-                                        IconButton({
-                                            vm.run {
-                                                val intent =
-                                                    Intent(Intent.ACTION_VIEW)
-                                                        .setDataAndType(
-                                                            task.uri.toUri(),
-                                                            if (task.name.endsWith(".txt"))
-                                                                "text/plain"
-                                                            else if (task.name.endsWith(".zip"))
-                                                                "application/zip"
-                                                            else if (task.name.endsWith(".json"))
-                                                                "application/json"
-                                                            else "image/*",
-                                                        )
-                                                        .addFlags(
-                                                            Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                                        )
-                                                context.startActivity(
-                                                    Intent.createChooser(
-                                                        intent,
-                                                        strings.getString(R.string.ui_3bb3442038),
-                                                    )
-                                                )
-                                            }
-                                        }) {
-                                            AppIcon(
-                                                materialSymbol(MaterialSymbol.ChevronRight),
-                                                strings.getString(R.string.ui_38820b3dc3),
-                                            )
-                                        }
+                                    "complete" -> Unit
                                 }
                             }
                             if (task.status in setOf("running", "paused", "failed") && task.total > 0)
@@ -1165,9 +1191,9 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
                                     when (task.status) {
-                                        "complete" -> "${strings.getString(R.string.ui_e99b48a29b)} · ${downloadProgressText(task.bytes, task.total)}"
+                                        "complete" -> "${strings.getString(R.string.ui_e99b48a29b)} · ${downloadSizeText(task.bytes)}"
                                         "paused" -> "已暂停 · ${downloadProgressText(task.bytes, task.total)}"
-                                        "running" -> "下载中 · ${downloadProgressText(task.bytes, task.total)}"
+                                        "running" -> "下载中 · ${downloadSizeText(speeds[task.id] ?: 0L)}/s · ${downloadProgressText(task.bytes, task.total)}"
                                         "failed" -> "${task.error.ifBlank { "下载失败，请重试" }} · ${downloadProgressText(task.bytes, task.total)}"
                                         "cancelled" -> strings.getString(R.string.ui_a5ffdc95ee)
                                         else -> strings.getString(R.string.ui_e575faa045)
@@ -1183,14 +1209,6 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                         vm.downloadAction(task.id, "cancelled")
                                     }) {
                                         Text(strings.getString(R.string.ui_4d0b4688c7))
-                                    }
-                                if (task.workJson.isNotEmpty())
-                                    TextButton({
-                                        navigate(
-                                            Detail(AppJson.decodeFromString<Work>(task.workJson))
-                                        )
-                                    }) {
-                                        Text(strings.getString(R.string.ui_f394cdc91d))
                                     }
                             }
                         }

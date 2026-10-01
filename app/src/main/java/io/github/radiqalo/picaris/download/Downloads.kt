@@ -16,7 +16,13 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
+
+@Singleton
+class DownloadEvents @Inject constructor() {
+    val completed = MutableSharedFlow<Unit>(extraBufferCapacity = 2)
+}
 
 @Singleton
 class DownloadManager
@@ -26,7 +32,8 @@ constructor(
     private val dao: LibraryDao,
     private val repo: WorkRepository,
 ) {
-    suspend fun enqueue(account: Long, initial: Work) {
+    suspend fun enqueue(account: Long, initial: Work, pages: Set<Int>? = null) {
+        require(pages == null || pages.isNotEmpty()) { "请至少选择一张图片" }
         val missingOriginals = !initial.isNovel && initial.type != "ugoira" &&
             (if (initial.page_count > 1) initial.meta_pages.size < initial.page_count ||
                 initial.meta_pages.any { it.image_urls.original.isBlank() }
@@ -72,8 +79,11 @@ constructor(
                     workJson = metadata,
                 )
             )
-        } else
-            work.originals.forEachIndexed { index, url ->
+        } else {
+            val requestedPages = (pages ?: work.originals.indices.toSet()).sorted()
+            require(requestedPages.all { it in work.originals.indices }) { "所选图片不可用，请刷新作品详情后重试" }
+            requestedPages.forEach { index ->
+                val url = work.originals[index]
                 queue(
                     DownloadEntity(
                         accountId = account,
@@ -83,11 +93,12 @@ constructor(
                         title = work.title,
                         url = url,
                         name =
-                            "${work.id}_p${index.toString().padStart(3,'0')}.${url.toUri().lastPathSegment?.substringAfterLast('.')?.takeIf { it.length in 2..5 } ?: "jpg"}",
+                            "${work.id}_p${index}.${url.toUri().lastPathSegment?.substringAfterLast('.')?.takeIf { it.length in 2..5 } ?: "jpg"}",
                         workJson = metadata,
                     )
                 )
             }
+        }
         schedule()
     }
 
@@ -107,7 +118,7 @@ constructor(
                 }
             if (readable) return
         }
-        dao.requeueDownload(existing.id, item.url, item.workJson)
+        dao.requeueDownload(existing.id, item.url, item.workJson, item.name)
     }
 
     fun schedule() {
@@ -150,6 +161,7 @@ constructor(
 @AndroidEntryPoint
 class DownloadService : JobService() {
     @Inject lateinit var dao: LibraryDao
+    @Inject lateinit var downloadEvents: DownloadEvents
     @Inject lateinit var network: Network
     @Inject lateinit var settings: SettingsStore
     @Inject lateinit var repo: WorkRepository
@@ -228,6 +240,7 @@ class DownloadService : JobService() {
         if (dao.completeDownload(task.id, part.length(), uri.toString()) == 0)
             contentResolver.delete(uri, null, null)
         part.delete()
+        if (dao.nextDownload() == null) downloadEvents.completed.tryEmit(Unit)
     }
 
     private suspend fun publish(task: DownloadEntity, file: File): Uri {

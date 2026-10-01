@@ -39,9 +39,6 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
         return
     }
     val s by vm.settings.collectAsStateWithLifecycle()
-    val downloadPermission = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { vm.download(work) }
     var chrome by rememberSaveable { mutableStateOf(true) }
     var vertical by rememberSaveable { mutableStateOf(false) }
     var showOriginal by rememberSaveable(work.id) { mutableStateOf(false) }
@@ -61,6 +58,14 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
     val count = work.originals.size
     val pager = rememberPagerState(pageCount = { count })
     val list = rememberLazyListState()
+    val downloadPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val page = if (vertical) list.firstVisibleItemIndex else pager.currentPage
+            vm.download(work, if (count > 1 && work.type != "ugoira") setOf(page) else null)
+        }
+    }
     val bg = if (s.blackReader) Color.Black else MaterialTheme.colorScheme.background
     val text = if (s.blackReader) Color.White else MaterialTheme.colorScheme.onBackground
     val scope = rememberCoroutineScope()

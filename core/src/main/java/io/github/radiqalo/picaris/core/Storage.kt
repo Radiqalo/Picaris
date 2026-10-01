@@ -191,9 +191,9 @@ interface LibraryDao {
     ): DownloadEntity?
 
     @Query(
-        "UPDATE downloads SET status='queued',error='',url=:url,workJson=:json WHERE id=:id AND status NOT IN ('queued','running')"
+        "UPDATE downloads SET status='queued',error='',url=:url,workJson=:json,name=COALESCE(:name,name) WHERE id=:id AND status NOT IN ('queued','running')"
     )
-    suspend fun requeueDownload(id: Long, url: String, json: String): Int
+    suspend fun requeueDownload(id: Long, url: String, json: String, name: String? = null): Int
 
     @Query(
         "SELECT * FROM downloads WHERE accountId=:account AND workId=:work AND status='complete' ORDER BY page ASC"

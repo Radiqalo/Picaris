@@ -27,6 +27,12 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import kotlinx.coroutines.launch
 
+private fun formatDownloadEstimate(bytes: Long): String = when {
+    bytes >= 1024L * 1024L -> String.format(java.util.Locale.ROOT, "约 %.1f MB", bytes / (1024.0 * 1024))
+    bytes >= 1024L -> String.format(java.util.Locale.ROOT, "约 %.1f KB", bytes / 1024.0)
+    else -> "约 $bytes B"
+}
+
 @Composable
 fun DetailScreen(
     initial: Work,
@@ -52,14 +58,32 @@ fun DetailScreen(
     val actionBusy = identity in busy
     var privateDialog by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
+    var downloadPageSelection by remember(work.id) { mutableStateOf(false) }
+    var selectedDownloadPages by remember(work.id) { mutableStateOf(emptySet<Int>()) }
+    var pendingDownloadPages by remember(work.id) { mutableStateOf<Set<Int>?>(null) }
+    var estimatedDownloadBytes by remember(work.id) { mutableStateOf<Long?>(null) }
+    var estimatingDownloadBytes by remember(work.id) { mutableStateOf(false) }
     var followBusy by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val bookmarkFeedback = toggleFeedback()
     val bookmarkInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val permission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            vm.download(work)
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            val pages = pendingDownloadPages
+            pendingDownloadPages = null
+            if (granted) vm.download(work, pages)
         }
+    fun requestDownload(pages: Set<Int>? = null) {
+        pendingDownloadPages = pages
+        permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+    LaunchedEffect(moreMenu, work.id, work.page_count) {
+        if (moreMenu && !work.isNovel) {
+            estimatingDownloadBytes = true
+            estimatedDownloadBytes = runCatching { vm.estimateDownloadBytes(work) }.getOrNull()
+            estimatingDownloadBytes = false
+        }
+    }
     fun bookmark(public: Boolean = true) {
         if (!permitted()) return
         bookmarkFeedback(!current.is_bookmarked)
@@ -343,13 +367,36 @@ fun DetailScreen(
                 onClick = { moreMenu = false; share() },
             )
             ListItem(
-                content = { Text(strings.getString(R.string.ui_255d6cabdc)) },
+                content = {
+                    Text(if (work.page_count > 1 && !work.isNovel) "下载全部图片" else "下载作品")
+                },
+                supportingContent = {
+                    Text(
+                        when {
+                            estimatingDownloadBytes -> "正在估算大小…"
+                            estimatedDownloadBytes != null -> formatDownloadEstimate(estimatedDownloadBytes!!)
+                            work.isNovel -> "下载后显示实际大小"
+                            else -> "大小暂不可用"
+                        }
+                    )
+                },
                 leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Download), null) },
                 onClick = {
                     moreMenu = false
-                    permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    requestDownload()
                 },
             )
+            if (work.page_count > 1 && !work.isNovel)
+                ListItem(
+                    content = { Text("下载选中图片") },
+                    supportingContent = { Text("已选 ${selectedDownloadPages.size} 张") },
+                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Image), null) },
+                    onClick = {
+                        moreMenu = false
+                        selectedDownloadPages = emptySet()
+                        downloadPageSelection = true
+                    },
+                )
             if (!current.is_bookmarked && !actionBusy)
                 ListItem(
                     content = { Text("非公开收藏") },
@@ -357,6 +404,60 @@ fun DetailScreen(
                     onClick = { moreMenu = false; privateDialog = true },
                 )
         }
+    }
+    if (downloadPageSelection && permitted()) {
+        val pageCount = maxOf(work.page_count, work.originals.size)
+        AlertDialog(
+            onDismissRequest = { downloadPageSelection = false },
+            title = { Text("选择要下载的图片") },
+            text = {
+                Column {
+                    TextButton(
+                        onClick = {
+                            selectedDownloadPages = if (selectedDownloadPages.size == pageCount)
+                                emptySet() else (0 until pageCount).toSet()
+                        },
+                    ) {
+                        Text(if (selectedDownloadPages.size == pageCount) "取消全选" else "全选")
+                    }
+                    LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                        items(pageCount) { page ->
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .clickable {
+                                        selectedDownloadPages = if (page in selectedDownloadPages)
+                                            selectedDownloadPages - page else selectedDownloadPages + page
+                                    }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text("第 ${page + 1} 张", Modifier.weight(1f))
+                                Checkbox(
+                                    checked = page in selectedDownloadPages,
+                                    onCheckedChange = { checked ->
+                                        selectedDownloadPages = if (checked)
+                                            selectedDownloadPages + page else selectedDownloadPages - page
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = selectedDownloadPages.isNotEmpty(),
+                    onClick = {
+                        val pages = selectedDownloadPages
+                        downloadPageSelection = false
+                        requestDownload(pages)
+                    },
+                ) { Text("下载选中 (${selectedDownloadPages.size})") }
+            },
+            dismissButton = {
+                TextButton(onClick = { downloadPageSelection = false }) { Text("取消") }
+            },
+        )
     }
     if (privateDialog && permitted())
         ActionSheet(

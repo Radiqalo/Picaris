@@ -12,11 +12,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.download.DownloadManager
+import io.github.radiqalo.picaris.download.DownloadEvents
 import java.io.File
 import java.util.zip.ZipFile
 import javax.inject.Inject
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import okhttp3.Request
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -29,11 +32,18 @@ constructor(
     val auth: AuthRepository,
     val settingsStore: SettingsStore,
     val downloads: DownloadManager,
+    private val downloadEvents: DownloadEvents,
     val dao: LibraryDao,
     val network: Network,
     private val pixivision: PixivisionRepository,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
+    init {
+        viewModelScope.launch {
+            downloadEvents.completed.collect { message.emit("已下载") }
+        }
+    }
+
     val settings = settingsStore.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Settings())
     val accounts = auth.data.stateIn(viewModelScope, SharingStarted.Eagerly, auth.data.value)
     private var legacyNavigationReset = savedState.remove<Boolean>("demo") == true
@@ -443,11 +453,43 @@ constructor(
         run { repo.record(accountId, work) }
     }
 
-    fun download(work: Work) {
+    fun download(work: Work, pages: Set<Int>? = null) {
         run {
-            downloads.enqueue(accountId, work)
+            downloads.enqueue(accountId, work, pages)
             message.emit("已加入下载队列")
         }
+    }
+
+    suspend fun estimateDownloadBytes(work: Work, pages: Set<Int>? = null): Long? {
+        if (work.isNovel) return null
+        val urls = if (work.type == "ugoira") {
+            val zip = repo.ugoira(accountId, work.id).zip_urls
+            listOf(zip.original.ifBlank { zip.medium }).filter(String::isNotBlank)
+        } else {
+            val originals = work.originals
+            (pages ?: originals.indices.toSet()).sorted().mapNotNull(originals::getOrNull)
+        }
+        if (urls.isEmpty()) return null
+        val client = network.okHttp()
+        val semaphore = Semaphore(4)
+        val sizes = coroutineScope {
+            urls.map { url ->
+                async(Dispatchers.IO) {
+                    semaphore.withPermit {
+                        runCatching {
+                            client.newCall(Request.Builder().url(url).head().build()).execute().use { response ->
+                                if (response.isSuccessful)
+                                response.header("Content-Length")?.toLongOrNull()
+                                        ?: response.body.contentLength().takeIf { it >= 0L }
+                                else null
+                            }
+                        }.getOrNull()
+                    }
+                }
+            }.awaitAll()
+        }
+        return sizes.takeIf { values -> values.all { it != null } }
+            ?.sumOf { it ?: 0L }
     }
 
     suspend fun downloadsNetwork() = network.okHttp()
