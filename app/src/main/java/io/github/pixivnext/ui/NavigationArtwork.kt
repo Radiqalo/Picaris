@@ -160,6 +160,11 @@ internal class NavigationArtwork(
         private set
     val isActive: Boolean get() = flights.isNotEmpty()
 
+    fun hasFlight(key: String, owner: Long?): Boolean {
+        val flight = flights[key] ?: return false
+        return owner != null && (flight.source.owner == owner || flight.targetLayer?.owner == owner)
+    }
+
     fun beginPreview() {
         flights.values.filter { it.targetLayer?.owner in coordinator.activeEntries }.forEach { flight ->
             val layer = flight.targetLayer ?: return@forEach
