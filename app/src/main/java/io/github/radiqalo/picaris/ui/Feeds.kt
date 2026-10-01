@@ -988,7 +988,6 @@ fun WorkCard(
                     modifier = Modifier.align(Alignment.BottomEnd)
                         .padding(WorkImageBadgeInset)
                         .size(32.dp)
-                        .workBookmarkTransition(work)
                         .expressivePress(likeInteraction)
                         .testTag("like_${work.type}_${work.id}")
                         .semantics {

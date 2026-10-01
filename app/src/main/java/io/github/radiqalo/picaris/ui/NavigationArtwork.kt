@@ -128,12 +128,10 @@ internal class ArtworkFlight(val key: String, val source: ArtworkLayer, frame: A
     val corners = ArtworkValue(frame.corners)
     val clip = ArtworkValue(frame.clip)
     val alpha = ArtworkValue(1f)
-    val morph = ArtworkValue(0f)
     var boundsVelocity = Rect.Zero
     var cornersVelocity = Rect.Zero
     var clipVelocity = Rect.Zero
     var alphaVelocity = 0f
-    var morphVelocity = 0f
     var target: ArtworkFrame? = null
     var targetLayer: ArtworkLayer? = null
     var job: Job? = null
@@ -145,7 +143,6 @@ internal class NavigationArtwork(
     private val coordinator: NavigationTransitionCoordinator,
     private val scope: CoroutineScope,
     private val spatial: FiniteAnimationSpec<Rect>,
-    private val spatialFloat: FiniteAnimationSpec<Float>,
     private val effects: FiniteAnimationSpec<Float>,
 ) {
     var root: LayoutCoordinates? = null
@@ -344,7 +341,6 @@ internal class NavigationArtwork(
             val corners = ArtworkAnimation(flight.corners, Rect.VectorConverter, spatial, flight.cornersVelocity, durationScale)
             val clip = ArtworkAnimation(flight.clip, Rect.VectorConverter, spatial, flight.clipVelocity, durationScale)
             val alpha = ArtworkAnimation(flight.alpha, Float.VectorConverter, effects, flight.alphaVelocity, durationScale)
-            val morph = ArtworkAnimation(flight.morph, Float.VectorConverter, spatialFloat, flight.morphVelocity, durationScale)
             var finished = false
             while (!finished && flight.generation == generation) {
                 withFrameNanos { now ->
@@ -359,13 +355,11 @@ internal class NavigationArtwork(
                     val cornersDone = destination == null || corners.advance(now, destination.corners)
                     val clipDone = destination == null || clip.advance(now, destination.clip)
                     val alphaDone = alpha.advance(now, if (destination == null) 0f else 1f)
-                    val morphDone = morph.advance(now, if (destination == null) flight.morph.value else 1f)
                     flight.boundsVelocity = bounds.velocity
                     flight.cornersVelocity = corners.velocity
                     flight.clipVelocity = clip.velocity
                     flight.alphaVelocity = alpha.velocity
-                    flight.morphVelocity = morph.velocity
-                    finished = boundsDone && cornersDone && clipDone && alphaDone && morphDone &&
+                    finished = boundsDone && cornersDone && clipDone && alphaDone &&
                         (destination == null || (!coordinator.hasSceneMotion && !coordinator.hasAnimations))
                 }
             }
@@ -395,10 +389,7 @@ internal class NavigationArtwork(
 
 internal fun artworkKeys(route: androidx.navigation3.runtime.NavKey?): Set<String> =
     when (route) {
-        is Detail -> setOf(
-            "work-image:${route.work.type}:${route.work.id}",
-            "work-like:${route.work.type}:${route.work.id}",
-        )
+        is Detail -> setOf("work-image:${route.work.type}:${route.work.id}")
         is Reader -> setOf("work-image:${route.work.type}:${route.work.id}")
         is Author -> setOf("author:${route.user.id}:avatar")
         else -> emptySet()
@@ -412,11 +403,8 @@ internal val LocalNavigationPageRadius = staticCompositionLocalOf<() -> Float> {
 internal fun rememberNavigationArtwork(coordinator: NavigationTransitionCoordinator): NavigationArtwork {
     val scope = rememberCoroutineScope()
     val spatial = androidx.compose.material3.MaterialTheme.motionScheme.defaultSpatialSpec<Rect>()
-    val spatialFloat = androidx.compose.material3.MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val effects = androidx.compose.material3.MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-    val artwork = remember(coordinator, scope, spatial, spatialFloat, effects) {
-        NavigationArtwork(coordinator, scope, spatial, spatialFloat, effects)
-    }
+    val artwork = remember(coordinator, scope, spatial, effects) { NavigationArtwork(coordinator, scope, spatial, effects) }
     DisposableEffect(artwork) { onDispose { artwork.dispose() } }
     return artwork
 }
@@ -491,6 +479,7 @@ internal fun NavigationArtworkOverlay(modifier: Modifier = Modifier) {
                         CornerRadius(corners.bottom.coerceAtLeast(0f)), CornerRadius(corners.right.coerceAtLeast(0f)),
                     ))
                 }
+                source.alpha = flight.alpha.value
                 clipPath(outline) {
                     clipRect(clip.left, clip.top, clip.right, clip.bottom) {
                         withTransform({
@@ -498,27 +487,9 @@ internal fun NavigationArtworkOverlay(modifier: Modifier = Modifier) {
                             translate(bounds.center.x - source.size.width * scale / 2f,
                                 bounds.center.y - source.size.height * scale / 2f)
                             scale(scale, scale, Offset.Zero)
-                        }) {
-                            val target = flight.targetLayer?.content
-                                ?.takeIf { flight.key.startsWith("work-like:") }
-                            val progress = flight.morph.value.coerceIn(0f, 1f)
-                            source.alpha = flight.alpha.value * if (target != null) 1f - progress else 1f
-                            drawLayer(source)
-                            if (target != null && target.size.width > 0 && target.size.height > 0) {
-                                target.alpha = flight.alpha.value * progress
-                                withTransform({
-                                    val targetScale = maxOf(bounds.width / target.size.width,
-                                        bounds.height / target.size.height)
-                                    translate(bounds.center.x - target.size.width * targetScale / 2f,
-                                        bounds.center.y - target.size.height * targetScale / 2f)
-                                    scale(targetScale, targetScale, Offset.Zero)
-                                }) { drawLayer(target) }
-                                target.alpha = 1f
-                            }
-                        }
+                        }) { drawLayer(source) }
                     }
                 }
-                source.alpha = 1f
             }
         }
     })

@@ -297,8 +297,7 @@ fun DetailScreen(
             floatingActionButton = {
                 FloatingActionButton(
                     onClick = { if (canOpenReader && !actionBusy) bookmark() },
-                    modifier = Modifier.navigationBarsPadding().expressivePress(bookmarkInteraction)
-                        .workBookmarkTransition(current, circular = true),
+                    modifier = Modifier.navigationBarsPadding().expressivePress(bookmarkInteraction),
                     interactionSource = bookmarkInteraction,
                 ) {
                     FeedbackIcon(
