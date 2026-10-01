@@ -456,7 +456,7 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
                 }
         }
     }
-    if (controls)
+    if (controls && navigationPermission()())
         ModalBottomSheet(onDismissRequest = { controls = false }) {
             Column(
                 Modifier.padding(24.dp).navigationBarsPadding(),

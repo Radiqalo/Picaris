@@ -18,8 +18,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -910,13 +908,7 @@ fun WorkCard(
     val strings = androidx.compose.ui.platform.LocalResources.current
     val imageShape = MaterialTheme.shapes.small
     val badgeShape = MaterialTheme.shapes.extraSmall
-    val tapRouter = LocalTransitionTapRouter.current
-    val registerTapTarget = LocalFeedTapTargetsEnabled.current
-    val tapTargetKey = remember(work.id) { Any() }
-    val currentOnClick by rememberUpdatedState(onClick)
-    DisposableEffect(tapRouter, tapTargetKey, registerTapTarget) {
-        onDispose { if (registerTapTarget) tapRouter?.remove(tapTargetKey) }
-    }
+    val permitted = navigationPermission()
     val likeInteraction = remember { MutableInteractionSource() }
     val artworkReturn = LocalArtworkReturnFeedback.current
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -936,11 +928,7 @@ fun WorkCard(
 
     Column(
         modifier.clip(imageShape)
-            .onGloballyPositioned {
-                if (registerTapTarget)
-                    tapRouter?.update(tapTargetKey, it.boundsInWindow()) { currentOnClick() }
-            }
-            .clickable(onClick = onClick)
+            .clickable { if (permitted()) onClick() }
             .semantics {
                 if (!showMetadata) contentDescription = "${work.title}，${work.user.name}"
             }
@@ -994,7 +982,7 @@ fun WorkCard(
                 }
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                 Surface(
-                    onClick = { feedback(!work.is_bookmarked); onLike() },
+                    onClick = { if (permitted()) { feedback(!work.is_bookmarked); onLike() } },
                     interactionSource = likeInteraction,
                     enabled = !likedBusy,
                     modifier = Modifier.align(Alignment.BottomEnd)

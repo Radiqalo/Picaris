@@ -20,6 +20,7 @@ fun ActionSheet(
     title: (@Composable () -> Unit)? = null,
     text: (@Composable () -> Unit)? = null,
 ) {
+    if (!navigationPermission()()) return
     val height = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
     ModalBottomSheet(onDismissRequest = onDismissRequest,
         sheetState = rememberBottomSheetState(

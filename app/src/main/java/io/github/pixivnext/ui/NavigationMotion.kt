@@ -6,8 +6,12 @@ import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.AnimationVector
+import androidx.compose.animation.core.TwoWayConverter
+import androidx.compose.animation.core.VectorizedFiniteAnimationSpec
 import androidx.compose.animation.core.Transition
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -16,20 +20,27 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntOffset
@@ -50,83 +61,83 @@ import androidx.navigationevent.NavigationEvent
 import androidx.navigationevent.NavigationEventTransitionState
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import kotlinx.coroutines.flow.collectLatest
 
-internal val LocalNavigationGestureActive = staticCompositionLocalOf { false }
 internal val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
-private val LocalNavigationGestureCompletionAllowed = staticCompositionLocalOf { false }
-internal val LocalArtworkPreviewReturning = staticCompositionLocalOf { false }
 private val LocalNavigationCurrentSceneKey = staticCompositionLocalOf<Any?> { null }
 internal val LocalNavigationSharedElementVisible = staticCompositionLocalOf { true }
 
 @Composable
 internal fun NavigationPageDisplay(
-    backStack: List<NavKey>,
     modifier: Modifier,
     sharedTransitionScope: SharedTransitionScope,
     motion: NavigationMotion,
     entryDecorators: List<NavEntryDecorator<NavKey>>,
     sceneDecoratorStrategies: List<SceneDecoratorStrategy<NavKey>>,
-    onBack: () -> Unit,
+    onBack: (Int) -> Unit,
     sceneStrategies: List<SceneStrategy<NavKey>>,
     entryProvider: (NavKey) -> NavEntry<NavKey>,
 ) {
-    val entries = rememberDecoratedNavEntries(backStack, entryDecorators, entryProvider)
+    val coordinator = checkNotNull(LocalNavigationCoordinator.current)
+    val artwork = checkNotNull(LocalNavigationArtwork.current)
+    val entries = rememberDecoratedNavEntries<NavKey>(coordinator.instances, entryDecorators) { key ->
+        val instance = key as NavigationInstance
+        val entry = entryProvider(instance.destination)
+        NavEntry(key = key, contentKey = instance.id, metadata = entry.metadata) {
+            CompositionLocalProvider(LocalNavigationInstance provides instance.id) {
+                Box(Modifier.fillMaxSize().navigationInteractionGate { coordinator.permits(instance.id) }) {
+                    entry.Content()
+                }
+            }
+        }
+    }
     val sceneState = rememberSceneState(
         entries = entries,
         sceneStrategies = sceneStrategies,
         sceneDecoratorStrategies = sceneDecoratorStrategies,
         sharedTransitionScope = sharedTransitionScope,
-        onBack = onBack,
+        onBack = { onBack(1) },
     )
     val scene = sceneState.currentScene
     val navigationEventState = rememberNavigationEventState(
         currentInfo = SceneInfo(scene),
         backInfo = sceneState.previousScenes.map { SceneInfo(it) },
     )
-    val handoff = remember { ArtworkPreviewHandoff() }
-    var gestureBackStack by remember { mutableStateOf<List<NavKey>?>(null) }
-    var releasedBackStack by remember { mutableStateOf<List<NavKey>?>(null) }
+    var previousGestureInProgress by remember { mutableStateOf(false) }
+    var previewEntries by remember { mutableStateOf<List<Long>?>(null) }
     NavigationBackHandler(
         state = navigationEventState,
-        isBackEnabled = scene.previousEntries.isNotEmpty(),
+        isBackEnabled = scene.previousEntries.isNotEmpty() &&
+            (previewEntries == null || previewEntries == coordinator.instances.map { it.id }),
         onBackCompleted = {
-            val completingPreview = releasedBackStack == null && gestureBackStack == backStack
-            if (completingPreview) handoff.captureReleasedBounds()
-            repeat(entries.size - scene.previousEntries.size) { onBack() }
-            if (completingPreview) releasedBackStack = backStack.toList()
+            if (previewEntries == null || previewEntries == coordinator.instances.map { it.id })
+                onBack(entries.size - scene.previousEntries.size)
         },
     )
     val gestureInProgress = navigationEventState.transitionState is NavigationEventTransitionState.InProgress
-    var previousGestureInProgress by remember { mutableStateOf(false) }
     SideEffect {
         if (gestureInProgress && !previousGestureInProgress) {
-            gestureBackStack = backStack.toList()
-            releasedBackStack = null
-            handoff.bounds.clear()
-            handoff.animatedBounds.clear()
-            handoff.targetBounds.clear()
-            handoff.sourceCorners.clear()
-            handoff.previewCorners.clear()
-            handoff.previewSources.clear()
-        } else if (!gestureInProgress && releasedBackStack != null && backStack != releasedBackStack) {
-            gestureBackStack = null
-            releasedBackStack = null
+            coordinator.beginPreview()
+            previewEntries = coordinator.instances.map { it.id }
+        } else if (!gestureInProgress && previousGestureInProgress) {
+            coordinator.cancelPreview()
+            if (coordinator.phase == NavigationTransitionPhase.Restoring) artwork.resumePreview()
+            previewEntries = null
         }
+        coordinator.updateSceneOwners(scene.entries.map { it.contentKey as Long }.toSet())
+        artwork.refreshTargets()
         previousGestureInProgress = gestureInProgress
     }
     CompositionLocalProvider(
         LocalNavigationGestureInProgress provides gestureInProgress,
-        LocalNavigationGestureCompletionAllowed provides
-            (backStack == (releasedBackStack ?: gestureBackStack)),
-        LocalArtworkPreviewReturning provides
-            (!gestureInProgress && releasedBackStack != null && backStack == releasedBackStack),
         LocalNavigationCurrentSceneKey provides scene.key,
-        LocalArtworkPreviewHandoff provides handoff,
     ) {
         NavDisplay(
             sceneState = sceneState,
             navigationEventState = navigationEventState,
-            modifier = modifier.onGloballyPositioned { handoff.root = it },
+            modifier = modifier.navigationInteractionGate {
+                coordinator.permits(null)
+            }.onGloballyPositioned { artwork.root = it },
             transitionSpec = { motion.forward(this) },
             popTransitionSpec = { motion.back(this) },
             predictivePopTransitionSpec = { swipeEdge ->
@@ -137,7 +148,7 @@ internal fun NavigationPageDisplay(
 }
 
 internal class NavigationPageSceneDecorator(
-    private val onSettled: () -> Unit,
+    private val onSettled: (Long) -> Unit,
 ) : SceneDecoratorStrategy<NavKey> {
     override fun SceneDecoratorStrategyScope<NavKey>.decorateScene(scene: Scene<NavKey>): Scene<NavKey> =
         NavigationPageScene(scene, onSettled)
@@ -145,14 +156,14 @@ internal class NavigationPageSceneDecorator(
 
 private data class NavigationPageScene(
     val scene: Scene<NavKey>,
-    val onSettled: () -> Unit,
+    val onSettled: (Long) -> Unit,
 ) : Scene<NavKey> by scene {
     override val key: Any = scene::class to scene.key
     override val content: @Composable () -> Unit = {
         CompositionLocalProvider(
             LocalNavigationSharedElementVisible provides (key == LocalNavigationCurrentSceneKey.current),
         ) {
-            NavigationPage(onSettled) { scene.content() }
+            NavigationPage(key, scene.entries.map { it.contentKey as Long }.toSet(), onSettled) { scene.content() }
         }
     }
 }
@@ -164,25 +175,43 @@ internal class NavigationMotion(
     private val scale: FiniteAnimationSpec<Float>,
     private val effects: FiniteAnimationSpec<Float>,
     private val direction: Int,
+    private val coordinator: NavigationTransitionCoordinator,
 ) {
     private var predictiveDirection: Int? = null
     private var predictiveScenes: Pair<Any, Any>? = null
+    private var previewId: Long? = null
 
     private fun matchesPreview(scope: AnimatedContentTransitionScope<*>): Boolean =
-        predictiveScenes == ((scope.initialState as Scene<*>).key to (scope.targetState as Scene<*>).key)
+        predictiveScenes == ((scope.initialState as Scene<*>).key to (scope.targetState as Scene<*>).key) &&
+            (previewId == coordinator.previewTransitionId ||
+                coordinator.returningTransitionId == coordinator.transitionId)
 
     fun forward(
         scope: AnimatedContentTransitionScope<*>,
         style: NavigationMotionStyle = NavigationMotionStyle.Slide,
     ): ContentTransform = with(scope) {
+        val frame = coordinator.incomingFrame
         if (matchesPreview(scope)) predictiveDirection?.let { return@with backPreview(it) }
         when (style) {
-            NavigationMotionStyle.Slide ->
-                slideInHorizontally(position) { direction * it } togetherWith (
-                    ExitTransition.KeepUntilTransitionsFinished
-                )
+            NavigationMotionStyle.Slide -> {
+                val slide = slideInHorizontally(handoffSpec(position,
+                    IntOffset(frame?.offsetVelocity?.toInt() ?: 0, 0), IntOffset.Zero,
+                )) { frame?.offset ?: (direction * it) }
+                val enter = if (frame == null) slide else slide +
+                    scaleIn(handoffSpec(scale, frame.scaleVelocity, 0f),
+                        initialScale = frame.scale.coerceIn(0.01f, 1.5f)) +
+                    fadeIn(handoffSpec(effects, frame.opacityVelocity, 0f),
+                        initialAlpha = frame.opacity.coerceIn(0f, 1f))
+                enter togetherWith ExitTransition.KeepUntilTransitionsFinished
+            }
             NavigationMotionStyle.Zoom ->
-                (scaleIn(scale, initialScale = 0.92f) + fadeIn(effects)) togetherWith (
+                (scaleIn(handoffSpec(scale, frame?.scaleVelocity ?: 0f, 0f),
+                    initialScale = frame?.scale?.coerceIn(0.01f, 1.5f) ?: 0.92f) +
+                    slideInHorizontally(handoffSpec(position,
+                        IntOffset(frame?.offsetVelocity?.toInt() ?: 0, 0), IntOffset.Zero,
+                    )) { frame?.offset ?: 0 } +
+                    fadeIn(handoffSpec(effects, frame?.opacityVelocity ?: 0f, 0f),
+                        initialAlpha = frame?.opacity?.coerceIn(0f, 1f) ?: 0f)) togetherWith (
                     ExitTransition.KeepUntilTransitionsFinished
                 )
         }
@@ -206,6 +235,7 @@ internal class NavigationMotion(
 
     fun predictiveBack(scope: AnimatedContentTransitionScope<*>, swipeDirection: Int): ContentTransform {
         predictiveDirection = swipeDirection
+        previewId = coordinator.previewTransitionId
         predictiveScenes = (scope.initialState as Scene<*>).key to (scope.targetState as Scene<*>).key
         return backPreview(swipeDirection)
     }
@@ -227,9 +257,12 @@ internal class NavigationMotion(
                 )
             }
 
-    fun settled() {
+    fun settled(id: Long) {
+        if (id != coordinator.transitionId) return
+        coordinator.settled(id)
         predictiveDirection = null
         predictiveScenes = null
+        previewId = null
     }
 }
 
@@ -239,40 +272,99 @@ internal fun rememberNavigationMotion(): NavigationMotion {
     val scale = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Ltr) 1 else -1
-    return remember(position, scale, effects, direction) { NavigationMotion(position, scale, effects, direction) }
+    val coordinator = checkNotNull(LocalNavigationCoordinator.current)
+    return remember(position, scale, effects, direction, coordinator) {
+        NavigationMotion(position, scale, effects, direction, coordinator)
+    }
 }
 
 @Composable
-internal fun NavigationPage(onSettled: () -> Unit, content: @Composable () -> Unit) {
+internal fun NavigationPage(
+    sceneKey: Any,
+    entryIds: Set<Long>,
+    onSettled: (Long) -> Unit,
+    content: @Composable () -> Unit,
+) {
     val navigation = LocalNavAnimatedContentScope.current.transition
     val transitions = generateSequence<Transition<*>>(navigation) {
         it.parentTransition
     }.toList()
     val seeking = LocalNavigationGestureInProgress.current
-    var completingGesture by remember { mutableStateOf(false) }
-    SideEffect {
-        if (seeking) completingGesture = true
-        else if (transitions.none { it.isRunning || it.currentState != it.targetState }) {
-            completingGesture = false
-            onSettled()
-        }
-    }
-    val gestureActive = seeking || (completingGesture && LocalNavigationGestureCompletionAllowed.current)
+    val coordinator = checkNotNull(LocalNavigationCoordinator.current)
+    val artwork = checkNotNull(LocalNavigationArtwork.current)
+    val visible = LocalNavigationSharedElementVisible.current
+    val entryFrame = remember(sceneKey) { if (visible) coordinator.incomingFrame else null }
+    val id = coordinator.transitionId
     val shapeMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val effectMotion = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val corners by navigation.animateFloat(
-        transitionSpec = { shapeMotion }, label = "navigation page corners",
-    ) { if (it == EnterExitState.Visible) 0f else 1f }
+        transitionSpec = { handoffSpec(shapeMotion, entryFrame?.roundingVelocity ?: 0f, 0f) },
+        label = "navigation page corners",
+    ) { if (it == EnterExitState.Visible) 0f else entryFrame?.rounding ?: 1f }
+    val opacity by navigation.animateFloat(
+        transitionSpec = { effectMotion },
+        label = "navigation scene sampled opacity",
+    ) { if (it == EnterExitState.Visible) 1f else 0f }
     val pageShape = MaterialTheme.shapes.extraLarge
     val density = LocalDensity.current
-    Surface(
-        modifier = Modifier.fillMaxSize().graphicsLayer {
-            val revealingPage = navigation.currentState == EnterExitState.PreEnter ||
-                navigation.targetState == EnterExitState.PreEnter
-            val rounding = when {
-                gestureActive && revealingPage -> 0f
-                gestureActive -> 1f
-                else -> corners.coerceIn(0f, 1f)
+    val roundingTarget = when {
+        seeking -> if (visible) 1f else 0f
+        coordinator.returningTransitionId == id -> if (visible) 0f else 1f
+        else -> corners.coerceIn(0f, 1f)
+    }
+    val rounding by animateFloatAsState(
+        targetValue = roundingTarget,
+        animationSpec = shapeMotion,
+        label = "navigation page rounding handoff",
+    )
+    SideEffect {
+        if (visible && !seeking && !artwork.isActive && !coordinator.hasAnimations &&
+            kotlin.math.abs(rounding - roundingTarget) < 0.001f &&
+            transitions.none { it.isRunning || it.currentState != it.targetState }
+        ) {
+            artwork.cancelPending()
+            onSettled(id)
+        }
+    }
+    val pageCoordinates = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val pageRadius = remember { floatArrayOf(0f) }
+    val sampledRounding = rememberUpdatedState(rounding)
+    val previewing = rememberUpdatedState(seeking)
+    val sampledVisibility = rememberUpdatedState(
+        if (seeking || (!coordinator.usesZoom(entryIds) && coordinator.returningTransitionId != id))
+            1f else opacity,
+    )
+    DisposableEffect(sceneKey, coordinator, artwork) {
+        coordinator.registerScene(sceneKey, entryIds) {
+            val root = artwork.root?.takeIf { it.isAttached }
+            val page = pageCoordinates[0]?.takeIf { it.isAttached }
+            if (root == null || page == null || root.size.width == 0) null else {
+                val bounds = root.localBoundingBoxOf(page, clipBounds = false)
+                val scale = bounds.width / root.size.width
+                NavigationSceneFrame(
+                    scale, (bounds.left - (1f - scale) * root.size.width / 2f).toInt(),
+                    sampledVisibility.value, sampledRounding.value,
+                )
             }
+        }
+        onDispose { coordinator.unregisterScene(sceneKey) }
+    }
+    LaunchedEffect(sceneKey, coordinator) {
+        snapshotFlow { previewing.value || transitions.any { it.isRunning || it.currentState != it.targetState } }
+            .collectLatest { running ->
+                if (running) {
+                    while (previewing.value || transitions.any { it.isRunning || it.currentState != it.targetState }) {
+                        withFrameNanos {
+                            coordinator.sampleScene(sceneKey, it)
+                            if (visible) artwork.invalidatePreview()
+                        }
+                    }
+                } else coordinator.sampleScene(sceneKey, System.nanoTime())
+            }
+    }
+    Surface(
+        modifier = Modifier.fillMaxSize().onGloballyPositioned { pageCoordinates[0] = it }.graphicsLayer {
+            pageRadius[0] = pageShape.topStart.toPx(size, density) * rounding
             shape = pageShape.copy(
                 topStart = CornerSize(pageShape.topStart.toPx(size, density) * rounding),
                 topEnd = CornerSize(pageShape.topEnd.toPx(size, density) * rounding),
@@ -283,6 +375,43 @@ internal fun NavigationPage(onSettled: () -> Unit, content: @Composable () -> Un
         },
         color = MaterialTheme.colorScheme.background,
     ) {
-        CompositionLocalProvider(LocalNavigationGestureActive provides gestureActive, content = content)
+        CompositionLocalProvider(
+            LocalNavigationPageCoordinates provides { pageCoordinates[0] },
+            LocalNavigationPageRadius provides { pageRadius[0] },
+        ) {
+            NavigationSceneContent(content)
+        }
+    }
+}
+
+private fun <Value> handoffSpec(
+    motion: FiniteAnimationSpec<Value>,
+    velocity: Value,
+    zero: Value,
+): FiniteAnimationSpec<Value> = if (velocity == zero) motion else VelocityHandoffSpec(motion, velocity, zero)
+
+private data class VelocityHandoffSpec<Value>(
+    val motion: FiniteAnimationSpec<Value>,
+    val velocity: Value,
+    val zero: Value,
+) : FiniteAnimationSpec<Value> {
+    override fun <Vector : AnimationVector> vectorize(converter: TwoWayConverter<Value, Vector>):
+        VectorizedFiniteAnimationSpec<Vector> {
+        val animation = motion.vectorize(converter)
+        val handoffVelocity = converter.convertToVector(velocity)
+        return object : VectorizedFiniteAnimationSpec<Vector> by animation {
+            private fun resolved(initialVelocity: Vector) =
+                if (converter.convertFromVector(initialVelocity) == zero) handoffVelocity else initialVelocity
+            override fun getValueFromNanos(playTimeNanos: Long, initialValue: Vector, targetValue: Vector,
+                initialVelocity: Vector): Vector =
+                animation.getValueFromNanos(playTimeNanos, initialValue, targetValue, resolved(initialVelocity))
+            override fun getVelocityFromNanos(playTimeNanos: Long, initialValue: Vector, targetValue: Vector,
+                initialVelocity: Vector): Vector =
+                animation.getVelocityFromNanos(playTimeNanos, initialValue, targetValue, resolved(initialVelocity))
+            override fun getDurationNanos(initialValue: Vector, targetValue: Vector, initialVelocity: Vector): Long =
+                animation.getDurationNanos(initialValue, targetValue, resolved(initialVelocity))
+            override fun getEndVelocity(initialValue: Vector, targetValue: Vector, initialVelocity: Vector): Vector =
+                animation.getEndVelocity(initialValue, targetValue, resolved(initialVelocity))
+        }
     }
 }

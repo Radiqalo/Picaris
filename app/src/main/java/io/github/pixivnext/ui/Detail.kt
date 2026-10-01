@@ -19,7 +19,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import io.github.pixivnext.AppViewModel
 import io.github.pixivnext.R
 import io.github.pixivnext.core.*
@@ -35,14 +34,11 @@ fun DetailScreen(
     back: () -> Unit,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-    val navigationTransition = LocalNavAnimatedContentScope.current.transition
-    val imageTransition = LocalWorkTransition.current
-    val canOpenReader = !navigationTransition.isRunning && imageTransition?.isTransitionActive != true
+    val permitted = navigationPermission()
+    val canOpenReader = permitted()
 
     fun openReader(work: Work) {
-        // Recheck at the event boundary so repeated taps cannot skip the entering detail page.
-        if (!navigationTransition.isRunning && imageTransition?.isTransitionActive != true)
-            navigate(Reader(work))
+        if (permitted()) navigate(Reader(work))
     }
 
     var work by remember { mutableStateOf(initial) }
@@ -62,6 +58,7 @@ fun DetailScreen(
             vm.download(work)
         }
     fun bookmark(public: Boolean = true) {
+        if (!permitted()) return
         bookmarkFeedback(!current.is_bookmarked)
         vm.run {
             work = vm.bookmark(current, public)
@@ -193,14 +190,11 @@ fun DetailScreen(
                                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                             ) {
                                 UserRow(work.user, {
-                                    if (!navigationTransition.isRunning &&
-                                        navigationTransition.targetState == androidx.compose.animation.EnterExitState.Visible &&
-                                        imageTransition?.isTransitionActive != true
-                                    ) navigate(Author(work.user))
+                                    if (permitted()) navigate(Author(work.user))
                                 }, containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
                                     FilledTonalButton(
                                         onClick = {
-                                            vm.run {
+                                            if (permitted() && !followBusy) vm.run {
                                                 followBusy = true
                                                 try {
                                                     work = work.copy(user = vm.follow(work.user))
@@ -307,7 +301,7 @@ fun DetailScreen(
             }
         }
     }
-    if (moreMenu) ModalBottomSheet(onDismissRequest = { moreMenu = false }) {
+    if (moreMenu && permitted()) ModalBottomSheet(onDismissRequest = { moreMenu = false }) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = PixivSpacing.content)) {
             ListItem(
                 content = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
@@ -335,7 +329,7 @@ fun DetailScreen(
                 )
         }
     }
-    if (privateDialog)
+    if (privateDialog && permitted())
         ActionSheet(
             onDismissRequest = { privateDialog = false },
             title = { Text(strings.getString(R.string.ui_67c6787737)) },
@@ -556,7 +550,7 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
             IconButton(onClick = ::shareAuthor) { AppIcon(Glyph.Share, "分享作者") }
         }
     }
-    if (showProfile) ModalBottomSheet(onDismissRequest = { showProfile = false }) {
+    if (showProfile && navigationPermission()()) ModalBottomSheet(onDismissRequest = { showProfile = false }) {
         AuthorProfileContent(details.copy(user = user), vm, profileLoaded)
     }
 }

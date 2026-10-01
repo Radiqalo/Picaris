@@ -11,6 +11,7 @@ import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -65,48 +66,59 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
     var artworkReturn by remember(account?.user?.id, revision) {
         mutableStateOf<ArtworkReturnFeedback?>(null)
     }
-    LaunchedEffect(artworkReturn) {
-        if (artworkReturn != null) {
-            kotlinx.coroutines.delay(500)
-            artworkReturn = null
-        }
-    }
     val backStack = rememberNavBackStack(Home)
-    var authorNavigation by remember { mutableStateOf(false) }
+    val coordinator = rememberSaveable(account?.user?.id, revision, saver = listSaver(
+        save = { state: NavigationTransitionCoordinator ->
+            listOf(state.activeTab.toLong()) + state.instances.map { it.id }
+        },
+        restore = { saved -> NavigationTransitionCoordinator(backStack, saved.drop(1), saved.first().toInt()) },
+    )) { NavigationTransitionCoordinator(backStack) }
+    LaunchedEffect(coordinator.phase, artworkReturn) {
+        if (coordinator.phase == NavigationTransitionPhase.Stable) artworkReturn = null
+    }
+    DisposableEffect(coordinator) { onDispose { coordinator.dispose() } }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    SideEffect { coordinator.clearFocus = { focusManager.clearFocus(force = true) } }
     val snackbar = remember { SnackbarHostState() }
     val navigate: (NavKey) -> Unit = {
-        authorNavigation = it is Author
-        if (it == Home) {
-            while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
-        } else if (it is Detail && backStack.lastOrNull() is Detail)
-            backStack[backStack.lastIndex] = it
-        else if (it is SearchResults && backStack.lastOrNull() is SearchResults)
-            backStack[backStack.lastIndex] = it
-        else backStack.add(it)
+        val route = it
+        if (route != backStack.lastOrNull()) coordinator.commit(backStack, destination = route) {
+            if (route == Home) {
+                while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+            } else if (route is Detail && backStack.lastOrNull() is Detail)
+                backStack[backStack.lastIndex] = route
+            else if (route is SearchResults && backStack.lastOrNull() is SearchResults)
+                backStack[backStack.lastIndex] = route
+            else backStack.add(route)
+        }
     }
     // Related works are a genuine drill-down: retain the current detail so Back returns to it.
     val navigateRelatedDetail: (Detail) -> Unit = {
-        authorNavigation = false
-        backStack.add(it)
-    }
-    val back: () -> Unit = {
-        if (backStack.size > 1) {
-            (backStack.lastOrNull() as? Detail)?.work?.let {
-                artworkReturn = ArtworkReturnFeedback(it.type, it.id)
-            }
-            authorNavigation = backStack.lastOrNull() is Author
-            backStack.removeAt(backStack.lastIndex)
+        val route = it
+        coordinator.commit(backStack, destination = route) {
+            backStack.add(route)
         }
     }
+    val pop: (Int) -> Unit = { count ->
+        if (backStack.size > 1) {
+            coordinator.commit(backStack, returning = true) {
+                (backStack.lastOrNull() as? Detail)?.work?.let {
+                    artworkReturn = ArtworkReturnFeedback(it.type, it.id)
+                }
+                repeat(count.coerceAtMost(backStack.size - 1)) { backStack.removeAt(backStack.lastIndex) }
+            }
+        }
+    }
+    val back: () -> Unit = { pop(1) }
     LaunchedEffect(Unit) {
         if (vm.takeLegacyNavigationReset())
-            while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+            navigate(Home)
         vm.message.collect { snackbar.showSnackbar(it) }
     }
     var routedAccountId by rememberSaveable { mutableStateOf(account?.user?.id) }
     LaunchedEffect(account?.user?.id) {
         if (routedAccountId != account?.user?.id)
-            while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
+            navigate(Home)
         routedAccountId = account?.user?.id
     }
     LaunchedEffect(incoming, account?.user?.id) {
@@ -146,10 +158,17 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                     key(account?.user?.id, revision) {
                         val strategy = rememberListDetailSceneStrategy<NavKey>()
                         SharedTransitionLayout {
+                            val artwork = rememberNavigationArtwork(coordinator)
+                            SideEffect {
+                                coordinator.beforeCommit = { _, owners, destination ->
+                                    artwork.prepare(owners, artworkKeys(destination))
+                                }
+                                coordinator.beforePreview = artwork::beginPreview
+                            }
                             CompositionLocalProvider(
                                 LocalWorkTransition provides this,
-                                LocalImageTransitionEnabled provides !authorNavigation,
-                                LocalTransitionTapRouter provides remember { TransitionTapRouter() },
+                                LocalNavigationCoordinator provides coordinator,
+                                LocalNavigationArtwork provides artwork,
                                 LocalArtworkReturnFeedback provides artworkReturn,
                             ) {
                                 val navigationMotion = rememberNavigationMotion()
@@ -160,73 +179,71 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                     NavigationPageSceneDecorator(navigationMotion::settled)
                                 }
                                 NavigationPageDisplay(
-                                    backStack = backStack,
                                     modifier = Modifier.fillMaxSize(),
                                     sharedTransitionScope = this@SharedTransitionLayout,
                                     motion = navigationMotion,
                                     entryDecorators =
                                         listOf(rememberSaveableStateHolderNavEntryDecorator()),
                                     sceneDecoratorStrategies = listOf(pageDecorator),
-                                    onBack = back,
+                                    onBack = pop,
                                     sceneStrategies =
                                         if (backStack.lastOrNull() is Detail) listOf(strategy)
                                         else emptyList(),
                                     entryProvider =
                                         entryProvider {
                                             entry<Home>(metadata = ListDetailSceneStrategy.listPane()) {
-                                                CompositionLocalProvider(LocalFeedTapTargetsEnabled provides true) {
-                                                    HomeScreen(vm, navigate)
-                                                }
+                                                HomeScreen(vm, guardedNavigation(navigate))
                                             }
                                             entry<Search>(metadata = ListDetailSceneStrategy.listPane()) {
-                                                ScrollingScreen { SearchScreen(vm, navigate, back) }
+                                                ScrollingScreen { SearchScreen(vm, guardedNavigation(navigate), guardedBack(back)) }
                                             }
                                             entry<SearchResults>(metadata = ListDetailSceneStrategy.listPane()) {
-                                                ScrollingScreen { SearchScreen(vm, navigate, back, it.query) }
+                                                ScrollingScreen { SearchScreen(vm, guardedNavigation(navigate), guardedBack(back), it.query) }
                                             }
                                             entry<People> {
-                                                ScrollingScreen(scrollBehaviorEnabled = false) { PeopleScreen(it, vm, navigate, back) }
+                                                ScrollingScreen(scrollBehaviorEnabled = false) { PeopleScreen(it, vm, guardedNavigation(navigate), guardedBack(back)) }
                                             }
                                             entry<Replies> {
-                                                ScrollingScreen { RepliesScreen(it, vm, navigate, back) }
+                                                ScrollingScreen { RepliesScreen(it, vm, guardedNavigation(navigate), guardedBack(back)) }
                                             }
                                             entry<Comments> {
                                                 ScrollingScreen {
-                                                    CommentsScreen(it.work, vm, navigate, back)
+                                                    CommentsScreen(it.work, vm, guardedNavigation(navigate), guardedBack(back))
                                                 }
                                             }
                                             entry<Detail>(metadata = ListDetailSceneStrategy.detailPane() + imageNavigation) {
-                                                val entry = it
-                                                val isInteractive = { backStack.lastOrNull() == entry }
-                                                NavigationExitContent(isInteractive) {
-                                                    DetailPagerScreen(entry, vm,
-                                                        navigate = { route ->
-                                                            if (isInteractive()) navigate(route)
-                                                        },
-                                                        navigateRelatedDetail = { route ->
-                                                            if (isInteractive()) navigateRelatedDetail(route)
-                                                        },
-                                                        back = { if (isInteractive()) back() },
-                                                    )
-                                                }
+                                                val permitted = navigationPermission()
+                                                DetailPagerScreen(it, vm,
+                                                    navigate = guardedNavigation(navigate),
+                                                    navigateRelatedDetail = { route ->
+                                                        if (permitted()) navigateRelatedDetail(route)
+                                                    },
+                                                    back = guardedBack(back),
+                                                )
                                             }
                                             entry<Reader>(metadata = imageNavigation) {
-                                                ScrollingScreen { ReaderScreen(it.work, vm, back) }
+                                                ScrollingScreen { ReaderScreen(it.work, vm, guardedBack(back)) }
                                             }
                                             entry<Author>(metadata = ListDetailSceneStrategy.listPane()) {
-                                                AuthorScreen(it.user, vm, navigate, back)
+                                                AuthorScreen(it.user, vm, guardedNavigation(navigate), guardedBack(back))
                                             }
                                             entry<Collection>(
                                                 metadata = ListDetailSceneStrategy.listPane()
                                             ) {
-                                                ScrollingScreen(scrollBehaviorEnabled = it.section == "ranking") { CollectionScreen(it, vm, navigate, back) }
+                                                ScrollingScreen(scrollBehaviorEnabled = it.section == "ranking") { CollectionScreen(it, vm, guardedNavigation(navigate), guardedBack(back)) }
                                             }
                                             entry<Utility> {
                                                 ScrollingScreen(scrollBehaviorEnabled = false) {
-                                                    UtilityScreen(it.page, vm, navigate, back)
+                                                    UtilityScreen(it.page, vm, guardedNavigation(navigate), guardedBack(back))
                                                 }
                                             }
                                         },
+                                )
+                                NavigationArtworkOverlay(
+                                    Modifier.renderInSharedTransitionScopeOverlay(
+                                        renderInOverlay = { artwork.isActive },
+                                        zIndexInOverlay = 0f,
+                                    ),
                                 )
                             }
                         }
@@ -248,6 +265,8 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    val coordinator = LocalNavigationCoordinator.current
+    val permitted = navigationPermission()
     val tabs =
         listOf(
             strings.getString(R.string.tab_home),
@@ -264,10 +283,13 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val homeReselection = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
     val feedback = selectionFeedback()
     val selectTab: (Int) -> Unit = { index ->
-        if (tab != index || index == 0) feedback()
-        if (tab == 0 && index == 0) homeReselection.tryEmit(Unit)
-        tab = index
-        navigate(Home)
+        if (permitted()) {
+            if (tab != index || index == 0) feedback()
+            if (tab == 0 && index == 0) homeReselection.tryEmit(Unit)
+            navigate(Home)
+            if (coordinator != null) coordinator.selectTab(index) { tab = index }
+            else tab = index
+        }
     }
     Box(Modifier.fillMaxSize()) {
         val wide =
@@ -321,6 +343,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     modifier = Modifier.padding(padding),
                 ) { currentTab ->
                     holder.SaveableStateProvider(currentTab) {
+                        val tabNavigate = guardedNavigation(navigate)
                         val homeGrid = rememberLazyStaggeredGridState()
                         val homeList = rememberLazyListState()
                         ScrollingScreen(
@@ -337,11 +360,11 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             }
                             when (currentTab) {
                                 0 ->
-                                    RecommendedHomeScreen(vm, navigate, homeGrid, homeList)
-                                1 -> DiscoverScreen(vm, navigate)
-                                2 -> FollowScreen(vm, navigate)
-                                3 -> SearchScreen(vm, navigate, back = null)
-                                else -> ProfileScreen(vm, navigate)
+                                    RecommendedHomeScreen(vm, tabNavigate, homeGrid, homeList)
+                                1 -> DiscoverScreen(vm, tabNavigate)
+                                2 -> FollowScreen(vm, tabNavigate)
+                                3 -> SearchScreen(vm, tabNavigate, back = null)
+                                else -> ProfileScreen(vm, tabNavigate)
                             }
                         }
                     }

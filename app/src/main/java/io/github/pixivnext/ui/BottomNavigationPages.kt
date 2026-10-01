@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -39,6 +40,7 @@ internal fun BottomNavigationPages(
     }
     val effects = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
     val layoutDirection = LocalLayoutDirection.current
+    val coordinator = LocalNavigationCoordinator.current
     var previousTab by remember { mutableIntStateOf(tab) }
     val direction = remember(tab, layoutDirection) {
         tab.compareTo(previousTab) * if (layoutDirection == LayoutDirection.Ltr) 1 else -1
@@ -54,12 +56,19 @@ internal fun BottomNavigationPages(
     ) { currentTab ->
         val entering = currentTab == tab
         val position = remember { Animatable(if (entering) direction / 4f else 0f) }
+        val velocity = remember { floatArrayOf(0f) }
+        val animationKey = remember { Any() }
         LaunchedEffect(tab, currentTab) {
-            if (entering) {
-                position.snapTo(direction / 4f)
-                position.animateTo(0f, enterSpatial)
-            } else {
-                position.animateTo(-direction / 6f, exitSpatial)
+            val id = coordinator?.transitionId ?: 0L
+            coordinator?.animationStarted(animationKey, id)
+            try {
+                if (entering) {
+                    position.animateTo(0f, enterSpatial, velocity[0]) { velocity[0] = this.velocity }
+                } else {
+                    position.animateTo(-direction / 6f, exitSpatial, velocity[0]) { velocity[0] = this.velocity }
+                }
+            } finally {
+                coordinator?.animationFinished(animationKey, id)
             }
         }
         Surface(
@@ -68,7 +77,12 @@ internal fun BottomNavigationPages(
             },
             color = MaterialTheme.colorScheme.background,
         ) {
-            content(currentTab)
+            CompositionLocalProvider(LocalNavigationTab provides currentTab) {
+                val permitted = navigationPermission()
+                NavigationVisualContent(entering, permitted, entering) {
+                    content(currentTab)
+                }
+            }
         }
     }
 }

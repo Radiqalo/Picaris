@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
-import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import io.github.pixivnext.AppViewModel
@@ -63,8 +62,7 @@ fun DetailPagerScreen(
     val pager = rememberPagerState(initialPage = route.position) {
         maxOf(retainedPageCount, items.itemCount)
     }
-    val navigation = LocalNavAnimatedContentScope.current.transition
-    val sharedTransition = LocalWorkTransition.current
+    val permitted = navigationPermission()
     val imageTransitionsEnabled = LocalImageTransitionEnabled.current
     LaunchedEffect(pager, items) {
         snapshotFlow { items.itemSnapshotList.items.getOrNull(pager.settledPage) }
@@ -80,8 +78,7 @@ fun DetailPagerScreen(
         HorizontalPager(
             state = pager,
             modifier = Modifier.fillMaxSize().testTag("detailPager"),
-            userScrollEnabled = !navigation.isRunning && sharedTransition?.isTransitionActive != true &&
-                items.itemCount > pager.settledPage,
+            userScrollEnabled = permitted() && items.itemCount > pager.settledPage,
         ) { page ->
             val work = if (page < items.itemCount) items[page] else null
             val initial = work ?: route.work.takeIf { page == route.position }
