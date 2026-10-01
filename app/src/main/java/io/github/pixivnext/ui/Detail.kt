@@ -418,6 +418,28 @@ private fun DetailArtworkFlow(
     onOpenPage: (Int) -> Unit,
 ) {
     val pages = work.previews
+    if (pages.size == 1) {
+        val url = pages.first()
+        val fallbackAspect = if (work.width > 1 && work.height > 1)
+            work.width.toFloat() / work.height else work.aspect
+        var aspect by remember(url) { mutableFloatStateOf(fallbackAspect) }
+        BoxWithConstraints(
+            modifier = modifier.testTag("detailImages").padding(contentPadding).clipToBounds(),
+            contentAlignment = Alignment.Center,
+        ) {
+            WorkImage(
+                work,
+                Modifier.width(minOf(maxWidth, maxHeight * aspect)).aspectRatio(aspect)
+                    .clickable { onOpenPage(0) }.testTag("detailImage"),
+                url = url,
+                scale = ContentScale.Fit,
+                sharedTransition = true,
+                rounded = false,
+                onImageAspectRatio = { aspect = it },
+            )
+        }
+        return
+    }
     LazyColumn(
         modifier = modifier.testTag("detailImages"),
         contentPadding = contentPadding,
