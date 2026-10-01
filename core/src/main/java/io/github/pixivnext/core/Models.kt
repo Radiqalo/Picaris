@@ -243,6 +243,7 @@ data class Settings(
     val blackReader: Boolean = true,
     val showHomeMetadata: Boolean = false,
     val showTagTranslations: Boolean = true,
+    val bottomBarStyle: String = "standard",
     val showAdult: Boolean = false,
     val hideAi: Boolean = false,
     val blockedTags: String = "",

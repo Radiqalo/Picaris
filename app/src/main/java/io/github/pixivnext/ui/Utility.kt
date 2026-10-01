@@ -418,6 +418,13 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         onSelect = { theme -> vm.update { it.copy(theme = theme) } },
                         position = SettingsRowPosition.First,
                     )
+                    SettingChoiceBlock(
+                        title = "底栏样式",
+                        selected = s.bottomBarStyle,
+                        options = listOf("standard" to "标准", "floating" to "浮动"),
+                        onSelect = { style -> vm.update { it.copy(bottomBarStyle = style) } },
+                        position = SettingsRowPosition.Middle,
+                    )
                     SettingRow(
                         strings.getString(R.string.ui_9d180a2c78),
                         strings.getString(R.string.ui_d80ba66133),

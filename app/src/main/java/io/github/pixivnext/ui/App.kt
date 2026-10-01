@@ -324,10 +324,7 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
                     if (!wide)
-                        ShortNavigationBar(
-                            modifier = Modifier.aboveWorkTransition(),
-                            arrangement = ShortNavigationBarArrangement.EqualWeight
-                        ) {
+                        HomeNavigationBar(floating = settings.bottomBarStyle == "floating") {
                             tabs.forEachIndexed { index, title ->
                                 ShortNavigationBarItem(
                                     selected = tab == index,
