@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.layout.ContentScale
@@ -34,6 +35,8 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import coil3.compose.AsyncImage
 import android.os.SystemClock
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -1324,13 +1327,16 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             androidx.compose.material3.FloatingActionButtonMenu(
                 expanded = actionsExpanded,
                 button = {
-                    androidx.compose.material3.ToggleFloatingActionButton(
-                        checked = actionsExpanded,
-                        onCheckedChange = { actionsExpanded = it },
-                    ) {
+                    val rotation by animateFloatAsState(
+                        targetValue = if (actionsExpanded) 45f else 0f,
+                        animationSpec = spring(),
+                        label = "downloadFabPlusRotation",
+                    )
+                    FloatingActionButton(onClick = { actionsExpanded = !actionsExpanded }) {
                         AppIcon(
-                            materialSymbol(if (checkedProgress > 0.5f) MaterialSymbol.Close else MaterialSymbol.Add),
-                            if (checkedProgress > 0.5f) "关闭操作" else "下载操作",
+                            materialSymbol(MaterialSymbol.Add),
+                            if (actionsExpanded) "关闭操作" else "下载操作",
+                            Modifier.graphicsLayer { rotationZ = rotation },
                         )
                     }
                 },
