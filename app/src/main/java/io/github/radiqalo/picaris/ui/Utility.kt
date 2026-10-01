@@ -34,16 +34,6 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import coil3.compose.AsyncImage
 import android.os.SystemClock
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -1033,6 +1023,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     var selecting by remember(vm.accountId) { mutableStateOf(false) }
     var selected by remember(vm.accountId) { mutableStateOf(emptySet<Long>()) }
     var confirmRemoval by remember(vm.accountId) { mutableStateOf(false) }
+    var keepDownloadedFiles by remember(vm.accountId) { mutableStateOf(true) }
     var actionsExpanded by remember(vm.accountId) { mutableStateOf(false) }
     var speeds by remember(vm.accountId) { mutableStateOf(emptyMap<Long, Long>()) }
     val speedSamples = remember(vm.accountId) { mutableMapOf<Long, DownloadSpeedSample>() }
@@ -1071,6 +1062,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         selected = selected.intersect(groups.map { it.workId }.toSet())
         if (selected.isEmpty()) selecting = false
     }
+    LaunchedEffect(selecting) { actionsExpanded = selecting }
     fun toggleSelection(workId: Long) {
         selected = if (workId in selected) selected - workId else selected + workId
         selecting = selected.isNotEmpty()
@@ -1078,6 +1070,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     fun removeSelection(deleteFiles: Boolean) {
         vm.removeDownloadRecords(selectedTaskIds, deleteFiles)
         confirmRemoval = false
+        keepDownloadedFiles = true
         selected = emptySet()
         selecting = false
     }
@@ -1125,7 +1118,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(filtered, key = { it.workId }) { group ->
@@ -1165,7 +1158,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                                     navigate(Reader(work))
                                                 } else Modifier
                                             ),
-                                            contentScale = ContentScale.Fit,
+                                            contentScale = ContentScale.Crop,
                                         )
                                     } else {
                                         Box(
@@ -1177,42 +1170,54 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                     }
                                 }
                                 Column(
-                                    Modifier.weight(1f).fillMaxHeight().padding(start = 12.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+                                    Modifier.weight(1f).fillMaxHeight().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
                                     verticalArrangement = Arrangement.SpaceBetween,
                                 ) {
-                                            Text(group.title, style = MaterialTheme.typography.titleSmall, maxLines = 2,
-                                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Text(
+                                        group.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
                                     val author = work?.user?.name.orEmpty()
                                     val size = if (group.bytes > 0) downloadSizeText(group.bytes) else ""
                                     val time = remember(group.createdAt) {
                                         java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
                                             .format(java.util.Date(group.createdAt))
                                     }
-                                    Text(
-                                        listOf(
-                                            author,
-                                            size,
-                                            time,
-                                            if (group.status == "running") "${downloadSizeText(groupSpeed)}/s" else "",
-                                        ).filter { it.isNotBlank() }.joinToString(" · "),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 2,
-                                    )
+                                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                        Text(author.ifBlank { "未知作者" }, style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                        Text(
+                                            listOf(size.ifBlank { "大小未知" }, time).joinToString(" · "),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            when (group.status) {
+                                                "running" -> "${downloadSizeText(groupSpeed)}/s · ${if (group.total > 0) "${(group.bytes * 100 / group.total).coerceIn(0L, 100)}%" else "下载中"}"
+                                                "queued" -> "等待下载"
+                                                "paused" -> "已暂停"
+                                                "failed" -> "下载失败"
+                                                "cancelled" -> "已取消"
+                                                else -> "已完成 · ${downloadSizeText(group.bytes)}"
+                                            },
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (group.status == "failed") MaterialTheme.colorScheme.error
+                                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        )
+                                    }
                                     if (group.status in setOf("running", "queued", "paused")) {
                                         if (group.total > 0) LinearWavyProgressIndicator(
                                             progress = { (group.bytes.toFloat() / group.total).coerceIn(0f, 1f) },
                                             modifier = Modifier.fillMaxWidth(),
                                         ) else if (group.status == "running")
                                             LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                    }
-                                    val statusLabel = when (group.status) {
-                                        "complete" -> "点击重试下载"
-                                        "running" -> "暂停下载 · ${downloadSizeText(groupSpeed)}/s"
-                                        "queued" -> "暂停下载"
-                                        "paused" -> "继续下载"
-                                        "failed" -> "点击重试下载"
-                                        else -> "继续下载"
                                     }
                                 }
                                 Column(
@@ -1233,14 +1238,17 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                             Text("${group.pageCount}P", style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         val statusLabel = when (group.status) {
-                                            "complete", "failed" -> "点击重试下载"
+                                            "complete" -> "已完成"
+                                            "failed" -> "点击重试下载"
                                             "running", "queued" -> "暂停下载"
-                                            else -> "继续下载"
+                                            "paused", "cancelled" -> "继续下载"
+                                            else -> "下载状态"
                                         }
                                         val statusIcon = when (group.status) {
                                             "running", "queued" -> MaterialSymbol.Pause
                                             "paused", "cancelled" -> MaterialSymbol.PlayArrow
-                                            else -> MaterialSymbol.Refresh
+                                            "failed" -> MaterialSymbol.Refresh
+                                            else -> MaterialSymbol.Check
                                         }
                                         IconButton(
                                             onClick = {
@@ -1253,15 +1261,15 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                                         group.tasks.filter { it.status in setOf("paused", "cancelled") }
                                                             .map { it.id }.toSet(), "queued",
                                                     )
-                                                    else -> vm.retryDownloads(
-                                                        if (group.status == "complete") group.tasks.map { it.id }.toSet()
-                                                        else group.tasks.filter { it.status in setOf("failed", "cancelled") }
+                                                    "failed" -> vm.retryDownloads(
+                                                        group.tasks.filter { it.status == "failed" }
                                                             .map { it.id }.toSet(),
                                                     )
+                                                    else -> Unit
                                                 }
                                             },
                                             modifier = Modifier.size(32.dp),
-                                            enabled = !selecting,
+                                            enabled = !selecting && group.status != "complete",
                                         ) {
                                             AppIcon(materialSymbol(statusIcon), statusLabel, Modifier.size(19.dp),
                                                 tint = if (group.status == "failed") MaterialTheme.colorScheme.error
@@ -1274,71 +1282,45 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                     }
                 }
             }
-            Column(
-                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AnimatedVisibility(
-                    actionsExpanded,
-                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom) +
-                        scaleIn(initialScale = 0.8f, animationSpec = spring()),
-                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom) +
-                        scaleOut(targetScale = 0.8f, animationSpec = spring()),
-                ) {
-                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilledTonalIconButton(onClick = {
-                            val visible = filtered.map { it.workId }.toSet()
-                            selected = if (selected.containsAll(visible)) selected - visible else selected + visible
-                            selecting = selected.isNotEmpty()
-                            actionsExpanded = false
-                        }, modifier = Modifier.size(48.dp)) {
-                            AppIcon(materialSymbol(MaterialSymbol.Check), "全选")
-                        }
-                        FilledTonalIconButton(
-                            enabled = chosen.any { it.tasks.any { task -> task.status in setOf("paused", "failed", "cancelled") } },
-                            onClick = {
-                                vm.downloadBatchAction(selectedTaskIds, "queued")
-                                actionsExpanded = false
-                            },
-                            modifier = Modifier.size(48.dp),
-                        ) {
-                            AppIcon(materialSymbol(MaterialSymbol.PlayArrow), "开始")
-                        }
-                        FilledTonalIconButton(
-                            enabled = chosen.any { it.tasks.any { task -> task.status in setOf("queued", "running") } },
-                            onClick = {
-                                vm.downloadBatchAction(selectedTaskIds, "paused")
-                                actionsExpanded = false
-                            },
-                            modifier = Modifier.size(48.dp),
-                        ) {
-                            AppIcon(materialSymbol(MaterialSymbol.Pause), "暂停")
-                        }
-                        FilledTonalIconButton(
-                            enabled = selected.isNotEmpty(),
-                            onClick = { confirmRemoval = true; actionsExpanded = false },
-                            modifier = Modifier.size(48.dp),
-                        ) {
-                            AppIcon(materialSymbol(MaterialSymbol.Delete), "删除", tint = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                }
-                FloatingActionButton(onClick = { actionsExpanded = !actionsExpanded }) {
-                    AnimatedContent(
-                        targetState = actionsExpanded,
-                        transitionSpec = {
-                            (scaleIn(animationSpec = spring()) + fadeIn()) togetherWith
-                                (scaleOut(animationSpec = spring()) + fadeOut())
-                        },
-                        label = "downloadActionsFabIcon",
-                    ) { expanded ->
+            androidx.compose.material3.FloatingActionButtonMenu(
+                expanded = actionsExpanded,
+                button = {
+                    androidx.compose.material3.ToggleFloatingActionButton(
+                        checked = actionsExpanded,
+                        onCheckedChange = { actionsExpanded = it },
+                    ) {
                         AppIcon(
-                            materialSymbol(if (expanded) MaterialSymbol.Close else MaterialSymbol.Add),
-                            if (expanded) "关闭操作" else "下载操作",
+                            materialSymbol(if (checkedProgress > 0.5f) MaterialSymbol.Close else MaterialSymbol.Add),
+                            if (checkedProgress > 0.5f) "关闭操作" else "下载操作",
                         )
                     }
-                }
+                },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
+            ) {
+                FloatingActionButtonMenuItem(
+                    onClick = {
+                        val visible = filtered.map { it.workId }.toSet()
+                        selected = if (selected.containsAll(visible)) selected - visible else selected + visible
+                        selecting = selected.isNotEmpty()
+                    },
+                    icon = { AppIcon(materialSymbol(MaterialSymbol.Check), "全选") },
+                    text = {},
+                )
+                FloatingActionButtonMenuItem(
+                    onClick = { vm.downloadBatchAction(selectedTaskIds, "queued"); actionsExpanded = false },
+                    icon = { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), "开始") },
+                    text = {},
+                )
+                FloatingActionButtonMenuItem(
+                    onClick = { vm.downloadBatchAction(selectedTaskIds, "paused"); actionsExpanded = false },
+                    icon = { AppIcon(materialSymbol(MaterialSymbol.Pause), "暂停") },
+                    text = {},
+                )
+                FloatingActionButtonMenuItem(
+                    onClick = { confirmRemoval = true; actionsExpanded = false },
+                    icon = { AppIcon(materialSymbol(MaterialSymbol.Delete), "删除") },
+                    text = {},
+                )
             }
         }
     }
@@ -1349,19 +1331,21 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("删除下载项？", style = MaterialTheme.typography.titleLarge)
-            Text("已下载文件也要一起删除吗？未完成任务会先取消。")
-            FilledTonalButton(
-                onClick = { removeSelection(deleteFiles = false) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("只删除记录，保留文件") }
-            Button(
-                onClick = { removeSelection(deleteFiles = true) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("删除记录和文件") }
-            TextButton(
-                onClick = { confirmRemoval = false },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("取消") }
+            Text("未完成任务会取消。")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = keepDownloadedFiles, onCheckedChange = { keepDownloadedFiles = it })
+                Text("保留已下载文件", Modifier.clickable { keepDownloadedFiles = !keepDownloadedFiles })
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                TextButton(
+                    onClick = { confirmRemoval = false; keepDownloadedFiles = true },
+                    modifier = Modifier.weight(1f),
+                ) { Text("取消") }
+                Button(
+                    onClick = { removeSelection(deleteFiles = !keepDownloadedFiles) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("确认") }
+            }
         }
     }
 }

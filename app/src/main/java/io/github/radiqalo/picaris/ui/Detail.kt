@@ -8,11 +8,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -406,58 +411,77 @@ fun DetailScreen(
         }
     }
     if (downloadPageSelection && permitted()) {
-        val pageCount = maxOf(work.page_count, work.originals.size)
-        AlertDialog(
-            onDismissRequest = { downloadPageSelection = false },
-            title = { Text("选择要下载的图片") },
-            text = {
-                Column {
+        val pageCount = maxOf(work.page_count, work.originals.size, work.previews.size)
+        ModalBottomSheet(onDismissRequest = { downloadPageSelection = false }) {
+            Column(
+                Modifier.fillMaxWidth().navigationBarsPadding()
+                    .padding(horizontal = PixivSpacing.content)
+                    .padding(bottom = PixivSpacing.content),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text("选择要下载的图片", style = MaterialTheme.typography.titleLarge)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("已选 ${selectedDownloadPages.size} / $pageCount", Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     TextButton(
                         onClick = {
                             selectedDownloadPages = if (selectedDownloadPages.size == pageCount)
                                 emptySet() else (0 until pageCount).toSet()
                         },
-                    ) {
-                        Text(if (selectedDownloadPages.size == pageCount) "取消全选" else "全选")
-                    }
-                    LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                        items(pageCount) { page ->
-                            Row(
-                                Modifier.fillMaxWidth()
-                                    .clickable {
-                                        selectedDownloadPages = if (page in selectedDownloadPages)
-                                            selectedDownloadPages - page else selectedDownloadPages + page
-                                    }
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                    ) { Text(if (selectedDownloadPages.size == pageCount) "取消全选" else "全选") }
+                }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.heightIn(max = 420.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(pageCount) { page ->
+                        val selectedPage = page in selectedDownloadPages
+                        Box(
+                            Modifier.fillMaxWidth().aspectRatio(0.72f)
+                                .clip(MaterialTheme.shapes.medium)
+                                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                                .clickable {
+                                    selectedDownloadPages = if (selectedPage)
+                                        selectedDownloadPages - page else selectedDownloadPages + page
+                                },
+                        ) {
+                            coil3.compose.AsyncImage(
+                                model = work.previews.getOrNull(page) ?: work.originals.getOrNull(page),
+                                contentDescription = "第 ${page + 1} 张",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                            )
+                            if (selectedPage) Surface(
+                                Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp),
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
                             ) {
-                                Text("第 ${page + 1} 张", Modifier.weight(1f))
-                                Checkbox(
-                                    checked = page in selectedDownloadPages,
-                                    onCheckedChange = { checked ->
-                                        selectedDownloadPages = if (checked)
-                                            selectedDownloadPages + page else selectedDownloadPages - page
-                                    },
-                                )
+                                AppIcon(materialSymbol(MaterialSymbol.Check), "已选择",
+                                    tint = MaterialTheme.colorScheme.onPrimary)
                             }
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = selectedDownloadPages.isNotEmpty(),
-                    onClick = {
-                        val pages = selectedDownloadPages
-                        downloadPageSelection = false
-                        requestDownload(pages)
-                    },
-                ) { Text("下载选中 (${selectedDownloadPages.size})") }
-            },
-            dismissButton = {
-                TextButton(onClick = { downloadPageSelection = false }) { Text("取消") }
-            },
-        )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TextButton(
+                        onClick = { downloadPageSelection = false },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("取消") }
+                    Button(
+                        enabled = selectedDownloadPages.isNotEmpty(),
+                        onClick = {
+                            val pages = selectedDownloadPages
+                            downloadPageSelection = false
+                            requestDownload(pages)
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("下载选中 (${selectedDownloadPages.size})") }
+                }
+            }
+        }
     }
     if (privateDialog && permitted())
         ActionSheet(
