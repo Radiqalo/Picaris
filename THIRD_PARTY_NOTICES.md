@@ -50,10 +50,10 @@ Upstream license terms and notices remain applicable to the bundled dependencies
 
 - `licenses/Apache-2.0.txt` — Apache-2.0, covering the AndroidX, Kotlin, Ktor, Dagger, OkHttp, Okio, Coil, Telephoto, Accompanist, Poko and remaining transitive families listed above.
 - `licenses/MIT.txt` — MIT, covering MaterialKolor, colormath and SLF4J, with each component's copyright notice.
-- `LICENSE` — the Picaris project's own license, GNU GPL v3.0 (only).
+- `LICENSE` — the Picaris project's own license, GNU GPL v3.0 or later.
 
 ## Project license
 
-The Picaris project itself is released under the GNU General Public License v3.0 (only); see `LICENSE` for the license text and `NOTICE` for the copyright notice. That license covers the project's own code only; the texts above apply to the third-party dependencies.
+The Picaris project itself is released under the GNU General Public License v3.0 or later; see `LICENSE` for the license text and `NOTICE` for the copyright notice. That license covers the project's own code only; the texts above apply to the third-party dependencies.
 
 Reference projects are identified for design/function attribution only: [CeuiLiSA/Pixiv-Shaft](https://github.com/CeuiLiSA/Pixiv-Shaft), [zhanghai/MaterialFiles](https://github.com/zhanghai/MaterialFiles), [FooIbar/EhViewer](https://github.com/FooIbar/EhViewer). Their source files were not incorporated into this project. Pixiv names, services and user-uploaded works belong to their respective rights holders.

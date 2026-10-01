@@ -146,9 +146,9 @@ Pixiv 没有为本项目授权公开 API。OAuth 与应用接口采用第三方�
 
 ## 许可
 
-本项目以 [GNU General Public License v3.0](LICENSE) 发布，版权归 `Copyright (C) 2026 Radiqalo`；声明见 [`NOTICE`](NOTICE)。
+本项目以 [GNU General Public License v3.0 或更高版本](LICENSE) 发布，版权归 `Copyright (C) 2026 Radiqalo`；声明见 [`NOTICE`](NOTICE)。
 
-这是 **GPL-3.0-only**（不含 "or any later version"）。以目标代码形式分发时，对应源码见 <https://github.com/Radiqalo/Picaris>；GPL-3.0 要求分发者向接收者提供完整许可文本与对应源码，二者均已随本仓库和 APK 提供。
+这是 **GPL-3.0-or-later**：接收者可以选择 GPL-3.0，也可以选择自由软件基金会之后发布的任何更新版本。以目标代码形式分发时，对应源码见 <https://github.com/Radiqalo/Picaris>；GPL 要求分发者向接收者提供完整许可文本与对应源码，二者均已随本仓库和 APK 提供。
 
 「Picaris」名称与应用图标不在许可授权范围内，请不要在衍生分发中使用，以免与官方版本混淆。Pixiv、PIXIVISION 等名称与商标归其各自所有者。
 
