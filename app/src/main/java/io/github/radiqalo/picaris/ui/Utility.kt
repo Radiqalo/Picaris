@@ -19,12 +19,11 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
@@ -1223,55 +1222,96 @@ fun AboutScreen(back: () -> Unit) {
     Column {
         ScreenBar(strings.getString(R.string.ui_bed172efc9), back = back, scrollBehavior = null)
         Column(
-            Modifier.padding(28.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(bottom = PixivSpacing.section),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Surface(
-                Modifier.size(88.dp),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.primary,
+            Column(
+                Modifier.padding(
+                    top = PixivSpacing.section,
+                    start = PixivSpacing.content,
+                    end = PixivSpacing.content,
+                ),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(PixivSpacing.related),
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        "p",
-                        fontSize = 64.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                Image(
+                    painterResource(R.drawable.ic_launcher),
+                    contentDescription = null,
+                    modifier = Modifier.size(96.dp).clip(MaterialTheme.shapes.large),
+                )
+                Text("Picaris", style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    strings.getString(R.string.about_tagline),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(PixivSpacing.section))
+            Surface(
+                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+            ) {
+                Column(Modifier.padding(vertical = PixivSpacing.compact)) {
+                    AboutInfoRow(
+                        strings.getString(R.string.about_version),
+                        io.github.radiqalo.picaris.BuildConfig.VERSION_NAME,
+                    )
+                    AboutInfoRow(strings.getString(R.string.about_package), context.packageName)
+                    AboutInfoRow(
+                        strings.getString(R.string.about_platform),
+                        strings.getString(R.string.about_platform_value),
+                    )
+                    AboutInfoRow(
+                        strings.getString(R.string.about_appearance),
+                        strings.getString(R.string.about_appearance_value),
                     )
                 }
             }
-            Text("Picaris", style = MaterialTheme.typography.headlineLarge)
-            Text(
-                "${io.github.radiqalo.picaris.BuildConfig.VERSION_NAME} · Android 17\nMaterial 3 Expressive",
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            Spacer(Modifier.height(PixivSpacing.section))
             Text(
                 strings.getString(R.string.ui_d70fcfc258),
+                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(PixivSpacing.section))
             Text(
                 strings.getString(R.string.ui_4b03f9aeb2),
+                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 style = MaterialTheme.typography.titleMedium,
             )
-            listOf(
-                    "Pixiv-Shaft" to "https://github.com/CeuiLiSA/Pixiv-Shaft",
-                    "MaterialFiles" to "https://github.com/zhanghai/MaterialFiles",
-                    "FooIbar/EhViewer" to "https://github.com/FooIbar/EhViewer",
-                )
-                .forEach { (title, url) ->
-                    OutlinedButton(
-                        { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) },
-                        Modifier.fillMaxWidth(),
-                    ) {
-                        Text(title)
+            Column(
+                Modifier.fillMaxWidth().padding(
+                    start = PixivSpacing.content,
+                    end = PixivSpacing.content,
+                    top = PixivSpacing.related,
+                ),
+                verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+            ) {
+                listOf(
+                        "Pixiv-Shaft" to "https://github.com/CeuiLiSA/Pixiv-Shaft",
+                        "MaterialFiles" to "https://github.com/zhanghai/MaterialFiles",
+                        "FooIbar/EhViewer" to "https://github.com/FooIbar/EhViewer",
+                        strings.getString(R.string.about_source_code) to "https://github.com/Radiqalo/Picaris",
+                    )
+                    .forEach { (title, url) ->
+                        OutlinedButton(
+                            { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) },
+                            Modifier.fillMaxWidth(),
+                        ) {
+                            Text(title)
+                        }
                     }
+                OutlinedButton({ notices = true }, Modifier.fillMaxWidth()) {
+                    Text(strings.getString(R.string.license_notices))
                 }
-            OutlinedButton({ notices = true }, Modifier.fillMaxWidth()) {
-                Text(strings.getString(R.string.license_notices))
             }
+            Spacer(Modifier.height(PixivSpacing.section))
             Text(
                 strings.getString(R.string.ui_0b6361b284),
+                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1299,4 +1339,21 @@ fun AboutScreen(back: () -> Unit) {
                 TextButton({ notices = false }) { Text(strings.getString(R.string.ui_33246f6a5e)) }
             },
         )
+}
+
+@Composable
+private fun AboutInfoRow(label: String, value: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content, vertical = PixivSpacing.compact),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+        )
+    }
 }
