@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.first
 
 @Singleton
 class DownloadEvents @Inject constructor() {
-    val completed = MutableSharedFlow<Unit>(extraBufferCapacity = 2)
+    val completed = MutableSharedFlow<String>(extraBufferCapacity = 4)
 }
 
 @Singleton
@@ -148,9 +148,15 @@ constructor(
         if (changed && status == "queued") schedule()
     }
 
-    suspend fun removeRecords(account: Long, ids: Set<Long>) {
+    suspend fun removeRecords(account: Long, ids: Set<Long>, deleteFiles: Boolean) {
         withContext(Dispatchers.IO) {
             for (id in ids) {
+                val initial = dao.download(id)?.takeIf { it.accountId == account } ?: continue
+                if (initial.status in setOf("queued", "running", "paused", "failed"))
+                    dao.changeDownloadStatus(id, "cancelled")
+                val task = dao.download(id) ?: continue
+                if (deleteFiles && task.status == "complete" && task.uri.isNotBlank())
+                    runCatching { context.contentResolver.delete(task.uri.toUri(), null, null) }
                 if (dao.deleteFinishedDownload(account, id) > 0)
                     File(context.filesDir, "transfer/$account/$id.part").delete()
             }
@@ -240,7 +246,11 @@ class DownloadService : JobService() {
         if (dao.completeDownload(task.id, part.length(), uri.toString()) == 0)
             contentResolver.delete(uri, null, null)
         part.delete()
-        if (dao.nextDownload() == null) downloadEvents.completed.tryEmit(Unit)
+        if (dao.activeDownloadsForWork(task.accountId, task.workId) == 0) {
+            val title = runCatching { AppJson.decodeFromString<Work>(task.workJson).title }
+                .getOrDefault(task.title)
+            downloadEvents.completed.tryEmit(title)
+        }
     }
 
     private suspend fun publish(task: DownloadEntity, file: File): Uri {

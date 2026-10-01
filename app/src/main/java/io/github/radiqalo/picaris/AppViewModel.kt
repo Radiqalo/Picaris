@@ -40,7 +40,7 @@ constructor(
 ) : ViewModel() {
     init {
         viewModelScope.launch {
-            downloadEvents.completed.collect { message.emit("已下载") }
+            downloadEvents.completed.collect { title -> message.emit("$title 已下载") }
         }
     }
 
@@ -299,9 +299,9 @@ constructor(
         run { downloads.batchAction(account, ids, status) }
     }
 
-    fun removeDownloadRecords(ids: Set<Long>) {
+    fun removeDownloadRecords(ids: Set<Long>, deleteFiles: Boolean) {
         val account = accountId
-        run { downloads.removeRecords(account, ids) }
+        run { downloads.removeRecords(account, ids, deleteFiles) }
     }
 
     suspend fun authorDetails(initial: User): AuthorDetails {

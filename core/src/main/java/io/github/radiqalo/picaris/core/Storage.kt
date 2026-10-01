@@ -178,6 +178,9 @@ interface LibraryDao {
     @Query("SELECT * FROM downloads WHERE status='queued' ORDER BY createdAt ASC LIMIT 1")
     suspend fun nextDownload(): DownloadEntity?
 
+    @Query("SELECT COUNT(*) FROM downloads WHERE accountId=:account AND workId=:work AND status IN ('queued','running')")
+    suspend fun activeDownloadsForWork(account: Long, work: Long): Int
+
     @Query("SELECT * FROM downloads WHERE id=:id") suspend fun download(id: Long): DownloadEntity?
 
     @Query(

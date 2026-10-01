@@ -34,6 +34,11 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import coil3.compose.AsyncImage
 import android.os.SystemClock
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -992,6 +997,27 @@ private fun downloadSizeText(size: Long): String = when {
 
 private data class DownloadSpeedSample(val bytes: Long, val time: Long)
 
+private data class DownloadGroup(val workId: Long, val tasks: List<DownloadEntity>) {
+    val work: Work? = tasks.firstNotNullOfOrNull {
+        runCatching { AppJson.decodeFromString<Work>(it.workJson) }.getOrNull()
+    }
+    val status: String
+        get() = when {
+            tasks.any { it.status == "running" } -> "running"
+            tasks.any { it.status == "queued" } -> "queued"
+            tasks.any { it.status == "failed" } -> "failed"
+            tasks.any { it.status == "paused" } -> "paused"
+            tasks.any { it.status == "cancelled" } -> "cancelled"
+            else -> "complete"
+        }
+    val bytes get() = tasks.sumOf { it.bytes }
+    val total get() = tasks.sumOf { it.total }
+    val createdAt get() = tasks.minOfOrNull { it.createdAt } ?: 0L
+    val imageCount get() = tasks.count { it.kind == "illust" || it.kind == "manga" }
+    val title get() = work?.title ?: tasks.firstOrNull()?.title.orEmpty()
+}
+
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
@@ -1001,6 +1027,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     var selecting by remember(vm.accountId) { mutableStateOf(false) }
     var selected by remember(vm.accountId) { mutableStateOf(emptySet<Long>()) }
     var confirmRemoval by remember(vm.accountId) { mutableStateOf(false) }
+    var actionsExpanded by remember(vm.accountId) { mutableStateOf(false) }
     var speeds by remember(vm.accountId) { mutableStateOf(emptyMap<Long, Long>()) }
     val speedSamples = remember(vm.accountId) { mutableMapOf<Long, DownloadSpeedSample>() }
     LaunchedEffect(tasks) {
@@ -1017,18 +1044,37 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         speedSamples.keys.retainAll(tasks.filter { it.status == "running" }.map { it.id }.toSet())
         speeds = nextSpeeds
     }
-    val filtered = tasks.filter { task ->
+    val groups = remember(tasks) {
+        tasks.groupBy { it.workId }
+            .map { (workId, groupTasks) -> DownloadGroup(workId, groupTasks) }
+            .sortedByDescending { it.createdAt }
+    }
+    val filtered = groups.filter { group ->
         when (filter) {
-            "active" -> task.status in setOf("queued", "running")
-            "paused" -> task.status == "paused"
-            "failed" -> task.status == "failed"
-            "complete" -> task.status == "complete"
-            "cancelled" -> task.status == "cancelled"
+            "active" -> group.status in setOf("queued", "running")
+            "paused" -> group.status == "paused"
+            "failed" -> group.status == "failed"
+            "complete" -> group.status == "complete"
+            "cancelled" -> group.status == "cancelled"
             else -> true
         }
     }
-    val chosen = tasks.filter { it.id in selected }
-    LaunchedEffect(tasks) { selected = selected.intersect(tasks.map { it.id }.toSet()) }
+    val chosen = groups.filter { it.workId in selected }
+    val selectedTaskIds = chosen.flatMap { it.tasks }.map { it.id }.toSet()
+    LaunchedEffect(groups) {
+        selected = selected.intersect(groups.map { it.workId }.toSet())
+        if (selected.isEmpty()) selecting = false
+    }
+    fun toggleSelection(workId: Long) {
+        selected = if (workId in selected) selected - workId else selected + workId
+        selecting = selected.isNotEmpty()
+    }
+    fun removeSelection(deleteFiles: Boolean) {
+        vm.removeDownloadRecords(selectedTaskIds, deleteFiles)
+        confirmRemoval = false
+        selected = emptySet()
+        selecting = false
+    }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(
             strings.getString(R.string.ui_18df1a67a2),
@@ -1045,190 +1091,211 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("${filtered.size} 条记录" + if (selecting) " · 已选 ${chosen.size}" else "", Modifier.weight(1f))
-            if (selecting) TextButton(onClick = {
-                val visibleIds = filtered.map { it.id }.toSet()
-                selected = if (visibleIds.isNotEmpty() && selected.containsAll(visibleIds))
-                    selected - visibleIds else selected + visibleIds
-            }) { Text(if (filtered.isNotEmpty() && selected.containsAll(filtered.map { it.id })) "取消全选" else "全选") }
-            TextButton(onClick = { selecting = !selecting; selected = emptySet() }) {
-                Text(if (selecting) "完成" else "管理")
+            Text(
+                "${filtered.size} 个作品" + if (selecting) " · 已选 ${selected.size}" else "",
+                Modifier.weight(1f),
+            )
+            if (selecting) IconButton(onClick = { selecting = false; selected = emptySet() }) {
+                AppIcon(materialSymbol(MaterialSymbol.Close), "退出选择")
             }
         }
-        if (selecting) FlowRow(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TextButton(onClick = { vm.downloadBatchAction(selected, "paused") },
-                enabled = chosen.any { it.status in setOf("queued", "running") }) { Text("暂停") }
-            TextButton(onClick = { vm.downloadBatchAction(selected, "queued") },
-                enabled = chosen.any { it.status in setOf("paused", "failed", "cancelled") }) { Text("继续／重试") }
-            TextButton(onClick = { vm.downloadBatchAction(selected, "cancelled") },
-                enabled = chosen.any { it.status in setOf("queued", "running", "paused", "failed") }) { Text("取消下载") }
-            TextButton(onClick = { confirmRemoval = true },
-                enabled = chosen.any { it.status in setOf("complete", "failed", "cancelled") }) { Text("清理记录") }
-        }
-        if (filtered.isEmpty())
-            EmptyState(
-                if (tasks.isEmpty()) strings.getString(R.string.ui_92024c1013) else "没有匹配的下载",
-                if (tasks.isEmpty()) strings.getString(R.string.ui_ed6ecba3e8) else "可以切换其他状态查看",
-                materialSymbol(MaterialSymbol.Download),
-            )
-        else
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(filtered, key = { it.id }) { task ->
-                    val work = remember(task.workJson) {
-                        runCatching { AppJson.decodeFromString<Work>(task.workJson) }.getOrNull()
-                    }
-                    Surface(
-                        modifier = Modifier.then(
-                            if (!selecting && work != null) Modifier.clickable {
-                                navigate(Detail(work))
-                            } else Modifier
-                        ),
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    ) {
-                        Column(
-                            Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                if (selecting) Checkbox(
-                                    checked = task.id in selected,
-                                    modifier = Modifier.semantics { contentDescription = "选择下载记录 ${task.name}" },
-                                    onCheckedChange = { checked ->
-                                        selected = if (checked) selected + task.id else selected - task.id
-                                    },
-                                )
-                                if (work != null && !work.isNovel) {
-                                    AsyncImage(
-                                        model = work.previews.getOrNull(task.page) ?: work.cover,
-                                        contentDescription = "预览 ${task.title} 第 ${task.page + 1} 张",
-                                        modifier = Modifier.size(64.dp, 80.dp)
-                                            .clip(MaterialTheme.shapes.small)
-                                            .then(if (!selecting) Modifier.clickable {
-                                                navigate(Reader(work, task.page))
-                                            } else Modifier),
-                                        contentScale = ContentScale.Crop,
-                                    )
-                                } else if (work?.isNovel == true) {
-                                    Box(
-                                        Modifier.size(64.dp, 80.dp)
-                                            .clip(MaterialTheme.shapes.small)
-                                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                                            .clickable { navigate(Detail(work)) },
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        AppIcon(materialSymbol(MaterialSymbol.Book), null)
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (filtered.isEmpty()) {
+                EmptyState(
+                    if (tasks.isEmpty()) strings.getString(R.string.ui_92024c1013) else "没有匹配的下载",
+                    if (tasks.isEmpty()) strings.getString(R.string.ui_ed6ecba3e8) else "可以切换其他状态查看",
+                    materialSymbol(MaterialSymbol.Download),
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(filtered, key = { it.workId }) { group ->
+                        val selectedGroup = group.workId in selected
+                        val groupSpeed = group.tasks.sumOf { speeds[it.id] ?: 0L }
+                        val shape = MaterialTheme.shapes.large
+                        Surface(
+                            modifier = Modifier.clip(shape).combinedClickable(
+                                onClick = {
+                                    if (selecting) toggleSelection(group.workId)
+                                    else group.work?.let { navigate(Detail(it)) }
+                                },
+                                onLongClick = {
+                                    if (selecting) toggleSelection(group.workId)
+                                    else {
+                                        selected = setOf(group.workId)
+                                        selecting = true
                                     }
+                                },
+                            ),
+                            shape = shape,
+                            color = if (selectedGroup) MaterialTheme.colorScheme.secondaryContainer
+                                else MaterialTheme.colorScheme.surfaceContainerLow,
+                        ) {
+                            Row(Modifier.fillMaxWidth().height(124.dp)) {
+                                val work = group.work
+                                Box(Modifier.width(88.dp).fillMaxHeight()) {
+                                    if (work != null && !work.isNovel) {
+                                        AsyncImage(
+                                            model = work.previews.firstOrNull() ?: work.cover,
+                                            contentDescription = "预览 ${group.title} 全图或图集",
+                                            modifier = Modifier.fillMaxSize().then(
+                                                if (!selecting) Modifier.clickable {
+                                                    navigate(Reader(work))
+                                                } else Modifier
+                                            ),
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                    } else {
+                                        Box(
+                                            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.secondaryContainer),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            AppIcon(materialSymbol(MaterialSymbol.Book), null)
+                                        }
+                                    }
+                                    if (selecting) Checkbox(
+                                        checked = selectedGroup,
+                                        onCheckedChange = { toggleSelection(group.workId) },
+                                        modifier = Modifier.align(Alignment.TopStart)
+                                            .padding(4.dp)
+                                            .background(MaterialTheme.colorScheme.surface.copy(alpha = .82f), CircleShape),
+                                    )
                                 }
-                                AppIcon(
-                                    if (task.status == "complete") materialSymbol(MaterialSymbol.Check) else materialSymbol(MaterialSymbol.Download),
-                                    null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                                Column(Modifier.weight(1f)) {
+                                Column(
+                                    Modifier.weight(1f).fillMaxHeight().padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(group.title, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                                            Text(
+                                                when {
+                                                    group.imageCount > 1 -> "${group.imageCount} 张图片"
+                                                    group.tasks.any { it.kind == "ugoira" } -> "动图"
+                                                    group.tasks.any { it.kind == "novel" } -> "小说"
+                                                    else -> group.tasks.firstOrNull()?.name.orEmpty()
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                            )
+                                        }
+                                        if (group.status == "complete")
+                                            Text(downloadSizeText(group.bytes), style = MaterialTheme.typography.labelLarge)
+                                    }
+                                    val statusLabel = when (group.status) {
+                                        "complete" -> "已完成"
+                                        "running" -> "下载中 · ${downloadSizeText(groupSpeed)}/s"
+                                        "queued" -> "等待下载"
+                                        "paused" -> "已暂停"
+                                        "failed" -> group.tasks.firstOrNull { it.status == "failed" }?.error
+                                            ?.ifBlank { "下载失败" } ?: "下载失败"
+                                        else -> "已取消"
+                                    }
                                     Text(
-                                        task.title,
-                                        style = MaterialTheme.typography.titleSmall,
+                                        statusLabel,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (group.status == "failed") MaterialTheme.colorScheme.error
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                     )
-                                    Text(
-                                        task.name,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        remember(task.createdAt) {
-                                            java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
-                                                .format(java.util.Date(task.createdAt))
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                when (task.status) {
-                                    "running", "queued" ->
-                                        IconButton({
-                                            vm.downloadAction(task.id, "paused")
-                                        }) {
-                                            AppIcon(
-                                                materialSymbol(MaterialSymbol.Pause),
-                                                strings.getString(R.string.ui_130448bce6),
-                                            )
-                                        }
-                                    "paused",
-                                    "failed",
-                                    "cancelled" ->
-                                        IconButton({
-                                            vm.downloadAction(task.id, "queued")
-                                        }) {
-                                            AppIcon(
-                                                materialSymbol(MaterialSymbol.PlayArrow),
-                                                strings.getString(R.string.ui_3f9550508b),
-                                            )
-                                        }
-                                    "complete" -> Unit
-                                }
-                            }
-                            if (task.status in setOf("running", "paused", "failed") && task.total > 0)
-                                LinearWavyProgressIndicator(
-                                    progress = {
-                                        (task.bytes.toFloat() / task.total).coerceIn(0f, 1f)
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            else if (task.status == "running")
-                                LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    when (task.status) {
-                                        "complete" -> "${strings.getString(R.string.ui_e99b48a29b)} · ${downloadSizeText(task.bytes)}"
-                                        "paused" -> "已暂停 · ${downloadProgressText(task.bytes, task.total)}"
-                                        "running" -> "下载中 · ${downloadSizeText(speeds[task.id] ?: 0L)}/s · ${downloadProgressText(task.bytes, task.total)}"
-                                        "failed" -> "${task.error.ifBlank { "下载失败，请重试" }} · ${downloadProgressText(task.bytes, task.total)}"
-                                        "cancelled" -> strings.getString(R.string.ui_a5ffdc95ee)
-                                        else -> strings.getString(R.string.ui_e575faa045)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color =
-                                        if (task.status == "failed") MaterialTheme.colorScheme.error
-                                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                if (task.status != "complete" && task.status != "cancelled")
-                                    TextButton({
-                                        vm.downloadAction(task.id, "cancelled")
-                                    }) {
-                                        Text(strings.getString(R.string.ui_4d0b4688c7))
+                                    if (group.status in setOf("running", "queued", "paused")) {
+                                        if (group.total > 0) LinearWavyProgressIndicator(
+                                            progress = { (group.bytes.toFloat() / group.total).coerceIn(0f, 1f) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                        ) else if (group.status == "running")
+                                            LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
                                     }
+                                }
                             }
                         }
                     }
                 }
             }
+            Column(
+                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AnimatedVisibility(
+                    actionsExpanded,
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 },
+                ) {
+                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilledTonalButton(onClick = {
+                            val visible = filtered.map { it.workId }.toSet()
+                            selected = if (selected.containsAll(visible)) selected - visible else selected + visible
+                            selecting = selected.isNotEmpty()
+                            actionsExpanded = false
+                        }) {
+                            AppIcon(materialSymbol(MaterialSymbol.Check), null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("全选")
+                        }
+                        FilledTonalButton(
+                            enabled = chosen.any { it.tasks.any { task -> task.status in setOf("paused", "failed", "cancelled") } },
+                            onClick = {
+                                vm.downloadBatchAction(selectedTaskIds, "queued")
+                                actionsExpanded = false
+                            },
+                        ) {
+                            AppIcon(materialSymbol(MaterialSymbol.PlayArrow), null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("开始")
+                        }
+                        FilledTonalButton(
+                            enabled = chosen.any { it.tasks.any { task -> task.status in setOf("queued", "running") } },
+                            onClick = {
+                                vm.downloadBatchAction(selectedTaskIds, "paused")
+                                actionsExpanded = false
+                            },
+                        ) {
+                            AppIcon(materialSymbol(MaterialSymbol.Pause), null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("暂停")
+                        }
+                        FilledTonalButton(
+                            enabled = selected.isNotEmpty(),
+                            onClick = { confirmRemoval = true; actionsExpanded = false },
+                        ) {
+                            AppIcon(materialSymbol(MaterialSymbol.Close), null, tint = MaterialTheme.colorScheme.error)
+                            Spacer(Modifier.width(8.dp))
+                            Text("删除")
+                        }
+                    }
+                }
+                FloatingActionButton(onClick = { actionsExpanded = !actionsExpanded }) {
+                    Text(if (actionsExpanded) "×" else "+", style = MaterialTheme.typography.headlineMedium)
+                }
+            }
+        }
     }
-    if (confirmRemoval) AlertDialog(
-        onDismissRequest = { confirmRemoval = false },
-        title = { Text("清理下载记录？") },
-        text = { Text("仅移除选中的已完成、失败和已取消记录，不删除已保存文件。已完成记录移除后，应用内离线读取关联也会移除；进行中和已暂停的任务不受影响。") },
-        confirmButton = {
-            TextButton(onClick = {
-                vm.removeDownloadRecords(chosen.filter { it.status in setOf("complete", "failed", "cancelled") }.map { it.id }.toSet())
-                confirmRemoval = false
-                selected = emptySet()
-            }) { Text("清理") }
-        },
-        dismissButton = { TextButton(onClick = { confirmRemoval = false }) { Text("取消") } },
-    )
+    if (confirmRemoval) ModalBottomSheet(onDismissRequest = { confirmRemoval = false }) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("删除下载项？", style = MaterialTheme.typography.titleLarge)
+            Text("已下载文件也要一起删除吗？未完成任务会先取消。")
+            FilledTonalButton(
+                onClick = { removeSelection(deleteFiles = false) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("只删除记录，保留文件") }
+            Button(
+                onClick = { removeSelection(deleteFiles = true) },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("删除记录和文件") }
+            TextButton(
+                onClick = { confirmRemoval = false },
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("取消") }
+        }
+    }
 }
 
 @Composable
