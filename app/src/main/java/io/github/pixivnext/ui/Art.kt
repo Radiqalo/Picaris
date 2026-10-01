@@ -147,6 +147,7 @@ fun WorkImage(
     url: String = work.cover,
     sharedTransition: Boolean = false,
     rounded: Boolean = true,
+    onImageAspectRatio: ((Float) -> Unit)? = null,
     overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val shape = MaterialTheme.shapes.small
@@ -164,7 +165,12 @@ fun WorkImage(
             work.title,
             Modifier.matchParentSize().then(capture).background(MaterialTheme.colorScheme.surfaceContainerHigh),
             contentScale = scale,
-            onSuccess = { painter = it.painter },
+            onSuccess = {
+                painter = it.painter
+                val size = it.painter.intrinsicSize
+                if (size.width.isFinite() && size.height.isFinite() && size.width > 0f && size.height > 0f)
+                    onImageAspectRatio?.invoke(size.width / size.height)
+            },
         )
         overlay()
     }

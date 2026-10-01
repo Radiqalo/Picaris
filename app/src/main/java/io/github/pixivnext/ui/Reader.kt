@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
 
 @Composable
-fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
+fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: Int? = null) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     if (work.isNovel) {
@@ -68,7 +68,7 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
     var pendingLayoutPage by remember(work.id) { mutableStateOf<Int?>(null) }
     LaunchedEffect(work.id, vertical, pendingLayoutPage) {
         if (work.type != "ugoira" && count > 0) {
-            val targetPage = pendingLayoutPage ?: if (!restored) vm.readingProgress(work) else null
+            val targetPage = pendingLayoutPage ?: if (!restored) initialPage ?: vm.readingProgress(work) else null
             targetPage?.coerceIn(0, count - 1)?.let { page ->
                 if (vertical) list.scrollToItem(page)
                 else pager.scrollToPage(page)

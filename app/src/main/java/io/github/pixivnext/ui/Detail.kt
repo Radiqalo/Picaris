@@ -4,15 +4,20 @@ import android.Manifest
 import android.content.Intent
 import android.text.Html
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -82,225 +87,277 @@ fun DetailScreen(
     LaunchedEffect(initial.id) {
         runCatching { vm.detail(initial) }.onSuccess { work = it }
     }
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { if (canOpenReader && !actionBusy) bookmark() },
-                modifier = Modifier.navigationBarsPadding().expressivePress(bookmarkInteraction),
-                interactionSource = bookmarkInteraction,
+    val scope = rememberCoroutineScope()
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = maxWidth >= 840.dp
+        val useSheet = !wide && !work.isNovel
+        val sheetState = rememberBottomSheetScaffoldState()
+        val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+        val topInset = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        val peekHeight = 112.dp + bottomInset
+        val sheetHeight = (maxHeight - topInset - 64.dp).coerceAtLeast(peekHeight)
+        val sheetExpanded = sheetState.bottomSheetState.currentValue == SheetValue.Expanded ||
+            sheetState.bottomSheetState.targetValue == SheetValue.Expanded
+        fun detailBack() {
+            if (useSheet && sheetExpanded) scope.launch { sheetState.bottomSheetState.partialExpand() }
+            else back()
+        }
+        BackHandler(enabled = useSheet && sheetExpanded && !moreMenu && permitted()) {
+            scope.launch { sheetState.bottomSheetState.partialExpand() }
+        }
+        val information: @Composable (Modifier) -> Unit = { modifier ->
+            LazyColumn(
+                modifier.testTag("detailList"),
+                contentPadding = PaddingValues(
+                    top = if (wide) 64.dp else 0.dp,
+                    bottom = bottomInset + if (useSheet) 24.dp else 96.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                FeedbackIcon(
-                    if (current.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
-                    if (current.is_bookmarked) "取消收藏" else "收藏",
-                    selected = current.is_bookmarked,
-                )
-            }
-        },
-    ) { padding ->
-        BoxWithConstraints(Modifier.padding(padding).fillMaxSize()) {
-            val wide = maxWidth >= 840.dp
-            val largeWindow =
-                androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width /
-                    androidx.compose.ui.platform.LocalDensity.current.density >= 840f
-            val previewHeight = (maxHeight * .55f).coerceIn(200.dp, 360.dp)
-            Row(Modifier.fillMaxSize().statusBarsPadding().clipToBounds()) {
-                if (wide)
-                    Box(
-                        Modifier.weight(1f).fillMaxHeight(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        WorkImage(
-                            work,
-                            Modifier.fillMaxWidth()
-                                .aspectRatio(work.aspect)
-                                .clickable(enabled = canOpenReader) { openReader(current) }
-                                .testTag("detailImage"),
-                            sharedTransition = true,
-                            rounded = false,
-                        )
-                    }
-                LazyColumn(
-                    Modifier.weight(1f).testTag("detailList"),
-                    contentPadding = PaddingValues(
-                        top = if (wide) 64.dp else 0.dp,
-                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 96.dp,
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    if (!wide)
-                        item {
-                            if (largeWindow) {
-                                Box(
-                                    Modifier.fillMaxWidth().height(previewHeight),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    WorkImage(
-                                        work,
-                                        Modifier.fillMaxHeight()
-                                            .aspectRatio(work.aspect)
-                                            .clickable(enabled = canOpenReader) { openReader(current) }
-                                            .testTag("detailImage"),
-                                        sharedTransition = true,
-                                        rounded = false,
-                                    )
-                                }
-                            } else
-                                WorkImage(
-                                    work,
-                                    Modifier.fillMaxWidth()
-                                        .aspectRatio(work.aspect.coerceAtLeast(.85f))
-                                        .clickable(enabled = canOpenReader) { openReader(current) }
-                                        .testTag("detailImage"),
-                                    sharedTransition = true,
-                                    rounded = false,
-                                )
-                        }
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text(work.title, style = MaterialTheme.typography.headlineMedium)
+                if (work.isNovel && !wide) item {
+                    WorkImage(
+                        work,
+                        Modifier.fillMaxWidth().aspectRatio(work.aspect)
+                            .clickable(enabled = canOpenReader) { openReader(current) }.testTag("detailImage"),
+                        sharedTransition = true,
+                        rounded = false,
+                    )
+                }
+                item {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            if (!useSheet) Text(work.title, style = MaterialTheme.typography.headlineMedium)
+                            Text(
+                                "ID ${work.id}  ·  ${work.create_date.take(10)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                                 Text(
-                                    "ID ${work.id}  ·  ${work.create_date.take(10)}",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    "${compact(work.total_view)} 浏览",
+                                    style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                                Text(
+                                    "${compact(current.total_bookmarks)} 收藏",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                if (work.page_count > 1)
                                     Text(
-                                        "${compact(work.total_view)} 浏览",
+                                        "${work.page_count} 页",
                                         style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
-                                    Text(
-                                        "${compact(current.total_bookmarks)} 收藏",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    if (work.page_count > 1)
-                                        Text(
-                                            "${work.page_count} 页",
-                                            style = MaterialTheme.typography.labelLarge,
-                                        )
-                                }
                             }
                         }
                     }
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                            Surface(
-                                shape = MaterialTheme.shapes.large,
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                            ) {
-                                UserRow(work.user, {
-                                    if (permitted()) navigate(Author(work.user))
-                                }, containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                                    FilledTonalButton(
-                                        onClick = {
-                                            if (permitted() && !followBusy) vm.run {
-                                                followBusy = true
-                                                try {
-                                                    work = work.copy(user = vm.follow(work.user))
-                                                } finally {
-                                                    followBusy = false
-                                                }
-                                            }
-                                        },
-                                        enabled = !followBusy,
-                                    ) {
-                                        Text(if (work.user.is_followed) "已关注" else "关注")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (work.isNovel)
-                        item {
-                            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                }
+                item {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                        Surface(
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        ) {
+                            UserRow(work.user, {
+                                if (permitted()) navigate(Author(work.user))
+                            }, containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
                                 FilledTonalButton(
-                                    { openReader(current) },
-                                    Modifier.fillMaxWidth().height(52.dp),
+                                    onClick = {
+                                        if (permitted() && !followBusy) vm.run {
+                                            followBusy = true
+                                            try {
+                                                work = work.copy(user = vm.follow(work.user))
+                                            } finally {
+                                                followBusy = false
+                                            }
+                                        }
+                                    },
+                                    enabled = !followBusy,
                                 ) {
-                                    AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        if (work.isNovel) strings.getString(R.string.ui_f3be3e4b09)
-                                        else if (work.type == "ugoira")
-                                            strings.getString(R.string.ui_d3657fb0a3)
-                                        else strings.getString(R.string.ui_a0217cd1e4)
+                                    Text(if (work.user.is_followed) "已关注" else "关注")
+                                }
+                            }
+                        }
+                    }
+                }
+                if (work.isNovel)
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                            FilledTonalButton(
+                                { openReader(current) },
+                                Modifier.fillMaxWidth().height(52.dp),
+                            ) {
+                                AppIcon(if (work.isNovel) Glyph.Book else Glyph.Play, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    if (work.isNovel) strings.getString(R.string.ui_f3be3e4b09)
+                                    else if (work.type == "ugoira")
+                                        strings.getString(R.string.ui_d3657fb0a3)
+                                    else strings.getString(R.string.ui_a0217cd1e4)
+                                )
+                            }
+                        }
+                    }
+                if (work.tags.isNotEmpty())
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                work.tags.forEach { tag ->
+                                    AssistChip(
+                                        {
+                                            navigate(
+                                                Collection(
+                                                    if (tagTranslations)
+                                                        tag.translated_name ?: tag.name else tag.name,
+                                                    "search",
+                                                    if (work.isNovel) "novel" else "illust",
+                                                    word = tag.name,
+                                                )
+                                            )
+                                        },
+                                        label = { TagLabel(tag) },
                                     )
                                 }
                             }
                         }
-                    if (work.tags.isNotEmpty())
-                        item {
-                            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    work.tags.forEach { tag ->
-                                        AssistChip(
-                                            {
-                                                navigate(
-                                                    Collection(
-                                                        if (tagTranslations)
-                                                            tag.translated_name ?: tag.name else tag.name,
-                                                        "search",
-                                                        if (work.isNovel) "novel" else "illust",
-                                                        word = tag.name,
-                                                    )
-                                                )
-                                            },
-                                            label = { TagLabel(tag) },
-                                        )
-                                    }
-                                }
-                            }
+                    }
+                if (work.caption.isNotBlank())
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+                            Text(
+                                Html.fromHtml(work.caption, Html.FROM_HTML_MODE_COMPACT).toString(),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                    if (work.caption.isNotBlank())
-                        item {
-                            Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                                Text(
-                                    Html.fromHtml(work.caption, Html.FROM_HTML_MODE_COMPACT).toString(),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    if (work.series != null)
-                        item {
-                            OutlinedButton(
-                                onClick = {
-                                    navigate(Collection(work.series!!.title, "series", "novel", work.series!!.id))
-                                },
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                            ) {
-                                Text("系列 · ${work.series!!.title}")
-                            }
-                        }
-                    item(key = "comments") {
+                    }
+                if (work.series != null)
+                    item {
                         OutlinedButton(
-                            onClick = { navigate(Comments(current)) },
+                            onClick = {
+                                navigate(Collection(work.series!!.title, "series", "novel", work.series!!.id))
+                            },
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                         ) {
-                            AppIcon(Glyph.Comment, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("查看评论")
+                            Text("系列 · ${work.series!!.title}")
                         }
                     }
-                    if (!work.isNovel)
-                        item(key = "related") {
-                            RelatedWorkStrip(work, vm, navigate, navigateRelatedDetail)
+                item(key = "comments") {
+                    OutlinedButton(
+                        onClick = { navigate(Comments(current)) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    ) {
+                        AppIcon(Glyph.Comment, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("查看评论")
+                    }
+                }
+                if (!work.isNovel)
+                    item(key = "related") {
+                        RelatedWorkStrip(work, vm, navigate, navigateRelatedDetail)
+                    }
+            }
+        }
+        val images: @Composable (Modifier, PaddingValues) -> Unit = { modifier, padding ->
+            DetailArtworkFlow(
+                work = work,
+                modifier = modifier,
+                contentPadding = padding,
+                onOpenPage = { page ->
+                    if (permitted()) navigate(Reader(current, page))
+                },
+            )
+        }
+        if (useSheet) {
+            BottomSheetScaffold(
+                modifier = Modifier.fillMaxSize().statusBarsPadding().clipToBounds(),
+                scaffoldState = sheetState,
+                sheetPeekHeight = peekHeight,
+                sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                sheetContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                sheetSwipeEnabled = permitted(),
+                sheetDragHandle = {
+                    Box(Modifier.fillMaxWidth().height(24.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(32.dp, 4.dp).background(
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .4f), CircleShape))
+                    }
+                },
+                sheetContent = {
+                    Column(Modifier.fillMaxWidth().height(sheetHeight)) {
+                        Row(
+                            Modifier.fillMaxWidth().height(88.dp)
+                                .clickable(enabled = permitted(), onClickLabel = if (sheetExpanded) "收起作品信息" else "展开作品信息") {
+                                    scope.launch {
+                                        if (sheetExpanded) sheetState.bottomSheetState.partialExpand()
+                                        else sheetState.bottomSheetState.expand()
+                                    }
+                                }.padding(horizontal = 20.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(work.title, style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(work.user.name, style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            FilledTonalIconButton(
+                                onClick = { if (!actionBusy) bookmark() },
+                                enabled = permitted() && !actionBusy,
+                                interactionSource = bookmarkInteraction,
+                            ) {
+                                FeedbackIcon(
+                                    if (current.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                                    if (current.is_bookmarked) "取消收藏" else "收藏",
+                                    selected = current.is_bookmarked,
+                                )
+                            }
                         }
-
+                        Spacer(Modifier.height(bottomInset))
+                        information(Modifier.fillMaxWidth().weight(1f))
+                    }
+                },
+            ) { padding ->
+                images(Modifier.fillMaxSize(), PaddingValues(bottom = padding.calculateBottomPadding()))
+            }
+        } else {
+            Scaffold(
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                floatingActionButton = {
+                    FloatingActionButton(
+                        onClick = { if (canOpenReader && !actionBusy) bookmark() },
+                        modifier = Modifier.navigationBarsPadding().expressivePress(bookmarkInteraction),
+                        interactionSource = bookmarkInteraction,
+                    ) {
+                        FeedbackIcon(
+                            if (current.is_bookmarked) Glyph.HeartFilled else Glyph.Heart,
+                            if (current.is_bookmarked) "取消收藏" else "收藏",
+                            selected = current.is_bookmarked,
+                        )
+                    }
+                },
+            ) { padding ->
+                Row(Modifier.padding(padding).fillMaxSize().statusBarsPadding().clipToBounds()) {
+                    if (wide) {
+                        if (work.isNovel) Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                            WorkImage(work, Modifier.fillMaxWidth().aspectRatio(work.aspect)
+                                .clickable(enabled = canOpenReader) { openReader(current) },
+                                sharedTransition = true, rounded = false)
+                        } else images(Modifier.weight(1f).fillMaxHeight(), PaddingValues(bottom = bottomInset))
+                    }
+                    information(Modifier.weight(1f).fillMaxHeight())
                 }
             }
-            Row(
-                Modifier.align(Alignment.TopCenter).fillMaxWidth()
-                    .statusBarsPadding().padding(12.dp).workTransitionControls(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                IconButton(onClick = back) { AppIcon(Glyph.Back, "返回") }
-                IconButton(onClick = { if (canOpenReader) moreMenu = true }) {
-                    AppIcon(Glyph.More, "更多操作")
-                }
+        }
+        Row(
+            Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                .statusBarsPadding().padding(12.dp).workTransitionControls(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            IconButton(onClick = { detailBack() }) { AppIcon(Glyph.Back, "返回") }
+            IconButton(onClick = { if (canOpenReader) moreMenu = true }) {
+                AppIcon(Glyph.More, "更多操作")
             }
         }
     }
@@ -351,6 +408,39 @@ fun DetailScreen(
                 }
             },
         )
+}
+
+@Composable
+private fun DetailArtworkFlow(
+    work: Work,
+    modifier: Modifier,
+    contentPadding: PaddingValues,
+    onOpenPage: (Int) -> Unit,
+) {
+    val pages = work.previews
+    LazyColumn(
+        modifier = modifier.testTag("detailImages"),
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        items(pages.size, key = { page -> "${work.id}:$page" }) { page ->
+            val url = pages[page]
+            val fallbackAspect = if (work.width > 1 && work.height > 1)
+                work.width.toFloat() / work.height else work.aspect
+            var aspect by remember(url) { mutableFloatStateOf(fallbackAspect) }
+            WorkImage(
+                work,
+                Modifier.fillMaxWidth().aspectRatio(aspect)
+                    .clickable { onOpenPage(page) }
+                    .testTag(if (page == 0) "detailImage" else "detailImage:$page"),
+                url = url,
+                scale = ContentScale.Fit,
+                sharedTransition = page == 0,
+                rounded = false,
+                onImageAspectRatio = { aspect = it },
+            )
+        }
+    }
 }
 
 @Composable
