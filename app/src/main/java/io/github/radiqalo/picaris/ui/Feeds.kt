@@ -943,20 +943,22 @@ fun WorkCard(
                 if (work.illust_ai_type == 2) add("AI")
                 if (work.x_restrict > 0) add(if (work.x_restrict == 2) "R18G" else "R18")
             }
+            val imageKey = "work-image:${work.type}:${work.id}"
             if (labels.isNotEmpty())
                 Row(
-                    Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset),
+                    Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset)
+                        .aboveWorkTransition(.5f, imageKey),
                     horizontalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
                 ) {
                     labels.forEach { label ->
                         Surface(
                             shape = badgeShape,
-                            color = Color.Black.copy(alpha = .52f),
+                            color = Color.Black.copy(alpha = .48f),
                             contentColor = Color.White,
                         ) {
                             Text(
                                 label,
-                                Modifier.heightIn(min = 32.dp).wrapContentHeight()
+                                Modifier.height(32.dp).wrapContentHeight()
                                     .padding(horizontal = PixivSpacing.compact),
                                 style = MaterialTheme.typography.labelSmall,
                             )
@@ -966,16 +968,16 @@ fun WorkCard(
             if (work.page_count > 1 || work.type == "ugoira" || work.isNovel)
                 Surface(
                     Modifier.align(Alignment.TopStart).padding(WorkImageBadgeInset)
-                        .aboveWorkTransition(.5f, "work-image:${work.type}:${work.id}"),
+                        .aboveWorkTransition(.5f, imageKey),
                     shape = badgeShape,
-                    color = Color.Black.copy(alpha = .52f),
+                    color = Color.Black.copy(alpha = .48f),
                     contentColor = Color.White,
                 ) {
                     Text(
                         if (work.isNovel) strings.getString(R.string.ui_6eb705b4ce)
                         else if (work.type == "ugoira") strings.getString(R.string.ui_de9dcfdf88)
                         else "${work.page_count}P",
-                        Modifier.heightIn(min = 32.dp).wrapContentHeight()
+                        Modifier.height(32.dp).wrapContentHeight()
                             .padding(horizontal = PixivSpacing.compact),
                         style = MaterialTheme.typography.labelSmall,
                     )
@@ -984,10 +986,11 @@ fun WorkCard(
                 Surface(
                     onClick = { if (permitted()) { feedback(!work.is_bookmarked); onLike() } },
                     interactionSource = likeInteraction,
-                    enabled = !likedBusy,
+                    enabled = !likedBusy && permitted(),
                     modifier = Modifier.align(Alignment.BottomEnd)
                         .padding(WorkImageBadgeInset)
                         .size(32.dp)
+                        .aboveWorkTransition(.75f, imageKey)
                         .expressivePress(likeInteraction)
                         .testTag("like_${work.type}_${work.id}")
                         .semantics {
