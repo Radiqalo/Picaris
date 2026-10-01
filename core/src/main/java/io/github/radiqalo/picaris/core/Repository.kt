@@ -77,6 +77,162 @@ constructor(
             }
             .flow
 
+    fun followedSeries(account: Long, kind: String): Flow<PagingData<FollowedSeries>> {
+        val novel = kind == "novel"
+        val responseKeys = if (novel) {
+            listOf("series", "novel_series", "novels")
+        } else {
+            listOf("series", "illust_series", "manga_series", "illusts")
+        }
+        val detailKey = if (novel) "novel_series_detail" else "illust_series_detail"
+        return Pager(PagingConfig(pageSize = 30, enablePlaceholders = false)) {
+            object : PagingSource<String, FollowedSeries>() {
+                override fun getRefreshKey(state: PagingState<String, FollowedSeries>): String? = null
+
+                override suspend fun load(
+                    params: LoadParams<String>,
+                ): LoadResult<String, FollowedSeries> = try {
+                    val response = api.get(
+                        account,
+                        params.key ?: "v1/watchlist/${if (novel) "novel" else "manga"}",
+                    )
+                    val seriesArray = responseKeys.firstNotNullOfOrNull { response[it]?.jsonArrayOrNull }
+                        ?: throw IllegalStateException(
+                            "追更接口响应缺少列表字段（${response.keys.joinToString()}）"
+                        )
+                    val entries = seriesArray.mapNotNull { value ->
+                        val item = value.jsonObject
+                        val detail = (item[detailKey] ?: item["series"])
+                            ?.let { runCatching { it.jsonObject }.getOrNull() } ?: item
+                        val firstWork = listOf("work", "illust", "novel")
+                            .firstNotNullOfOrNull { key ->
+                                item[key]?.let { runCatching { it.jsonObject }.getOrNull() }
+                            }
+                        val id = (detail["id"] ?: detail["series_id"])
+                            ?.jsonPrimitive?.longOrNull ?: return@mapNotNull null
+                        val user = (item["user"] ?: detail["user"])?.let {
+                            runCatching { AppJson.decodeFromJsonElement<User>(it) }.getOrNull()
+                        } ?: User(
+                            id = detail["user_id"]?.jsonPrimitive?.longOrNull ?: 0L,
+                            name = detail["user_name"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            account = detail["user_account"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                        )
+                        FollowedSeries(
+                            id = id,
+                            title = (detail["title"] ?: detail["series_title"])
+                                ?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            coverUrl = detail.seriesCover().ifEmpty { firstWork?.seriesCover().orEmpty() },
+                            user = user,
+                            workCount = detail.seriesWorkCount().takeIf { it > 0 }
+                                ?: item.seriesWorkCount().takeIf { it > 0 }
+                                ?: item.seriesWorksCount(),
+                            kind = if (novel) "novel" else "manga",
+                        )
+                    }
+                    LoadResult.Page(
+                        data = entries,
+                        prevKey = null,
+                        nextKey = response["next_url"]?.jsonPrimitive?.contentOrNull,
+                    )
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    LoadResult.Error(e)
+                }
+            }
+        }.flow
+    }
+
+    suspend fun seriesDetails(account: Long, kind: String, id: Long): SeriesDetails {
+        val novel = kind == "novel"
+        val response = api.get(
+            account,
+            if (novel) "v2/novel/series" else "v1/illust/series",
+            mapOf(
+                "filter" to "for_android",
+                (if (novel) "series_id" else "illust_series_id") to id.toString(),
+            ),
+        )
+        val detail = response[if (novel) "novel_series_detail" else "illust_series_detail"]
+            ?.jsonObject ?: response
+        val cover = detail.seriesCover()
+        val user = (detail["user"] ?: response["user"])?.let {
+            runCatching { AppJson.decodeFromJsonElement<User>(it) }.getOrNull()
+        } ?: User()
+        return SeriesDetails(
+            id = detail["id"]?.jsonPrimitive?.longOrNull ?: id,
+            title = detail["title"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            caption = detail["caption"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            coverUrl = cover,
+            user = user,
+            workCount = detail.seriesWorkCount().takeIf { it > 0 }
+                ?: detail.seriesWorksCount().takeIf { it > 0 }
+                ?: response.seriesWorkCount().takeIf { it > 0 }
+                ?: response.seriesWorksCount(),
+            kind = if (novel) "novel" else "manga",
+            isWatched = detail["is_watched"]?.jsonPrimitive?.booleanOrNull
+                ?: detail["is_followed"]?.jsonPrimitive?.booleanOrNull ?: false,
+        )
+    }
+
+    private fun JsonObject.seriesCover(): String {
+        for (key in listOf(
+            "cover", "cover_url", "cover_image_url", "cover_image_urls", "image_urls",
+            "url", "medium_url", "large_url", "square_medium_url",
+        )) {
+            val value = this[key] ?: continue
+            val primitive = runCatching { value.jsonPrimitive.contentOrNull }.getOrNull()
+            if (!primitive.isNullOrEmpty()) return primitive
+            val objectValue = runCatching { value.jsonObject }.getOrNull() ?: continue
+            val directUrl = objectValue["url"]?.jsonPrimitive?.contentOrNull
+            if (!directUrl.isNullOrEmpty()) return directUrl
+            val urls = runCatching { objectValue["urls"]?.jsonObject }.getOrNull() ?: objectValue
+            for (size in listOf("medium", "large", "square_medium", "240mw", "1200x1200")) {
+                val url = urls[size]?.jsonPrimitive?.contentOrNull
+                if (!url.isNullOrEmpty()) return url
+            }
+        }
+        return ""
+    }
+
+    private fun JsonObject.seriesWorkCount(): Int =
+        listOf(
+            "series_content_count", "content_count", "content_count_with_r18", "total", "total_count",
+            "series_work_count", "series_count", "total_works", "illust_count", "novel_count",
+            "work_count", "works_count", "item_count",
+        )
+            .firstNotNullOfOrNull { key ->
+                this[key]?.let { value ->
+                    runCatching { value.jsonPrimitive.intOrNull }.getOrNull()
+                        ?: runCatching { value.jsonPrimitive.content.toIntOrNull() }.getOrNull()
+                }
+            }
+            ?: values.firstNotNullOfOrNull { it.findSeriesWorkCount() }
+            ?: 0
+
+    private fun JsonElement.findSeriesWorkCount(): Int? = when {
+        runCatching { jsonObject }.isSuccess -> jsonObject.seriesWorkCount().takeIf { it > 0 }
+        runCatching { jsonArray }.isSuccess -> jsonArray.firstNotNullOfOrNull { it.findSeriesWorkCount() }
+        else -> null
+    }
+
+    private fun JsonObject.seriesWorksCount(): Int =
+        listOf("illusts", "novels", "works", "series_contents")
+            .firstNotNullOfOrNull { key -> this[key]?.jsonArrayOrNull?.size }
+            ?: 0
+
+    private val JsonElement.jsonArrayOrNull: JsonArray?
+        get() = runCatching { jsonArray }.getOrNull()
+
+    suspend fun setSeriesWatched(account: Long, kind: String, id: Long, watched: Boolean) {
+        val category = if (kind == "novel") "novel" else "manga"
+        api.post(
+            account,
+            "v1/watchlist/$category/${if (watched) "add" else "delete"}",
+            mapOf("series_id" to id.toString()),
+        )
+    }
+
     internal fun endpoint(s: FeedSpec, account: Long): Pair<String, Map<String, String>> {
         val kind = if (s.kind == "novel") "novel" else "illust"
         val q = mutableMapOf("filter" to "for_android")
@@ -103,8 +259,13 @@ constructor(
                     "v1/user/${if(kind=="novel") "novels" else "illusts"}"
                 }
                 "series" -> {
-                    q["series_id"] = s.userId.toString()
-                    "v2/novel/series"
+                    if (kind == "novel") {
+                        q["series_id"] = s.userId.toString()
+                        "v2/novel/series"
+                    } else {
+                        q["illust_series_id"] = s.userId.toString()
+                        "v1/illust/series"
+                    }
                 }
                 "related" -> {
                     q["illust_id"] = s.userId.toString()
@@ -286,6 +447,23 @@ constructor(
                     it.jsonObject["translated_name"]?.jsonPrimitive?.contentOrNull,
                 )
             } ?: emptyList()
+
+    suspend fun tagSuggestions(word: String): List<String> =
+        api.webTagSuggestions(word)["candidates"]
+            ?.jsonArray
+            ?.mapNotNull { it.jsonObject["tag_name"]?.jsonPrimitive?.contentOrNull }
+            ?.filter { it.isNotBlank() }
+            ?.distinct()
+            ?.take(10)
+            ?: emptyList()
+
+    suspend fun tagTranslation(name: String): String? {
+        val tagTranslations = api.webTagInfo(name)["body"]
+            ?.jsonObject?.get("tagTranslation")?.jsonObject
+        val translation = tagTranslations?.get(name)?.jsonObject
+            ?.get("zh")?.jsonPrimitive?.contentOrNull
+        return translation?.takeIf { it.isNotBlank() && !it.equals(name, ignoreCase = true) }
+    }
 
     suspend fun trendingTags(account: Long): List<TrendingTag> {
         val filter = settings.flow.first().contentFilter()

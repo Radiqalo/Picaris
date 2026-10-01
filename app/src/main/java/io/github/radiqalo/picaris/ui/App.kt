@@ -50,6 +50,8 @@ data class Collection(
     val kind: String = "illust",
     val userId: Long = 0,
     val word: String = "",
+    val watched: Boolean = false,
+    val tagCover: Work? = null,
 ) : NavKey
 
 @Serializable data class Utility(val page: String) : NavKey
@@ -139,6 +141,13 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                 if (id != null) vm.run { navigate(Detail(vm.detail(Work(id = id)))) }
                 handled()
             }
+            uri?.host == "www.pixiv.net" &&
+                uri.pathSegments.firstOrNull() == "users" &&
+                account != null -> {
+                val id = uri.pathSegments.getOrNull(1)?.toLongOrNull()
+                if (id != null) vm.run { navigate(Author(vm.user(User(id = id)))) }
+                handled()
+            }
         }
     }
     PixivTheme(
@@ -146,9 +155,10 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
         settings.dynamicColor,
         settings.seed,
         darkSystemBarIcons =
-            if ((backStack.lastOrNull() as? Reader)?.work?.isNovel == false && settings.blackReader)
-                false
-            else null,
+            when (val current = backStack.lastOrNull()) {
+                is Reader -> if (!current.work.isNovel && settings.blackReader) false else null
+                else -> null
+            },
     ) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Box {

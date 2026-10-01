@@ -1,6 +1,8 @@
 package io.github.radiqalo.picaris.ui
 
 import android.content.Intent
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,6 +10,10 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextObfuscationMode
@@ -36,6 +42,15 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import coil3.compose.AsyncImage
 import android.os.SystemClock
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -143,45 +158,41 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
         contentPadding = PaddingValues(bottom = PixivSpacing.content + LocalHomeNavigationInset.current),
         verticalArrangement = Arrangement.spacedBy(PixivSpacing.section),
     ) {
-        item(key = "title") {
-            ScreenBar(
-                "",
-                scrollBehavior = null,
-                actions = { ContentKindAction(vm) },
-            )
-        }
         item(key = "identity") {
-            Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
-                verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = PixivSpacing.compact),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content),
-                    ) {
-                        Avatar(account?.user ?: User(), Modifier.size(72.dp).clip(CircleShape)
-                            .clickable(enabled = account != null, onClickLabel = "我的主页") {
-                                account?.user?.let { navigate(Author(it)) }
-                            }, sharedTransition = true)
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight)) {
-                            Text(account?.user?.name ?: "Picaris",
-                                style = MaterialTheme.typography.headlineSmall,
-                                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                            Text(
-                                "ID ${account?.user?.id ?: ""}",
-                                modifier = Modifier.clickable(enabled = account != null, onClickLabel = "我的主页") {
-                                    account?.user?.let { navigate(Author(it)) }
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        FilledTonalIconButton(onClick = { navigate(Utility("accounts")) }) {
-                            AppIcon(materialSymbol(MaterialSymbol.ChevronRight), strings.getString(R.string.ui_9d4ca7f307))
-                        }
-                    }
-                    ProfileLibraryActions(navigate)
+            Row(
+                Modifier.fillMaxWidth().statusBarsPadding()
+                    .padding(start = PixivSpacing.content, end = PixivSpacing.compact, top = PixivSpacing.tight),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PixivSpacing.content),
+            ) {
+                Avatar(account?.user ?: User(), Modifier.size(64.dp).clip(CircleShape)
+                    .clickable(enabled = account != null, onClickLabel = "我的主页") {
+                        account?.user?.let { navigate(Author(it)) }
+                    }, sharedTransition = true)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight)) {
+                    Text(account?.user?.name ?: "Picaris",
+                        modifier = Modifier.clickable(enabled = account != null, onClickLabel = "我的主页") {
+                            account?.user?.let { navigate(Author(it)) }
+                        },
+                        style = MaterialTheme.typography.headlineSmall,
+                        maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(
+                        "ID ${account?.user?.id ?: ""}",
+                        modifier = Modifier.clickable(enabled = account != null, onClickLabel = "我的主页") {
+                            account?.user?.let { navigate(Author(it)) }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
+                ContentKindAction(vm)
             }
+        }
+        item(key = "libraryActions") {
+            Box(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content)) {
+                ProfileLibraryActions(navigate)
+            }
+        }
         item(key = "pixiv") {
             Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
@@ -218,6 +229,18 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     }
                 }
             }
+        item(key = "accounts") {
+            Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content)) {
+                SegmentedListItem(
+                    colors = PixivContainerDefaults.listItemColors(),
+                    onClick = { navigate(Utility("accounts")) },
+                    shapes = ListItemDefaults.segmentedShapes(0, 1),
+                    content = { Text(strings.getString(R.string.ui_9d4ca7f307)) },
+                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Person), null) },
+                    trailingContent = { AppIcon(materialSymbol(MaterialSymbol.ChevronRight), null) },
+                )
+            }
+        }
     }
 }
 
@@ -426,7 +449,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         position = SettingsRowPosition.First,
                     )
                     SettingRow(
-                        "Floating 底栏",
+                        "悬浮底栏",
                         "启用悬浮底栏",
                         icon = materialSymbol(MaterialSymbol.Home),
                         action = {
@@ -465,19 +488,6 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         position = SettingsRowPosition.Middle,
                     ) {
                         dialog = "color"
-                    }
-                    SettingRow(
-                        "显示标签翻译",
-                        "显示译名和原标签；关闭后只显示原标签",
-                        icon = materialSymbol(MaterialSymbol.Search),
-                        action = {
-                            FeedbackSwitch(s.showTagTranslations, { value ->
-                                vm.update { it.copy(showTagTranslations = value) }
-                            })
-                        },
-                        position = SettingsRowPosition.Last,
-                    ) {
-                        vm.update { it.copy(showTagTranslations = !it.showTagTranslations) }
                     }
                 }
             }
@@ -540,9 +550,22 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_0ed0fdd725),
                         strings.getString(R.string.ui_4544c7e538),
                         materialSymbol(MaterialSymbol.BlockedUser),
-                        position = SettingsRowPosition.Last,
+                        position = SettingsRowPosition.Middle,
                     ) {
                         dialog = "users"
+                    }
+                    SettingRow(
+                        "显示标签翻译",
+                        "在标签旁显示译名",
+                        icon = materialSymbol(MaterialSymbol.Search),
+                        action = {
+                            FeedbackSwitch(s.showTagTranslations, { value ->
+                                vm.update { it.copy(showTagTranslations = value) }
+                            })
+                        },
+                        position = SettingsRowPosition.Last,
+                    ) {
+                        vm.update { it.copy(showTagTranslations = !it.showTagTranslations) }
                     }
                 }
             }
@@ -622,16 +645,38 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 text = {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        listOf(0xFF6256CA, 0xFF006C65, 0xFF0061A4, 0xFF984061, 0xFF825500)
-                            .forEach { color ->
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                        listOf(
+                            "紫罗兰" to 0xFF6256CA,
+                            "深紫" to 0xFF4F378B,
+                            "薰衣草" to 0xFF6750A4,
+                            "蓝紫" to 0xFF565D7E,
+                            "宝蓝" to 0xFF0061A4,
+                            "晴蓝" to 0xFF006D8F,
+                            "青色" to 0xFF006874,
+                            "蓝绿" to 0xFF006C65,
+                            "薄荷绿" to 0xFF386A5B,
+                            "森林绿" to 0xFF386A20,
+                            "橄榄绿" to 0xFF596400,
+                            "金黄" to 0xFF825500,
+                            "琥珀" to 0xFF7A5900,
+                            "焦橙" to 0xFF9B4428,
+                            "朱红" to 0xFFBA1A1A,
+                            "玫瑰红" to 0xFF9C4146,
+                            "莓果粉" to 0xFF984061,
+                            "灰粉" to 0xFF7D5260,
+                            "石板灰" to 0xFF565D6E,
+                            "暖棕" to 0xFF705746,
+                        ).forEach { (name, color) ->
                                 Surface(
                                     onClick = {
                                         vm.update { it.copy(seed = color, dynamicColor = false) }
                                         dialog = null
                                     },
-                                    modifier = Modifier.size(52.dp),
+                                    modifier = Modifier.size(52.dp).semantics {
+                                        contentDescription = "$name 色主题"
+                                    },
                                     shape = CircleShape,
                                     color = androidx.compose.ui.graphics.Color(color),
                                 ) {
@@ -808,6 +853,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
     var add by remember { mutableStateOf(false) }
     val tokenState = rememberTextFieldState()
     var remove by remember { mutableStateOf<Account?>(null) }
+    var export by remember { mutableStateOf<Account?>(null) }
     val context = LocalContext.current
     Column {
         ScreenBar(
@@ -829,12 +875,20 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                             },
                             segment = index to data.accounts.size,
                             action = {
-                                Row {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (data.activeId == a.user.id)
+                                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                                            AppIcon(
+                                                materialSymbol(MaterialSymbol.Check),
+                                                strings.getString(R.string.ui_922c94aae3),
+                                            )
+                                        }
+                                    IconButton({ export = a }) {
                                         AppIcon(
-                                            materialSymbol(MaterialSymbol.Check),
-                                            strings.getString(R.string.ui_922c94aae3),
+                                            materialSymbol(MaterialSymbol.ContentCopy),
+                                            "导出 refresh token",
                                         )
+                                    }
                                     IconButton({ remove = a }) {
                                         AppIcon(
                                             materialSymbol(MaterialSymbol.Close),
@@ -920,16 +974,43 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
             },
         )
     }
+    export?.let { a ->
+        ActionSheet(
+            onDismissRequest = { export = null },
+            title = { Text("导出 ${a.user.name} 的 Token？") },
+            text = {
+                Text("Refresh token 可用于登录此账号。复制后请妥善保管，不要分享给他人或不可信应用。")
+            },
+            confirmButton = {
+                TextButton({
+                    context.getSystemService(ClipboardManager::class.java)
+                        ?.setPrimaryClip(ClipData.newPlainText("Pixiv refresh token", a.refreshToken))
+                    export = null
+                }) {
+                    Text("复制 Token")
+                }
+            },
+            dismissButton = {
+                TextButton({ export = null }) { Text(strings.getString(R.string.ui_4d0b4688c7)) }
+            },
+        )
+    }
 }
 
 @Composable
 fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
-
+    val settings by vm.settings.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
+    val visibleHistory = remember(history, settings.contentKind) {
+        history.filter { record ->
+            val work = runCatching { AppJson.decodeFromString<Work>(record.json) }.getOrNull()
+            work?.isNovel == (settings.contentKind == "novel")
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(strings.getString(R.string.ui_29f6711704), back = back, scrollBehavior = null)
-        if (history.isEmpty())
+        if (visibleHistory.isEmpty())
             EmptyState(
                 strings.getString(R.string.ui_f1fd08eeb6),
                 strings.getString(R.string.ui_4a5a8a9f75),
@@ -941,7 +1022,7 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
                 contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(history, key = { "${it.kind}:${it.workId}" }) { record ->
+                items(visibleHistory, key = { "${it.kind}:${it.workId}" }) { record ->
                     val work = remember(record.json) { AppJson.decodeFromString<Work>(record.json) }
                     Surface(
                         modifier = Modifier.clip(MaterialTheme.shapes.large),
@@ -978,7 +1059,7 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
                                     Text(
                                         work.user.name.ifBlank { "未知作者" },
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     )
@@ -1037,6 +1118,9 @@ private data class DownloadGroup(val workId: Long, val tasks: List<DownloadEntit
     val bytes get() = tasks.sumOf { it.bytes }
     val total get() = tasks.sumOf { it.total }
     val createdAt get() = tasks.minOfOrNull { it.createdAt } ?: 0L
+    val uploadedAt get() = runCatching {
+        java.time.OffsetDateTime.parse(work?.create_date).toInstant().toEpochMilli()
+    }.getOrDefault(0L)
     val imageCount get() = tasks.count { it.kind == "illust" || it.kind == "manga" }
     val pageCount get() = work?.page_count?.takeIf { it > 0 } ?: imageCount
     val title get() = work?.title ?: tasks.firstOrNull()?.title.orEmpty()
@@ -1048,13 +1132,20 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     val tasks by vm.downloadList.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
     var filter by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("all") }
     var selecting by remember(vm.accountId) { mutableStateOf(false) }
     var selected by remember(vm.accountId) { mutableStateOf(emptySet<Long>()) }
     var confirmRemoval by remember(vm.accountId) { mutableStateOf(false) }
     var keepDownloadedFiles by remember(vm.accountId) { mutableStateOf(true) }
-    var sortMenuExpanded by remember(vm.accountId) { mutableStateOf(false) }
-    var sortMode by remember(vm.accountId) { mutableStateOf("recent") }
+    var sortOptionsExpanded by remember(vm.accountId) { mutableStateOf(false) }
+    var sortMode by remember(vm.accountId) { mutableStateOf("download_desc") }
+    var galleryMode by androidx.compose.runtime.saveable.rememberSaveable(vm.accountId) {
+        mutableStateOf(false)
+    }
+    val downloadListState = rememberLazyListState()
+    val downloadGridState = rememberLazyStaggeredGridState()
+    var pendingSortAnchor by remember(vm.accountId) { mutableStateOf<Pair<Long, Int>?>(null) }
     var speeds by remember(vm.accountId) { mutableStateOf(emptyMap<Long, Long>()) }
     val speedSamples = remember(vm.accountId) { mutableMapOf<Long, DownloadSpeedSample>() }
     LaunchedEffect(tasks) {
@@ -1075,12 +1166,13 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         val grouped = tasks.groupBy { it.workId }
             .map { (workId, groupTasks) -> DownloadGroup(workId, groupTasks) }
             .sortedByDescending { it.createdAt }
-        when (sortMode) {
-            "title" -> grouped.sortedBy { it.title.lowercase() }
-            "size" -> grouped.sortedByDescending { it.bytes }
-            "pages" -> grouped.sortedByDescending { it.pageCount }
-            else -> grouped
+        val comparator = when (sortMode.removeSuffix("_asc").removeSuffix("_desc")) {
+            "upload" -> compareBy<DownloadGroup> { it.uploadedAt }
+            "title" -> compareBy { it.title.lowercase() }
+            "author" -> compareBy { it.work?.user?.name.orEmpty().lowercase() }
+            else -> compareBy { it.createdAt }
         }
+        grouped.sortedWith(if (sortMode.endsWith("_asc")) comparator else comparator.reversed())
     }
     val filtered = groups.filter { group ->
         when (filter) {
@@ -1092,6 +1184,15 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             else -> true
         }
     }
+    LaunchedEffect(sortMode) {
+        val anchor = pendingSortAnchor ?: return@LaunchedEffect
+        val index = filtered.indexOfFirst { it.workId == anchor.first }
+        if (index >= 0) {
+            if (galleryMode) downloadGridState.scrollToItem(index, anchor.second)
+            else downloadListState.scrollToItem(index, anchor.second)
+        }
+        pendingSortAnchor = null
+    }
     val chosen = groups.filter { it.workId in selected }
     val selectedTaskIds = chosen.flatMap { it.tasks }.map { it.id }.toSet()
     LaunchedEffect(groups) {
@@ -1099,7 +1200,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         if (selected.isEmpty()) selecting = false
     }
     LaunchedEffect(selecting) {
-        if (selecting) sortMenuExpanded = false
+        if (selecting) sortOptionsExpanded = false
     }
     fun toggleSelection(workId: Long) {
         selected = if (workId in selected) selected - workId else selected + workId
@@ -1115,19 +1216,17 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     fun exitSelection() {
         selected = emptySet()
         selecting = false
-        sortMenuExpanded = false
     }
-    fun closeFloatingMenu() {
-        if (selecting) exitSelection() else sortMenuExpanded = false
+    BackHandler(enabled = selecting || sortOptionsExpanded) {
+        if (sortOptionsExpanded) sortOptionsExpanded = false else exitSelection()
     }
-    BackHandler(enabled = selecting || sortMenuExpanded) { closeFloatingMenu() }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(
             strings.getString(R.string.ui_18df1a67a2),
             {
                 when {
                     selecting -> exitSelection()
-                    sortMenuExpanded -> sortMenuExpanded = false
+                    sortOptionsExpanded -> sortOptionsExpanded = false
                     else -> back()
                 }
             },
@@ -1152,6 +1251,55 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
+            Box {
+                IconButton(onClick = { sortOptionsExpanded = true }, enabled = !selecting) {
+                    AppIcon(materialSymbol(MaterialSymbol.Sort), "排序方式")
+                }
+                DropdownMenu(
+                    expanded = sortOptionsExpanded,
+                    onDismissRequest = { sortOptionsExpanded = false },
+                ) {
+                    listOf(
+                        "upload_desc" to "上传时间 · 降序",
+                        "upload_asc" to "上传时间 · 升序",
+                        "download_desc" to "下载时间 · 降序",
+                        "download_asc" to "下载时间 · 升序",
+                        "title_asc" to "标题 · 升序",
+                        "title_desc" to "标题 · 降序",
+                        "author_asc" to "作者 · 升序",
+                        "author_desc" to "作者 · 降序",
+                    ).forEach { (mode, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                if (mode != sortMode) {
+                                    val visibleIndex = if (galleryMode) downloadGridState.firstVisibleItemIndex
+                                        else downloadListState.firstVisibleItemIndex
+                                    val anchorOffset = if (galleryMode) downloadGridState.firstVisibleItemScrollOffset
+                                        else downloadListState.firstVisibleItemScrollOffset
+                                    pendingSortAnchor = filtered.getOrNull(visibleIndex)?.let {
+                                        it.workId to anchorOffset
+                                    }
+                                }
+                                sortMode = mode
+                                sortOptionsExpanded = false
+                            },
+                            trailingIcon = {
+                                if (sortMode == mode) AppIcon(materialSymbol(MaterialSymbol.Check), null)
+                            },
+                        )
+                    }
+                }
+            }
+            IconButton(
+                onClick = { galleryMode = !galleryMode },
+                enabled = !selecting,
+            ) {
+                AppIcon(
+                    materialSymbol(if (galleryMode) MaterialSymbol.Feed else MaterialSymbol.Image),
+                    if (galleryMode) "切换到列表" else "切换到图片流",
+                )
+            }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (filtered.isEmpty()) {
@@ -1161,7 +1309,117 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                     materialSymbol(MaterialSymbol.Download),
                 )
             } else {
-                LazyColumn(
+                AnimatedContent(
+                    targetState = galleryMode,
+                    modifier = Modifier.fillMaxSize(),
+                    transitionSpec = {
+                        val direction = if (targetState) 1 else -1
+                        (slideInHorizontally(
+                            initialOffsetX = { direction * it / 18 },
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        ) + fadeIn(tween(160))) togetherWith
+                            (slideOutHorizontally(
+                                targetOffsetX = { -direction * it / 18 },
+                                animationSpec = tween(110),
+                            ) + fadeOut(tween(100)))
+                    },
+                    label = "downloadsViewMode",
+                ) { showGallery ->
+                if (showGallery) {
+                    LazyVerticalStaggeredGrid(
+                        columns = StaggeredGridCells.Adaptive(160.dp),
+                        state = downloadGridState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalItemSpacing = 12.dp,
+                    ) {
+                        items(filtered, key = { it.workId }) { group ->
+                            val work = group.work
+                            val selectedGroup = group.workId in selected
+                            val shape = MaterialTheme.shapes.medium
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().animateItem().clip(shape).combinedClickable(
+                                    onClick = {
+                                        if (selecting) toggleSelection(group.workId)
+                                        else work?.let {
+                                            vm.record(it)
+                                            if (it.isNovel) navigate(Detail(it)) else navigate(Reader(it))
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (selecting) toggleSelection(group.workId)
+                                        else work?.let {
+                                            vm.record(it)
+                                            navigate(Detail(it))
+                                        }
+                                    },
+                                ),
+                                shape = shape,
+                                color = if (selectedGroup) MaterialTheme.colorScheme.secondaryContainer
+                                    else MaterialTheme.colorScheme.surfaceContainerLow,
+                            ) {
+                                Column {
+                                    Box {
+                                        if (work != null && !work.isNovel) {
+                                            AsyncImage(
+                                                model = work.previews.firstOrNull() ?: work.cover,
+                                                contentDescription = "${group.title}，单击预览，长按查看作品",
+                                                modifier = Modifier.fillMaxWidth()
+                                                    .aspectRatio(if (work.isNovel) .9f else work.aspect),
+                                                contentScale = ContentScale.Crop,
+                                            )
+                                        } else {
+                                            Box(
+                                                Modifier.fillMaxWidth().aspectRatio(.78f)
+                                                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                AppIcon(materialSymbol(MaterialSymbol.Book), null)
+                                            }
+                                        }
+                                        if (group.pageCount > 1) {
+                                            Text(
+                                                "${group.pageCount}P",
+                                                Modifier.align(Alignment.TopStart).padding(8.dp)
+                                                    .clip(MaterialTheme.shapes.small)
+                                                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = .62f))
+                                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.inverseOnSurface,
+                                            )
+                                        }
+                                        if (selecting) {
+                                            Checkbox(
+                                                checked = selectedGroup,
+                                                onCheckedChange = { toggleSelection(group.workId) },
+                                                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
+                                            )
+                                        }
+                                    }
+                                    if (settings.showHomeMetadata && work != null) {
+                                        Text(
+                                            group.title,
+                                            Modifier.padding(top = 2.dp, start = 3.dp, end = 3.dp),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            work.user.name,
+                                            Modifier.padding(start = 3.dp, end = 3.dp),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else LazyColumn(
+                    state = downloadListState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -1171,7 +1429,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                         val groupSpeed = group.tasks.sumOf { speeds[it.id] ?: 0L }
                         val shape = MaterialTheme.shapes.large
                         Surface(
-                            modifier = Modifier.clip(shape).combinedClickable(
+                            modifier = Modifier.animateItem().clip(shape).combinedClickable(
                                 onClick = {
                                     if (selecting) toggleSelection(group.workId)
                                     else group.work?.let { navigate(Detail(it)) }
@@ -1232,7 +1490,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                     }
                                     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                                         Text(author.ifBlank { "未知作者" }, style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                                            color = MaterialTheme.colorScheme.onSurface, maxLines = 1,
                                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                                         Text(
                                             listOf(size.ifBlank { "大小未知" }, time).joinToString(" · "),
@@ -1317,90 +1575,38 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                         }
                     }
                 }
+                }
             }
-            val menuExpanded = !confirmRemoval && (selecting || sortMenuExpanded)
-            val menuContainerColor = MaterialTheme.colorScheme.primaryContainer
-            FloatingActionButtonMenu(
-                expanded = menuExpanded,
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
-                button = {
-                    ToggleFloatingActionButton(
-                        checked = menuExpanded,
-                        onCheckedChange = { checked ->
-                            if (selecting) {
-                                if (!checked) exitSelection()
-                            } else {
-                                sortMenuExpanded = checked
-                            }
-                        },
-                        containerColor = { menuContainerColor },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AppIcon(
-                            materialSymbol(MaterialSymbol.Add),
-                            if (menuExpanded) "关闭操作" else "下载操作",
-                            Modifier.graphicsLayer { rotationZ = checkedProgress * 45f },
-                        )
-                    }
-                },
-            ) {
-                if (selecting) {
-                    FloatingActionButtonMenuItem(
+        }
+        if (selecting && !confirmRemoval) {
+            BottomAppBar(
+                actions = {
+                    Text(
+                        "${selected.size} 项已选",
+                        Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    IconButton(
                         onClick = {
                             val visible = filtered.map { it.workId }.toSet()
                             selected = if (selected.containsAll(visible)) selected - visible else selected + visible
                             selecting = selected.isNotEmpty()
                         },
-                        text = { Text("全选") },
-                        icon = { AppIcon(materialSymbol(MaterialSymbol.Check), null) },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    FloatingActionButtonMenuItem(
-                        onClick = { vm.downloadBatchAction(selectedTaskIds, "queued") },
-                        text = { Text("开始") },
-                        icon = { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), null) },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    FloatingActionButtonMenuItem(
-                        onClick = { vm.downloadBatchAction(selectedTaskIds, "paused") },
-                        text = { Text("暂停") },
-                        icon = { AppIcon(materialSymbol(MaterialSymbol.Pause), null) },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    FloatingActionButtonMenuItem(
-                        onClick = { confirmRemoval = true },
-                        text = { Text("删除") },
-                        icon = { AppIcon(materialSymbol(MaterialSymbol.Delete), null) },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                } else {
-                    FloatingActionButtonMenuItem(
-                        onClick = {
-                            sortMode = when (sortMode) {
-                                "recent" -> "title"
-                                "title" -> "size"
-                                "size" -> "pages"
-                                else -> "recent"
-                            }
-                            sortMenuExpanded = false
-                        },
-                        text = { Text("排序方式 · ${when (sortMode) {
-                            "title" -> "标题"
-                            "size" -> "文件大小"
-                            "pages" -> "图片数量"
-                            else -> "最近下载"
-                        }}") },
-                        icon = { AppIcon(materialSymbol(MaterialSymbol.Sort), null) },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-            }
+                    ) { AppIcon(materialSymbol(MaterialSymbol.Check), "全选") }
+                    IconButton(onClick = { vm.downloadBatchAction(selectedTaskIds, "queued") }) {
+                        AppIcon(materialSymbol(MaterialSymbol.PlayArrow), "开始")
+                    }
+                    IconButton(onClick = { vm.downloadBatchAction(selectedTaskIds, "paused") }) {
+                        AppIcon(materialSymbol(MaterialSymbol.Pause), "暂停")
+                    }
+                    IconButton(onClick = { confirmRemoval = true }) {
+                        AppIcon(materialSymbol(MaterialSymbol.Delete), "删除", tint = MaterialTheme.colorScheme.error)
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            )
         }
     }
     if (confirmRemoval) ModalBottomSheet(onDismissRequest = { confirmRemoval = false }) {

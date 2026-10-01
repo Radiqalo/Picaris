@@ -8,6 +8,10 @@
     <string name="tab_home">首页</string>
     <string name="discover_recommend">推荐</string>
     <string name="discover_following">关注动态</string>
+    <string name="follow_tab_activity">动态</string>
+    <string name="follow_tab_updates">追更</string>
+    <string name="follow_updates_empty">你关注的系列更新会显示在这里</string>
+    <string name="follow_updates_count">%1$d 篇作品</string>
     <string name="discover_featured">人气标签</string>
     <string name="discover_tags">推荐标签</string>
     <string name="discover_artists">推荐作者</string>
@@ -161,9 +165,9 @@
     <string name="ui_d7ddb05929">非官方客户端</string>
     <string name="ui_d80ba66133">使用系统壁纸配色</string>
     <string name="ui_d95ef5ba39">HTTP 代理</string>
-    <string name="ui_da33a1a4d5">显示成人内容</string>
+    <string name="ui_da33a1a4d5">显示 R18 内容</string>
     <string name="ui_dc35af8d69">排序</string>
-    <string name="ui_de9dcfdf88">动图</string>
+    <string name="ui_de9dcfdf88">GIF</string>
     <string name="ui_df80b48aa7">分享作品</string>
     <string name="ui_df855f5c93">输入标签名称，以逗号或换行分隔</string>
     <string name="ui_dfe5a318ab">公开</string>

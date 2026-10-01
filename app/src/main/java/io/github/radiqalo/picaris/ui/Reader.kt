@@ -63,7 +63,11 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit, initialPage: In
     ) { granted ->
         if (granted) {
             val page = if (vertical) list.firstVisibleItemIndex else pager.currentPage
-            vm.download(work, if (count > 1 && work.type != "ugoira") setOf(page) else null)
+            vm.download(
+                work,
+                if (count > 1 && work.type != "ugoira") setOf(page) else null,
+                ugoiraAsGif = work.type == "ugoira",
+            )
         }
     }
     val bg = if (s.blackReader) Color.Black else MaterialTheme.colorScheme.background

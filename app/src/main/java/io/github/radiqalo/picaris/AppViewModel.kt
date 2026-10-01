@@ -101,6 +101,27 @@ constructor(
     fun feed(spec: FeedSpec) =
         feeds.get(FeedSession(accountId, spec, settings.value.contentFilter()))
 
+    fun followedSeries(kind: String) = repo.followedSeries(accountId, kind)
+
+    private val seriesDetailsCache = mutableMapOf<Triple<Long, String, Long>, SeriesDetails>()
+
+    fun cachedSeriesDetails(kind: String, id: Long): SeriesDetails? =
+        seriesDetailsCache[Triple(accountId, kind, id)]
+
+    suspend fun seriesDetails(kind: String, id: Long): SeriesDetails {
+        val account = accountId
+        val key = Triple(account, kind, id)
+        return seriesDetailsCache[key] ?: repo.seriesDetails(account, kind, id)
+            .also { seriesDetailsCache[key] = it }
+    }
+
+    suspend fun setSeriesWatched(kind: String, id: Long, watched: Boolean) {
+        val account = accountId
+        repo.setSeriesWatched(account, kind, id, watched)
+        val key = Triple(account, kind, id)
+        seriesDetailsCache[key]?.let { seriesDetailsCache[key] = it.copy(isWatched = watched) }
+    }
+
     suspend fun bookmark(work: Work, public: Boolean = true): Work {
         val account = accountId
         val key = work.identity(account)
@@ -201,7 +222,31 @@ constructor(
     suspend fun detail(initial: Work): Work =
         repo.detail(accountId, initial.id, initial.isNovel)
 
-    suspend fun tags(): List<Tag> = repo.tags(accountId)
+    private val popularSearchTags = mutableMapOf<Long, Deferred<List<Tag>>>()
+
+    fun cachedTags(): List<Tag>? = popularSearchTags[accountId]?.let {
+        if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
+    }
+
+    suspend fun tags(): List<Tag> {
+        val account = accountId
+        if (popularSearchTags[account]?.isCancelled == true) popularSearchTags.remove(account)
+        val request = popularSearchTags.getOrPut(account) { viewModelScope.async { repo.tags(account) } }
+        return try {
+            request.await()
+        } catch (error: Throwable) {
+            if (popularSearchTags[account] === request) popularSearchTags.remove(account)
+            throw error
+        }
+    }
+
+    suspend fun tagSuggestions(word: String): List<String> = repo.tagSuggestions(word)
+
+    private val tagTranslationCache = mutableMapOf<String, String?>()
+    suspend fun tagTranslation(name: String): String? {
+        if (tagTranslationCache.containsKey(name)) return tagTranslationCache[name]
+        return repo.tagTranslation(name).also { tagTranslationCache[name] = it }
+    }
 
     private var profileSync: Job? = null
     private var profileSyncAccount: Long? = null
@@ -458,9 +503,9 @@ constructor(
         run { repo.record(accountId, work) }
     }
 
-    fun download(work: Work, pages: Set<Int>? = null) {
+    fun download(work: Work, pages: Set<Int>? = null, ugoiraAsGif: Boolean = false) {
         run {
-            downloads.enqueue(accountId, work, pages)
+            downloads.enqueue(accountId, work, pages, ugoiraAsGif)
             message.emit("已加入下载队列")
         }
     }

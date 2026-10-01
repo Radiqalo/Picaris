@@ -72,6 +72,26 @@ data class TrendingTag(val tag: Tag, val cover: Work)
 
 @Serializable data class Series(val id: Long = 0, val title: String = "")
 
+data class FollowedSeries(
+    val id: Long,
+    val title: String,
+    val coverUrl: String,
+    val user: User,
+    val workCount: Int,
+    val kind: String,
+)
+
+data class SeriesDetails(
+    val id: Long,
+    val title: String,
+    val caption: String,
+    val coverUrl: String,
+    val user: User,
+    val workCount: Int,
+    val kind: String,
+    val isWatched: Boolean,
+)
+
 @Serializable
 data class Work(
     val id: Long = 0,

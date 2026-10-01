@@ -50,6 +50,7 @@ enum class MaterialSymbol(val resource: Int) {
     Add(R.drawable.ms_add),
     Delete(R.drawable.ms_delete),
     Sort(R.drawable.ms_sort),
+    ContentCopy(R.drawable.ms_content_copy),
 }
 
 @Composable

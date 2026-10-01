@@ -276,6 +276,28 @@ class PixivOAuth @Inject constructor(private val network: Network) : OAuthExchan
 
 @Singleton
 class PixivApi @Inject constructor(private val auth: AuthRepository, private val network: Network) {
+    suspend fun webTagSuggestions(word: String): JsonObject {
+        val response = network.client().get("https://www.pixiv.net/rpc/cps.php") {
+            header(HttpHeaders.Accept, "application/json, text/plain, */*")
+            header(HttpHeaders.UserAgent, "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/132.0.0.0 Mobile Safari/537.36")
+            parameter("keyword", word)
+        }
+        if (!response.status.isSuccess())
+            throw PixivException(response.status.value, "Pixiv 标签联想请求失败（${response.status.value}）")
+        return AppJson.parseToJsonElement(response.bodyAsText()).jsonObject
+    }
+
+    suspend fun webTagInfo(tag: String): JsonObject {
+        val response = network.client().get("https://www.pixiv.net/ajax/search/tags/${tag.encodeURLPath()}") {
+            header(HttpHeaders.Accept, "application/json, text/plain, */*")
+            header(HttpHeaders.AcceptLanguage, "zh-CN")
+            header(HttpHeaders.UserAgent, "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/132.0.0.0 Mobile Safari/537.36")
+        }
+        if (!response.status.isSuccess())
+            throw PixivException(response.status.value, "Pixiv 标签翻译请求失败（${response.status.value}）")
+        return AppJson.parseToJsonElement(response.bodyAsText()).jsonObject
+    }
+
     suspend fun get(
         account: Long,
         path: String,

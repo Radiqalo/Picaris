@@ -59,11 +59,23 @@ fun PixivTheme(
             ?.insetsController
             ?.setSystemBarsAppearance(if (darkSystemBarIcons ?: !dark) mask else 0, mask)
     }
-    val colors =
+    val baseColors =
         if (dynamic) {
             if (dark) dynamicDarkColorScheme(LocalContext.current)
             else dynamicLightColorScheme(LocalContext.current)
         } else androidx.compose.runtime.remember(seed, dark) { seededColors(seed, dark) }
+    val colors = androidx.compose.runtime.remember(baseColors) {
+        baseColors.copy(
+            secondary = baseColors.primary,
+            onSecondary = baseColors.onPrimary,
+            secondaryContainer = baseColors.primaryContainer,
+            onSecondaryContainer = baseColors.onPrimaryContainer,
+            tertiary = baseColors.primary,
+            onTertiary = baseColors.onPrimary,
+            tertiaryContainer = baseColors.primaryContainer,
+            onTertiaryContainer = baseColors.onPrimaryContainer,
+        )
+    }
     MaterialExpressiveTheme(
         colorScheme = colors,
         motionScheme = MotionScheme.expressive(),

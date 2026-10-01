@@ -1,5 +1,6 @@
 package io.github.radiqalo.picaris.ui
 
+import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -20,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -36,7 +38,12 @@ import io.github.radiqalo.picaris.AppViewModel
 import io.github.radiqalo.picaris.R
 import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 private val WorkImageBadgeInset = 8.dp
 
@@ -275,7 +282,12 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                         items(trends.take(6), key = { it.tag.name }) { trend ->
                             ElevatedCard(
                                 onClick = {
-                                    navigate(Collection(trend.tag.name, "search", word = trend.tag.name))
+                                    navigate(Collection(
+                                        trend.tag.name,
+                                        "search",
+                                        word = trend.tag.name,
+                                        tagCover = trend.cover,
+                                    ))
                                 },
                                 modifier = Modifier.width(260.dp),
                             ) {
@@ -283,10 +295,15 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                                     WorkImage(trend.cover, Modifier.fillMaxWidth().height(150.dp))
                                     SuggestionChip(
                                         onClick = {
-                                            navigate(Collection(trend.tag.name, "search", word = trend.tag.name))
+                                            navigate(Collection(
+                                                trend.tag.name,
+                                                "search",
+                                                word = trend.tag.name,
+                                                tagCover = trend.cover,
+                                            ))
                                         },
                                         modifier = Modifier.align(Alignment.BottomStart)
-                                            .padding(start = 12.dp, bottom = 4.dp, end = 12.dp),
+                                            .padding(12.dp),
                                         border = null,
                                         shape = MaterialTheme.shapes.extraSmall,
                                         colors = SuggestionChipDefaults.suggestionChipColors(
@@ -301,7 +318,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                             }
                         }
                     }
-                    trends.take(3).forEach { trend -> DiscoveryTagWorks(trend.tag, vm, navigate) }
+                    trends.take(3).forEach { trend -> DiscoveryTagWorks(trend, vm, navigate) }
                 }
                 if (settings.contentKind != "novel") {
                     Text(strings.getString(R.string.discover_artists), style = MaterialTheme.typography.titleLarge)
@@ -325,9 +342,12 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 }
 
 @Composable
-private fun DiscoveryTagWorks(tag: Tag, vm: AppViewModel, navigate: (NavKey) -> Unit) {
+private fun DiscoveryTagWorks(trend: TrendingTag, vm: AppViewModel, navigate: (NavKey) -> Unit) {
+    val tag = trend.tag
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val spec = remember(tag.name) { FeedSpec(section = "search", word = tag.name) }
+    val spec = remember(tag.name, trend.cover.id) {
+        FeedSpec(section = "related", userId = trend.cover.id)
+    }
     val flow = remember(spec, vm.accountId, settings.contentFilter()) { vm.feed(spec) }
     val works = flow.collectAsLazyPagingItems()
     val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
@@ -336,7 +356,9 @@ private fun DiscoveryTagWorks(tag: Tag, vm: AppViewModel, navigate: (NavKey) -> 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("#${if (settings.showTagTranslations) tag.translated_name ?: tag.name else tag.name} · 相关作品", Modifier.weight(1f),
                 style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            TextButton(onClick = { navigate(Collection(tag.name, "search", word = tag.name)) }) { Text("查看全部") }
+            TextButton(onClick = {
+                navigate(Collection(tag.name, "search", word = tag.name, tagCover = trend.cover))
+            }) { Text("查看全部") }
         }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
             if (works.itemCount == 0 && works.loadState.refresh is LoadState.Loading) items(5) {
@@ -442,13 +464,162 @@ private fun DiscoveryPlaceholders() {
 @Composable
 fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
-    FeedGrid(
-        FeedSpec(section = "follow", kind = settings.contentKind),
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    val pager = rememberPagerState(pageCount = { 2 })
+    val scope = rememberCoroutineScope()
+    Column(Modifier.fillMaxSize()) {
+        Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues().calculateTopPadding()))
+        PrimaryTabRow(selectedTabIndex = pager.currentPage) {
+            Tab(
+                selected = pager.currentPage == 0,
+                onClick = { scope.launch { pager.animateScrollToPage(0) } },
+                text = { Text(strings.getString(R.string.follow_tab_activity)) },
+            )
+            Tab(
+                selected = pager.currentPage == 1,
+                onClick = { scope.launch { pager.animateScrollToPage(1) } },
+                text = { Text(strings.getString(R.string.follow_tab_updates)) },
+            )
+        }
+        HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
+            if (page == 0) {
+                FeedGrid(
+                    FeedSpec(section = "follow", kind = settings.contentKind),
+                    vm,
+                    navigate,
+                    Modifier.fillMaxSize(),
+                    topPadding = PixivSpacing.content,
+                )
+            } else {
+                FollowedSeriesScreen(vm, navigate)
+            }
+        }
+    }
+}
+
+@Composable
+private fun FollowedSeriesScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    FollowedSeriesList(
         vm,
         navigate,
-        Modifier.fillMaxSize(),
-        topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + PixivSpacing.content,
+        if (settings.contentKind == "novel") "novel" else "manga",
     )
+}
+
+@Composable
+private fun FollowedSeriesList(vm: AppViewModel, navigate: (NavKey) -> Unit, kind: String) {
+    val strings = androidx.compose.ui.platform.LocalResources.current
+    val entries = remember(vm.accountId, kind) { vm.followedSeries(kind) }.collectAsLazyPagingItems()
+    val listState = rememberLazyListState()
+    val padding = PaddingValues(
+        horizontal = PixivSpacing.content,
+        vertical = PixivSpacing.compact,
+    )
+    when {
+        entries.loadState.refresh is LoadState.Loading && entries.itemCount == 0 ->
+            Box(Modifier.fillMaxSize(), Alignment.Center) { LoadingState() }
+        entries.loadState.refresh is LoadState.Error && entries.itemCount == 0 -> {
+            val error = (entries.loadState.refresh as LoadState.Error).error
+            EmptyState(
+                strings.getString(R.string.follow_tab_updates),
+                error.message ?: strings.getString(R.string.ui_73a13d2b99),
+                materialSymbol(MaterialSymbol.Book),
+                strings.getString(R.string.ui_e2d53a6d3a),
+            ) { entries.retry() }
+        }
+        entries.itemCount == 0 -> EmptyState(
+            strings.getString(R.string.follow_tab_updates),
+            strings.getString(R.string.follow_updates_empty),
+            materialSymbol(MaterialSymbol.Book),
+        )
+        else -> LazyColumn(
+            state = listState,
+            contentPadding = padding,
+            verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            items(entries.itemCount, key = entries.itemKey { it.id }) { index ->
+                entries[index]?.let { series ->
+                    val resolvedWorkCount by produceState(
+                        initialValue = series.workCount,
+                        series.kind,
+                        series.id,
+                        vm.accountId,
+                    ) {
+                        if (value <= 0) {
+                            value = runCatching {
+                                vm.seriesDetails(series.kind, series.id).workCount
+                            }.getOrDefault(0)
+                        }
+                    }
+                    Surface(
+                        onClick = {
+                            navigate(Collection(series.title, "series", series.kind, series.id, watched = true))
+                        },
+                        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ) {
+                        Row(Modifier.fillMaxWidth().height(124.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                Modifier.width(88.dp).fillMaxHeight().clip(MaterialTheme.shapes.medium)
+                                    .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                            ) {
+                            AsyncImage(
+                                model = series.coverUrl,
+                                contentDescription = "${series.title} 封面",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            )
+                            }
+                            Column(
+                                Modifier.weight(1f).fillMaxHeight()
+                                    .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                                verticalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    series.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                    Text(
+                                        series.user.name.ifBlank { "未知作者" },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        strings.getString(R.string.follow_updates_count, resolvedWorkCount),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
+                            AppIcon(
+                                materialSymbol(MaterialSymbol.ChevronRight),
+                                null,
+                                Modifier.padding(horizontal = 12.dp),
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                when (val state = entries.loadState.append) {
+                    is LoadState.Loading -> LoadingState()
+                    is LoadState.Error -> TextButton(onClick = entries::retry) {
+                        Text(state.error.message ?: strings.getString(R.string.ui_73a13d2b99))
+                    }
+                    else -> Spacer(Modifier.height(PixivSpacing.content))
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -523,9 +694,20 @@ fun CollectionScreen(
                 },
                 scrollBehavior = if (route.section == "search") null else LocalAppBarScrollBehavior.current,
             )
-        else ScreenBar(route.title, back = back, scrollBehavior = null,
-            modifier = Modifier.aboveWorkTransition())
-        if (route.section == "ranking")
+        else if (route.section != "series")
+            ScreenBar(route.title, back = back, scrollBehavior = null,
+                modifier = Modifier.aboveWorkTransition())
+        if (route.section == "series") {
+            FeedGrid(
+                FeedSpec(section = "series", kind = route.kind, userId = route.userId),
+                vm,
+                navigate,
+                Modifier.weight(1f),
+                header = { SeriesHeader(route, vm, navigate, back) },
+                scrollHeaderWhileEmpty = true,
+                topPadding = 0.dp,
+            )
+        } else if (route.section == "ranking")
             RankingPages(vm, navigate, Modifier.weight(1f), rankingDate)
         else FeedGrid(
             FeedSpec(
@@ -539,6 +721,7 @@ fun CollectionScreen(
             vm,
             navigate,
             Modifier.weight(1f),
+            leadingWork = route.tagCover,
         )
     }
     if (showDatePicker) {
@@ -625,6 +808,144 @@ private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier:
 }
 
 @Composable
+private fun SeriesHeader(
+    route: Collection,
+    vm: AppViewModel,
+    navigate: (NavKey) -> Unit,
+    back: () -> Unit,
+) {
+    var details by remember(route.kind, route.userId, vm.accountId) {
+        mutableStateOf(
+            vm.cachedSeriesDetails(route.kind, route.userId)?.let {
+                if (route.watched) it.copy(isWatched = true) else it
+            }
+        )
+    }
+    var loading by remember(route.kind, route.userId, vm.accountId) {
+        mutableStateOf(vm.cachedSeriesDetails(route.kind, route.userId) == null)
+    }
+    var watchBusy by remember(route.kind, route.userId, vm.accountId) { mutableStateOf(false) }
+    var error by remember(route.kind, route.userId, vm.accountId) { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    LaunchedEffect(route.kind, route.userId, vm.accountId) {
+        if (details == null) {
+            loading = true
+            error = null
+            runCatching { vm.seriesDetails(route.kind, route.userId) }
+                .onSuccess { details = if (route.watched) it.copy(isWatched = true) else it }
+                .onFailure { error = it.message }
+            loading = false
+        }
+    }
+
+    Column(
+        Modifier.fillMaxWidth().padding(bottom = PixivSpacing.content),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+    ) {
+        if (details?.coverUrl?.isNotEmpty() == true) {
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val edgeToEdgeWidth = maxWidth + PixivSpacing.content * 2
+                Box(
+                    Modifier.fillMaxWidth().heightIn(min = 190.dp, max = 300.dp),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    AsyncImage(
+                        model = details?.coverUrl,
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier
+                            .requiredWidth(edgeToEdgeWidth)
+                            .heightIn(min = 190.dp, max = 300.dp),
+                    )
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = PixivSpacing.tight, vertical = PixivSpacing.tight),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        IconButton(
+                            onClick = back,
+                            modifier = Modifier.clip(CircleShape)
+                                .background(Color.Black.copy(alpha = .38f)),
+                        ) {
+                            AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回", tint = Color.White)
+                        }
+                        IconButton(
+                            onClick = {
+                                val url = if (route.kind == "novel")
+                                    "https://www.pixiv.net/novel/series/${route.userId}"
+                                else "https://www.pixiv.net/user/series/${route.userId}"
+                                context.startActivity(
+                                    Intent.createChooser(
+                                        Intent(Intent.ACTION_SEND).setType("text/plain")
+                                            .putExtra(Intent.EXTRA_TEXT, url),
+                                        "分享系列",
+                                    ),
+                                )
+                            },
+                            modifier = Modifier.clip(CircleShape)
+                                .background(Color.Black.copy(alpha = .38f)),
+                        ) {
+                            AppIcon(materialSymbol(MaterialSymbol.Share), "分享", tint = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+        ) {
+            Text(
+                details?.title?.ifBlank { route.title } ?: route.title,
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
+            details?.user?.takeIf { it.id > 0 }?.let { user ->
+                Text(
+                    user.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.clickable { navigate(Author(user)) },
+                )
+            }
+            details?.let { series ->
+                Button(
+                    onClick = {
+                        if (!watchBusy) scope.launch {
+                            watchBusy = true
+                            runCatching { vm.setSeriesWatched(series.kind, series.id, !series.isWatched) }
+                                .onSuccess { details = series.copy(isWatched = !series.isWatched) }
+                                .onFailure { error = it.message }
+                            watchBusy = false
+                        }
+                    },
+                    enabled = !watchBusy,
+                ) {
+                    Text(if (series.isWatched) "取消追更" else "追更")
+                }
+                if (series.caption.isNotBlank()) {
+                    Text(
+                        series.caption,
+                        modifier = Modifier.fillMaxWidth().padding(top = PixivSpacing.compact),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            error?.let { message ->
+                Text(message, color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
 fun FeedGrid(
     spec: FeedSpec,
     vm: AppViewModel,
@@ -639,6 +960,7 @@ fun FeedGrid(
     topPadding: Dp = PixivSpacing.content,
     pullToRefreshEnabled: Boolean = true,
     scrollHeaderWhileEmpty: Boolean = false,
+    leadingWork: Work? = null,
 ) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
@@ -664,11 +986,11 @@ fun FeedGrid(
     val showFeedMetadata = spec.section != "ranking" && settings.showHomeMetadata
     val feedContent: @Composable () -> Unit = {
         when {
-            refreshing && items.itemCount == 0 -> FeedGridStatus(
+            refreshing && items.itemCount == 0 && leadingWork == null -> FeedGridStatus(
                 header, afterHeader, scrollHeaderWhileEmpty, grid, list, topPadding,
                 gridLayout = spec.kind != "novel",
             ) { LoadingState() }
-            error != null && items.itemCount == 0 ->
+            error != null && items.itemCount == 0 && leadingWork == null ->
                 FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty, grid, list, topPadding,
                     gridLayout = spec.kind != "novel") {
                     EmptyState(
@@ -680,7 +1002,7 @@ fun FeedGrid(
                         items.retry()
                     }
                 }
-            items.itemCount == 0 ->
+            items.itemCount == 0 && leadingWork == null ->
                 FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty, grid, list, topPadding,
                     gridLayout = spec.kind != "novel") {
                     EmptyState(
@@ -700,21 +1022,38 @@ fun FeedGrid(
                 ) {
                     if (header != null) item(key = "feed_header") { header() }
                     if (afterHeader != null) item(key = "feed_after_header") { afterHeader() }
+                    if (leadingWork != null) item(key = "leading_work_${leadingWork.id}") {
+                        val identity = leadingWork.identity(vm.accountId)
+                        val current = bookmarks[identity]?.apply(leadingWork) ?: leadingWork
+                        NovelListItem(
+                            work = current,
+                            rank = null,
+                            likedBusy = identity in busy,
+                            modifier = itemsModifier,
+                            onLike = { vm.run { vm.bookmark(current) } },
+                            onClick = {
+                                vm.record(current)
+                                navigate(Detail(current, spec, 0))
+                            },
+                        )
+                    }
                     items(items.itemCount, key = items.itemKey { "${it.type}_${it.id}" }) { index ->
                         items[index]?.let { work ->
-                            val identity = work.identity(vm.accountId)
-                            val current = bookmarks[identity]?.apply(work) ?: work
-                            NovelListItem(
-                                work = current,
-                                rank = index.takeIf { rank },
-                                likedBusy = identity in busy,
-                                modifier = itemsModifier,
-                                onLike = { vm.run { vm.bookmark(current) } },
-                                onClick = {
-                                    vm.record(current)
-                                    navigate(Detail(current))
-                                },
-                            )
+                            if (work.id != leadingWork?.id) {
+                                val identity = work.identity(vm.accountId)
+                                val current = bookmarks[identity]?.apply(work) ?: work
+                                NovelListItem(
+                                    work = current,
+                                    rank = index.takeIf { rank },
+                                    likedBusy = identity in busy,
+                                    modifier = itemsModifier,
+                                    onLike = { vm.run { vm.bookmark(current) } },
+                                    onClick = {
+                                        vm.record(current)
+                                        navigate(Detail(current))
+                                    },
+                                )
+                            }
                         }
                     }
                     item { FeedAppendState(items.loadState.append, items.itemCount, items::retry) }
@@ -737,20 +1076,36 @@ fun FeedGrid(
                         item(span = StaggeredGridItemSpan.FullLine, key = "feed_after_header") {
                             afterHeader()
                         }
+                    if (leadingWork != null) item(key = "leading_work_${leadingWork.id}") {
+                        val identity = leadingWork.identity(vm.accountId)
+                        val current = bookmarks[identity]?.apply(leadingWork) ?: leadingWork
+                        WorkCard(
+                            current,
+                            likedBusy = identity in busy,
+                            showMetadata = showFeedMetadata,
+                            modifier = itemsModifier,
+                            onLike = { vm.run { vm.bookmark(current) } },
+                        ) {
+                            vm.record(current)
+                            navigate(Detail(current, spec, 0))
+                        }
+                    }
                     items(items.itemCount, key = items.itemKey { "${it.type}_${it.id}" }) { index ->
                         items[index]?.let { work ->
-                            val identity = work.identity(vm.accountId)
-                            val current = bookmarks[identity]?.apply(work) ?: work
-                            WorkCard(
-                                current,
-                                index.takeIf { rank },
-                                likedBusy = identity in busy,
-                                showMetadata = showFeedMetadata,
-                                modifier = itemsModifier,
-                                onLike = { vm.run { vm.bookmark(current) } },
-                            ) {
-                                vm.record(current)
-                                navigate(Detail(current, spec, index))
+                            if (work.id != leadingWork?.id) {
+                                val identity = work.identity(vm.accountId)
+                                val current = bookmarks[identity]?.apply(work) ?: work
+                                WorkCard(
+                                    current,
+                                    index.takeIf { rank },
+                                    likedBusy = identity in busy,
+                                    showMetadata = showFeedMetadata,
+                                    modifier = itemsModifier,
+                                    onLike = { vm.run { vm.bookmark(current) } },
+                                ) {
+                                    vm.record(current)
+                                    navigate(Detail(current, spec, index))
+                                }
                             }
                         }
                     }
@@ -1094,6 +1449,8 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
     var dateField by remember { mutableStateOf<String?>(null) }
     var filter by remember { mutableStateOf(false) }
     var tags by remember { mutableStateOf<List<Tag>>(emptyList()) }
+    var tagSuggestions by remember { mutableStateOf<List<Tag>>(emptyList()) }
+    var tagSuggestionError by remember { mutableStateOf<String?>(null) }
     var users by remember { mutableStateOf<List<User>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
     var userLoading by remember { mutableStateOf(false) }
@@ -1131,9 +1488,41 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
     }
     LaunchedEffect(vm.accountId, settings.contentKind) {
         if (initialQuery != null) return@LaunchedEffect
-        if (settings.contentKind == "illust")
+        if (settings.contentKind == "illust") {
+            tags = vm.cachedTags().orEmpty()
             runCatching { vm.tags() }.onSuccess { tags = it }
-        else tags = emptyList()
+        } else tags = emptyList()
+    }
+    LaunchedEffect(vm.accountId, settings.contentKind, settings.showTagTranslations, submitted) {
+        snapshotFlow { word.text.toString().trim() }
+            .distinctUntilChanged()
+            .collectLatest { query ->
+                kotlinx.coroutines.delay(300)
+                if (query.isBlank() || query == submitted || settings.contentKind != "illust") {
+                    tagSuggestions = emptyList()
+                    tagSuggestionError = null
+                } else {
+                    try {
+                        val suggestions = vm.tagSuggestions(query)
+                        tagSuggestions = if (settings.showTagTranslations) {
+                            coroutineScope {
+                                suggestions.map { name ->
+                                    async {
+                                        val translation = runCatching { vm.tagTranslation(name) }.getOrNull()
+                                        Tag(name, translation)
+                                    }
+                                }.awaitAll()
+                            }
+                        } else suggestions.map(::Tag)
+                        tagSuggestionError = null
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        tagSuggestions = emptyList()
+                        tagSuggestionError = e.message ?: "标签联想请求失败"
+                    }
+                }
+            }
     }
     LaunchedEffect(submitted, vm.accountId, userRetry) {
         if (submitted.isNotBlank()) {
@@ -1317,6 +1706,19 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
     }
     ExpandedFullScreenSearchBar(state = searchState, inputField = searchField) {
         idSuggestions()
+        tagSuggestionError?.let { message ->
+            Text(
+                "标签联想请求失败：$message",
+                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
+        tagSuggestions.forEach { suggestion ->
+            ListItem(
+                modifier = Modifier.clickable { submit(suggestion.name) },
+            ) { TagLabel(suggestion) }
+        }
         history.take(8).forEach { entry ->
             ListItem(
                 leadingContent = { AppIcon(materialSymbol(MaterialSymbol.History), null) },

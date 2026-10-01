@@ -66,6 +66,8 @@ fun DetailScreen(
     var downloadPageSelection by remember(work.id) { mutableStateOf(false) }
     var selectedDownloadPages by remember(work.id) { mutableStateOf(emptySet<Int>()) }
     var pendingDownloadPages by remember(work.id) { mutableStateOf<Set<Int>?>(null) }
+    var pendingUgoiraGif by remember(work.id) { mutableStateOf(false) }
+    var ugoiraFormatSelection by remember(work.id) { mutableStateOf(false) }
     var estimatedDownloadBytes by remember(work.id) { mutableStateOf<Long?>(null) }
     var estimatingDownloadBytes by remember(work.id) { mutableStateOf(false) }
     var followBusy by remember { mutableStateOf(false) }
@@ -76,11 +78,16 @@ fun DetailScreen(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val pages = pendingDownloadPages
             pendingDownloadPages = null
-            if (granted) vm.download(work, pages)
+            if (granted) vm.download(work, pages, pendingUgoiraGif)
         }
     fun requestDownload(pages: Set<Int>? = null) {
         pendingDownloadPages = pages
         permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
+    fun requestUgoiraDownload(asGif: Boolean) {
+        pendingUgoiraGif = asGif
+        ugoiraFormatSelection = false
+        requestDownload()
     }
     LaunchedEffect(moreMenu, work.id, work.page_count) {
         if (moreMenu && !work.isNovel) {
@@ -286,7 +293,16 @@ fun DetailScreen(
                     item {
                         OutlinedButton(
                             onClick = {
-                                navigate(Collection(work.series!!.title, "series", "novel", work.series!!.id))
+                                work.series?.let { series ->
+                                    navigate(
+                                        Collection(
+                                            series.title,
+                                            "series",
+                                            if (work.isNovel) "novel" else "manga",
+                                            series.id,
+                                        ),
+                                    )
+                                }
                             },
                             modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap),
                         ) {
@@ -375,26 +391,29 @@ fun DetailScreen(
                 content = {
                     Text(if (work.page_count > 1 && !work.isNovel) "下载全部图片" else "下载作品")
                 },
-                supportingContent = {
+                trailingContent = {
                     Text(
                         when {
                             estimatingDownloadBytes -> "正在估算大小…"
                             estimatedDownloadBytes != null -> formatDownloadEstimate(estimatedDownloadBytes!!)
                             work.isNovel -> "下载后显示实际大小"
                             else -> "大小暂不可用"
-                        }
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
                     )
                 },
                 leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Download), null) },
                 onClick = {
                     moreMenu = false
-                    requestDownload()
+                    if (work.type == "ugoira") ugoiraFormatSelection = true
+                    else requestDownload()
                 },
             )
             if (work.page_count > 1 && !work.isNovel)
                 ListItem(
                     content = { Text("下载选中图片") },
-                    supportingContent = { Text("已选 ${selectedDownloadPages.size} 张") },
                     leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Image), null) },
                     onClick = {
                         moreMenu = false
@@ -408,6 +427,26 @@ fun DetailScreen(
                     leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Favorite), null) },
                     onClick = { moreMenu = false; privateDialog = true },
                 )
+        }
+    }
+    if (ugoiraFormatSelection && permitted()) ModalBottomSheet(
+        onDismissRequest = { ugoiraFormatSelection = false },
+    ) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = PixivSpacing.content)) {
+            Text("下载动图", Modifier.padding(horizontal = PixivSpacing.content, vertical = 8.dp),
+                style = MaterialTheme.typography.titleLarge)
+            ListItem(
+                content = { Text("下载原文件") },
+                supportingContent = { Text("在作品文件夹中保存 ZIP 原档和帧时序 JSON") },
+                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Image), null) },
+                onClick = { requestUgoiraDownload(asGif = false) },
+            )
+            ListItem(
+                content = { Text("下载 GIF") },
+                supportingContent = { Text("合成为可循环播放的 GIF 文件") },
+                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), null) },
+                onClick = { requestUgoiraDownload(asGif = true) },
+            )
         }
     }
     if (downloadPageSelection && permitted()) {
@@ -644,11 +683,14 @@ private fun RelatedWorkStrip(
 
 @Composable
 fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    val novelMode = settings.contentKind == "novel"
     var user by remember(initial.id) { mutableStateOf(initial) }
     var profile by remember(initial.id) { mutableStateOf(AuthorProfile()) }
     var profileLoaded by remember(initial.id) { mutableStateOf(false) }
     var details by remember(initial.id) { mutableStateOf(AuthorDetails(initial)) }
-    val pager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { 3 })
+    val pageLabels = if (novelMode) listOf("小说", "收藏") else listOf("插画", "漫画", "收藏")
+    val pager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { pageLabels.size })
     val outerScroll = rememberLazyListState()
     val pageGridStates = listOf(
         rememberLazyStaggeredGridState(),
@@ -656,7 +698,6 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         rememberLazyStaggeredGridState(),
     )
     val scope = rememberCoroutineScope()
-    val pageLabels = listOf("插画", "漫画", "收藏")
     val feedback = selectionFeedback()
     val pageMotion = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val workTransition = LocalWorkTransition.current
@@ -690,6 +731,9 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
             vm.authorDetails(initial).let { details = it; user = it.user; profile = it.profile; profileLoaded = true }
         } catch (e: kotlinx.coroutines.CancellationException) { throw e }
         catch (_: Exception) { /* Keep the known author and their reachable works. */ }
+    }
+    LaunchedEffect(pageLabels.size) {
+        if (pager.currentPage >= pageLabels.size) pager.scrollToPage(pageLabels.lastIndex)
     }
     fun shareAuthor() {
         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND)
@@ -770,8 +814,15 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                         LocalWorkTransition provides if (page == pager.currentPage) workTransition else null,
                     ) {
                         FeedGrid(
-                            FeedSpec(section = if (page == 2) "bookmarks" else "user",
-                                kind = if (page == 1) "manga" else "illust", userId = user.id),
+                            FeedSpec(
+                                section = if (page == pageLabels.lastIndex) "bookmarks" else "user",
+                                kind = when {
+                                    novelMode -> "novel"
+                                    page == 1 -> "manga"
+                                    else -> "illust"
+                                },
+                                userId = user.id,
+                            ),
                             vm, navigate, Modifier.fillMaxSize(),
                             gridState = pageGridStates[page],
                             pullToRefreshEnabled = false,
