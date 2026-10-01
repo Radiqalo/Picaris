@@ -1,6 +1,7 @@
 package io.github.radiqalo.picaris.ui
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.browser.customtabs.CustomTabsIntent
@@ -35,6 +36,15 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import coil3.compose.AsyncImage
 import android.os.SystemClock
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -1065,6 +1075,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     var confirmRemoval by remember(vm.accountId) { mutableStateOf(false) }
     var keepDownloadedFiles by remember(vm.accountId) { mutableStateOf(true) }
     var actionsExpanded by remember(vm.accountId) { mutableStateOf(false) }
+    var sortMode by remember(vm.accountId) { mutableStateOf("recent") }
     var speeds by remember(vm.accountId) { mutableStateOf(emptyMap<Long, Long>()) }
     val speedSamples = remember(vm.accountId) { mutableMapOf<Long, DownloadSpeedSample>() }
     LaunchedEffect(tasks) {
@@ -1081,10 +1092,16 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         speedSamples.keys.retainAll(tasks.filter { it.status == "running" }.map { it.id }.toSet())
         speeds = nextSpeeds
     }
-    val groups = remember(tasks) {
-        tasks.groupBy { it.workId }
+    val groups = remember(tasks, sortMode) {
+        val grouped = tasks.groupBy { it.workId }
             .map { (workId, groupTasks) -> DownloadGroup(workId, groupTasks) }
             .sortedByDescending { it.createdAt }
+        when (sortMode) {
+            "title" -> grouped.sortedBy { it.title.lowercase() }
+            "size" -> grouped.sortedByDescending { it.bytes }
+            "pages" -> grouped.sortedByDescending { it.pageCount }
+            else -> grouped
+        }
     }
     val filtered = groups.filter { group ->
         when (filter) {
@@ -1114,10 +1131,16 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         selected = emptySet()
         selecting = false
     }
+    fun exitSelection() {
+        selected = emptySet()
+        selecting = false
+        actionsExpanded = false
+    }
+    BackHandler(enabled = selecting) { exitSelection() }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(
             strings.getString(R.string.ui_18df1a67a2),
-            back,
+            { if (selecting) exitSelection() else back() },
             scrollBehavior = null,
         )
         LazyRow(
@@ -1322,46 +1345,89 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                     }
                 }
             }
-            androidx.compose.material3.FloatingActionButtonMenu(
-                expanded = actionsExpanded,
-                button = {
-                    androidx.compose.material3.ToggleFloatingActionButton(
-                        checked = actionsExpanded,
-                        onCheckedChange = { actionsExpanded = it },
-                    ) {
-                        AppIcon(
-                            materialSymbol(MaterialSymbol.Add),
-                            if (actionsExpanded) "关闭操作" else "下载操作",
-                            Modifier.graphicsLayer { rotationZ = checkedProgress * 45f },
-                        )
-                    }
-                },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
+            Column(
+                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FloatingActionButtonMenuItem(
+                AnimatedVisibility(
+                    visible = actionsExpanded,
+                    enter = fadeIn() + scaleIn(initialScale = 0.8f, animationSpec = spring()) +
+                        slideInVertically(initialOffsetY = { it / 3 }, animationSpec = spring()),
+                    exit = fadeOut() + scaleOut(targetScale = 0.8f, animationSpec = spring()) +
+                        slideOutVertically(targetOffsetY = { it / 3 }, animationSpec = spring()),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (selecting) {
+                            FilledTonalIconButton(
+                                onClick = {
+                                    val visible = filtered.map { it.workId }.toSet()
+                                    selected = if (selected.containsAll(visible)) selected - visible else selected + visible
+                                    selecting = selected.isNotEmpty()
+                                },
+                                modifier = Modifier.size(48.dp),
+                            ) { AppIcon(materialSymbol(MaterialSymbol.Check), "全选") }
+                            FilledTonalIconButton(
+                                enabled = selectedTaskIds.isNotEmpty(),
+                                onClick = { vm.downloadBatchAction(selectedTaskIds, "queued"); actionsExpanded = false },
+                                modifier = Modifier.size(48.dp),
+                            ) { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), "开始") }
+                            FilledTonalIconButton(
+                                enabled = selectedTaskIds.isNotEmpty(),
+                                onClick = { vm.downloadBatchAction(selectedTaskIds, "paused"); actionsExpanded = false },
+                                modifier = Modifier.size(48.dp),
+                            ) { AppIcon(materialSymbol(MaterialSymbol.Pause), "暂停") }
+                            FilledTonalIconButton(
+                                enabled = selected.isNotEmpty(),
+                                onClick = { confirmRemoval = true; actionsExpanded = false },
+                                modifier = Modifier.size(48.dp),
+                            ) { AppIcon(materialSymbol(MaterialSymbol.Delete), "删除") }
+                        } else {
+                            FilledTonalIconButton(
+                                onClick = {
+                                    sortMode = when (sortMode) {
+                                        "recent" -> "title"
+                                        "title" -> "size"
+                                        "size" -> "pages"
+                                        else -> "recent"
+                                    }
+                                    actionsExpanded = false
+                                },
+                                modifier = Modifier.size(48.dp),
+                            ) {
+                                AppIcon(
+                                    materialSymbol(MaterialSymbol.Sort),
+                                    "排序方式：${when (sortMode) {
+                                        "title" -> "标题"
+                                        "size" -> "文件大小"
+                                        "pages" -> "图片数量"
+                                        else -> "最近下载"
+                                    }}",
+                                )
+                            }
+                        }
+                    }
+                }
+                val plusRotation by animateFloatAsState(
+                    targetValue = if (actionsExpanded) 45f else 0f,
+                    animationSpec = spring(),
+                    label = "downloadActionsPlusRotation",
+                )
+                FloatingActionButton(
                     onClick = {
-                        val visible = filtered.map { it.workId }.toSet()
-                        selected = if (selected.containsAll(visible)) selected - visible else selected + visible
-                        selecting = selected.isNotEmpty()
+                        if (actionsExpanded && selecting) exitSelection()
+                        else actionsExpanded = !actionsExpanded
                     },
-                    icon = { AppIcon(materialSymbol(MaterialSymbol.Check), "全选") },
-                    text = {},
-                )
-                FloatingActionButtonMenuItem(
-                    onClick = { vm.downloadBatchAction(selectedTaskIds, "queued"); actionsExpanded = false },
-                    icon = { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), "开始") },
-                    text = {},
-                )
-                FloatingActionButtonMenuItem(
-                    onClick = { vm.downloadBatchAction(selectedTaskIds, "paused"); actionsExpanded = false },
-                    icon = { AppIcon(materialSymbol(MaterialSymbol.Pause), "暂停") },
-                    text = {},
-                )
-                FloatingActionButtonMenuItem(
-                    onClick = { confirmRemoval = true; actionsExpanded = false },
-                    icon = { AppIcon(materialSymbol(MaterialSymbol.Delete), "删除") },
-                    text = {},
-                )
+                ) {
+                    AppIcon(
+                        materialSymbol(MaterialSymbol.Add),
+                        if (actionsExpanded) "关闭操作" else "下载操作",
+                        Modifier.graphicsLayer { rotationZ = plusRotation },
+                    )
+                }
             }
         }
     }
