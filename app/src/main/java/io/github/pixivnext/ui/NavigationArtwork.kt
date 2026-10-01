@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -87,16 +88,28 @@ private class ArtworkAnimation<Value, Vector : AnimationVector>(
     private val converter: TwoWayConverter<Value, Vector>,
     private val motion: FiniteAnimationSpec<Value>,
     var velocity: Value,
+    private val durationScale: Float,
 ) {
     private var animation: TargetBasedAnimation<Value, Vector>? = null
     private var start = 0L
 
     fun pause() { animation = null }
 
+    /** Play time in animation time, honouring the platform's animation duration scale. */
+    private fun playTime(now: Long): Long =
+        ((now - start).coerceAtLeast(0L) / durationScale).toLong()
+
     fun advance(now: Long, target: Value): Boolean {
+        // A zero scale means the system asks for no animation: land directly on the target
+        // instead of driving a frame loop Compose's own animation APIs would have skipped.
+        if (durationScale <= 0f) {
+            state.value = target
+            animation = null
+            return true
+        }
         var current = animation
         if (current != null) {
-            val elapsed = (now - start).coerceAtLeast(0L)
+            val elapsed = playTime(now)
             state.value = current.getValueFromNanos(elapsed)
             velocity = converter.convertFromVector(current.getVelocityVectorFromNanos(elapsed))
         }
@@ -106,7 +119,7 @@ private class ArtworkAnimation<Value, Vector : AnimationVector>(
             animation = current
             start = now
         }
-        return now - start >= current.durationNanos
+        return playTime(now) >= current.durationNanos
     }
 }
 
@@ -312,16 +325,17 @@ internal class NavigationArtwork(
         flight.generation++
         val generation = flight.generation
         flight.job = scope.launch {
+            val durationScale = coroutineContext[MotionDurationScale]?.scaleFactor ?: 1f
             flight.handoffFrame?.let { frame ->
                 flight.bounds.value = frame.bounds
                 flight.corners.value = frame.corners
                 flight.clip.value = frame.clip
                 flight.handoffFrame = null
             }
-            val bounds = ArtworkAnimation(flight.bounds, Rect.VectorConverter, spatial, flight.boundsVelocity)
-            val corners = ArtworkAnimation(flight.corners, Rect.VectorConverter, spatial, flight.cornersVelocity)
-            val clip = ArtworkAnimation(flight.clip, Rect.VectorConverter, spatial, flight.clipVelocity)
-            val alpha = ArtworkAnimation(flight.alpha, Float.VectorConverter, effects, flight.alphaVelocity)
+            val bounds = ArtworkAnimation(flight.bounds, Rect.VectorConverter, spatial, flight.boundsVelocity, durationScale)
+            val corners = ArtworkAnimation(flight.corners, Rect.VectorConverter, spatial, flight.cornersVelocity, durationScale)
+            val clip = ArtworkAnimation(flight.clip, Rect.VectorConverter, spatial, flight.clipVelocity, durationScale)
+            val alpha = ArtworkAnimation(flight.alpha, Float.VectorConverter, effects, flight.alphaVelocity, durationScale)
             var finished = false
             while (!finished && flight.generation == generation) {
                 withFrameNanos { now ->
