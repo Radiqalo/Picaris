@@ -146,8 +146,12 @@ Pixiv 没有为本项目授权公开 API。OAuth 与应用接口采用第三方�
 
 ## 许可
 
-本项目以 [Apache License 2.0](LICENSE) 发布，版权归 `Copyright 2026 Radiqalo`；署名信息见 [`NOTICE`](NOTICE)。
+本项目以 [GNU General Public License v3.0](LICENSE) 发布，版权归 `Copyright (C) 2026 Radiqalo`；声明见 [`NOTICE`](NOTICE)。
 
-第三方依赖的许可证与声明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)，随源码归档的许可文本位于 [`licenses/Apache-2.0.txt`](licenses/Apache-2.0.txt)。Apache-2.0 不授予任何商标权；Pixiv、PIXIVISION 等名称与商标归其各自所有者。
+这是 **GPL-3.0-only**（不含 "or any later version"）。以目标代码形式分发时，对应源码见 <https://github.com/Radiqalo/Picaris>；GPL-3.0 要求分发者向接收者提供完整许可文本与对应源码，二者均已随本仓库和 APK 提供。
+
+「Picaris」名称与应用图标不在许可授权范围内，请不要在衍生分发中使用，以免与官方版本混淆。Pixiv、PIXIVISION 等名称与商标归其各自所有者。
+
+第三方依赖的许可证与声明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)，随源码归档的许可文本位于 [`licenses/Apache-2.0.txt`](licenses/Apache-2.0.txt)。
 
 版本变更记录见 [`CHANGELOG.md`](CHANGELOG.md)。
