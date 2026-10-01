@@ -1218,7 +1218,6 @@ fun AboutScreen(back: () -> Unit) {
     val strings = androidx.compose.ui.platform.LocalResources.current
 
     val context = LocalContext.current
-    var notices by remember { mutableStateOf(false) }
     Column {
         ScreenBar(strings.getString(R.string.ui_bed172efc9), back = back, scrollBehavior = null)
         Column(
@@ -1286,9 +1285,6 @@ fun AboutScreen(back: () -> Unit) {
                 ) {
                     Text(strings.getString(R.string.about_source_code))
                 }
-                OutlinedButton({ notices = true }, Modifier.fillMaxWidth()) {
-                    Text(strings.getString(R.string.license_notices))
-                }
             }
             Spacer(Modifier.height(PixivSpacing.section))
             Text(
@@ -1299,28 +1295,6 @@ fun AboutScreen(back: () -> Unit) {
             )
         }
     }
-    if (notices)
-        ActionSheet(
-            onDismissRequest = { notices = false },
-            title = { Text(strings.getString(R.string.license_notices)) },
-            text = {
-                val text = remember {
-                    context.assets.open("THIRD_PARTY_NOTICES.md").bufferedReader().use {
-                        it.readText()
-                    } +
-                        "\n\n" +
-                        context.assets.open("Apache-2.0.txt").bufferedReader().use { it.readText() }
-                }
-                Text(
-                    text,
-                    Modifier.fillMaxWidth(),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            },
-            confirmButton = {
-                TextButton({ notices = false }) { Text(strings.getString(R.string.ui_33246f6a5e)) }
-            },
-        )
 }
 
 @Composable

@@ -157,7 +157,7 @@
     <string name="ui_d3657fb0a3">播放动图</string>
     <string name="ui_d5edf52f07">纯黑图片背景</string>
     <string name="ui_d6166d6460">Pixiv 服务条款</string>
-    <string name="ui_d70fcfc258">一个专注于画作、阅读与发现的非官方 Pixiv 客户端。与 Pixiv Inc. 无任何关联，所有作品版权归其创作者所有。</string>
+    <string name="ui_d70fcfc258">又一个 Pixiv 第三方客户端。与 Pixiv Inc. 无任何关联，所有作品版权归其创作者所有。</string>
     <string name="ui_d7ddb05929">非官方客户端</string>
     <string name="ui_d80ba66133">使用系统壁纸配色</string>
     <string name="ui_d95ef5ba39">HTTP 代理</string>
@@ -199,7 +199,6 @@
     <string name="search_clear_dates">清除日期范围</string>
     <string name="reader_image_error">图片加载失败</string>
     <string name="reader_image_error_detail">请检查网络，或在下载管理中重新保存作品。</string>
-    <string name="license_notices">开源许可证</string>
     <string name="about_tagline">非官方 Pixiv 客户端</string>
     <string name="about_version">版本</string>
     <string name="about_appearance">界面</string>
