@@ -1,7 +1,9 @@
 package io.github.pixivnext.ui
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.TargetBasedAnimation
+import androidx.compose.animation.core.TwoWayConverter
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,10 +13,12 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -36,7 +40,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.toSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 internal data class ArtworkFrame(val bounds: Rect, val corners: Rect, val clip: Rect)
@@ -55,6 +58,8 @@ internal class ArtworkLayer(
     var pageCoordinates: LayoutCoordinates? = null
     var visible = true
     var recorded = false
+    var recordedPainter: Painter? = null
+    var recordedSize = IntSize.Zero
     var detached = false
     var references = 0
     var released = false
@@ -73,11 +78,43 @@ internal class ArtworkLayer(
     }
 }
 
+internal class ArtworkValue<Value>(initial: Value) {
+    var value by mutableStateOf(initial)
+}
+
+private class ArtworkAnimation<Value, Vector : AnimationVector>(
+    private val state: ArtworkValue<Value>,
+    private val converter: TwoWayConverter<Value, Vector>,
+    private val motion: FiniteAnimationSpec<Value>,
+    var velocity: Value,
+) {
+    private var animation: TargetBasedAnimation<Value, Vector>? = null
+    private var start = 0L
+
+    fun pause() { animation = null }
+
+    fun advance(now: Long, target: Value): Boolean {
+        var current = animation
+        if (current != null) {
+            val elapsed = (now - start).coerceAtLeast(0L)
+            state.value = current.getValueFromNanos(elapsed)
+            velocity = converter.convertFromVector(current.getVelocityVectorFromNanos(elapsed))
+        }
+        if (current == null || current.targetValue != target) {
+            current = TargetBasedAnimation(motion, converter, state.value, target,
+                converter.convertToVector(velocity))
+            animation = current
+            start = now
+        }
+        return now - start >= current.durationNanos
+    }
+}
+
 internal class ArtworkFlight(val key: String, val source: ArtworkLayer, frame: ArtworkFrame) {
-    val bounds = Animatable(frame.bounds, Rect.VectorConverter)
-    val corners = Animatable(frame.corners, Rect.VectorConverter)
-    val clip = Animatable(frame.clip, Rect.VectorConverter)
-    val alpha = Animatable(1f)
+    val bounds = ArtworkValue(frame.bounds)
+    val corners = ArtworkValue(frame.corners)
+    val clip = ArtworkValue(frame.clip)
+    val alpha = ArtworkValue(1f)
     var boundsVelocity = Rect.Zero
     var cornersVelocity = Rect.Zero
     var clipVelocity = Rect.Zero
@@ -239,7 +276,8 @@ internal class NavigationArtwork(
     }
 
     fun refreshTargets() {
-        if (disposed || coordinator.phase == NavigationTransitionPhase.Previewing) return
+        if (disposed || coordinator.phase == NavigationTransitionPhase.Previewing ||
+            (pending.isEmpty() && flights.isEmpty())) return
         val targets = layers.filter { isTarget(it) && it.recorded }
             .mapNotNull { layer -> frame(layer)?.let { layer.key to (layer to it) } }.toMap()
         pending.toMap().forEach { (key, source) ->
@@ -268,40 +306,42 @@ internal class NavigationArtwork(
     }
 
     private fun animate(flight: ArtworkFlight, targetLayer: ArtworkLayer?, target: ArtworkFrame?) {
-        flight.job?.cancel()
-        flight.generation++
-        val generation = flight.generation
         flight.target = target
         flight.targetLayer = targetLayer
+        if (flight.job?.isActive == true) return
+        flight.generation++
+        val generation = flight.generation
         flight.job = scope.launch {
             flight.handoffFrame?.let { frame ->
-                flight.bounds.snapTo(frame.bounds)
-                flight.corners.snapTo(frame.corners)
-                flight.clip.snapTo(frame.clip)
+                flight.bounds.value = frame.bounds
+                flight.corners.value = frame.corners
+                flight.clip.value = frame.clip
                 flight.handoffFrame = null
             }
-            coroutineScope {
-                if (target != null) {
-                    launch {
-                        flight.bounds.animateTo(target.bounds, spatial, flight.boundsVelocity) {
-                            flight.boundsVelocity = velocity
-                        }
+            val bounds = ArtworkAnimation(flight.bounds, Rect.VectorConverter, spatial, flight.boundsVelocity)
+            val corners = ArtworkAnimation(flight.corners, Rect.VectorConverter, spatial, flight.cornersVelocity)
+            val clip = ArtworkAnimation(flight.clip, Rect.VectorConverter, spatial, flight.clipVelocity)
+            val alpha = ArtworkAnimation(flight.alpha, Float.VectorConverter, effects, flight.alphaVelocity)
+            var finished = false
+            while (!finished && flight.generation == generation) {
+                withFrameNanos { now ->
+                    refreshTargets()
+                    val destination = flight.target
+                    if (destination == null) {
+                        bounds.pause()
+                        corners.pause()
+                        clip.pause()
                     }
-                    launch {
-                        flight.corners.animateTo(target.corners, spatial, flight.cornersVelocity) {
-                            flight.cornersVelocity = velocity
-                        }
-                    }
-                    launch {
-                        flight.clip.animateTo(target.clip, spatial, flight.clipVelocity) {
-                            flight.clipVelocity = velocity
-                        }
-                    }
-                }
-                launch {
-                    flight.alpha.animateTo(if (target == null) 0f else 1f, effects, flight.alphaVelocity) {
-                        flight.alphaVelocity = velocity
-                    }
+                    val boundsDone = destination == null || bounds.advance(now, destination.bounds)
+                    val cornersDone = destination == null || corners.advance(now, destination.corners)
+                    val clipDone = destination == null || clip.advance(now, destination.clip)
+                    val alphaDone = alpha.advance(now, if (destination == null) 0f else 1f)
+                    flight.boundsVelocity = bounds.velocity
+                    flight.cornersVelocity = corners.velocity
+                    flight.clipVelocity = clip.velocity
+                    flight.alphaVelocity = alpha.velocity
+                    finished = boundsDone && cornersDone && clipDone && alphaDone &&
+                        (destination == null || (!coordinator.hasSceneMotion && !coordinator.hasAnimations))
                 }
             }
             if (flight.generation == generation && flights[flight.key] === flight) finish(flight)
@@ -381,13 +421,19 @@ internal fun Modifier.navigationArtwork(key: String, corners: Rect, painter: Pai
             intrinsic.width > 0f && intrinsic.height > 0f
         ) {
             val imageSize = IntSize(intrinsic.width.toInt().coerceAtLeast(1), intrinsic.height.toInt().coerceAtLeast(1))
-            layer.content.record(size = imageSize) { with(painter) { draw(imageSize.toSize()) } }
+            if (layer.recordedPainter !== painter || layer.recordedSize != imageSize) {
+                layer.content.record(size = imageSize) { with(painter) { draw(imageSize.toSize()) } }
+                layer.recordedPainter = painter
+                layer.recordedSize = imageSize
+            }
         } else {
             layer.content.record { this@drawWithContent.drawContent() }
+            layer.recordedPainter = null
         }
+        val firstRecording = !layer.recorded
         layer.recorded = true
         layer.placement.record { this@drawWithContent.drawContent() }
-        artwork.refreshTargets()
+        if (firstRecording) artwork.refreshTargets()
         drawLayer(layer.placement)
     }
 }

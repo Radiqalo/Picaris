@@ -63,13 +63,15 @@ internal class NavigationTransitionCoordinator(
     var incomingFrame: NavigationSceneFrame? = null
         private set
     private val destinations = instances.associate { it.id to it.destination }.toMutableMap()
-    private class SceneSample(val entries: Set<Long>, val routes: List<NavKey>, val read: () -> NavigationSceneFrame?) {
+    private class SceneSample(val entries: Set<Long>, val routes: List<NavKey>,
+        val moving: () -> Boolean, val read: () -> NavigationSceneFrame?) {
         var frame: NavigationSceneFrame? = null
         var timeNanos = 0L
     }
     private val scenes = linkedMapOf<Any, SceneSample>()
     private val animations = mutableStateMapOf<Any, Long>()
     val hasAnimations: Boolean get() = animations.isNotEmpty()
+    val hasSceneMotion: Boolean get() = scenes.values.any { it.moving() }
 
     fun animationStarted(key: Any, id: Long) {
         if (!disposed && id == transitionId) animations[key] = id
@@ -78,9 +80,10 @@ internal class NavigationTransitionCoordinator(
         if (animations[key] == id) animations.remove(key)
     }
 
-    fun registerScene(key: Any, entries: Set<Long>, read: () -> NavigationSceneFrame?) {
+    fun registerScene(key: Any, entries: Set<Long>, moving: () -> Boolean,
+        read: () -> NavigationSceneFrame?) {
         if (disposed) return
-        scenes[key] = SceneSample(entries, entries.mapNotNull { destinations[it] }, read)
+        scenes[key] = SceneSample(entries, entries.mapNotNull { destinations[it] }, moving, read)
     }
 
     fun unregisterScene(key: Any) {

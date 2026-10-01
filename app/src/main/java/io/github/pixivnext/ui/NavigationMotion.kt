@@ -21,9 +21,9 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
@@ -336,7 +336,9 @@ internal fun NavigationPage(
             1f else opacity,
     )
     DisposableEffect(sceneKey, coordinator, artwork) {
-        coordinator.registerScene(sceneKey, entryIds) {
+        coordinator.registerScene(sceneKey, entryIds, moving = {
+            previewing.value || transitions.any { it.isRunning || it.currentState != it.targetState }
+        }) {
             val root = artwork.root?.takeIf { it.isAttached }
             val page = pageCoordinates[0]?.takeIf { it.isAttached }
             if (root == null || page == null || root.size.width == 0) null else {
@@ -363,7 +365,7 @@ internal fun NavigationPage(
                 } else coordinator.sampleScene(sceneKey, System.nanoTime())
             }
     }
-    Surface(
+    Box(
         modifier = Modifier.fillMaxSize().onGloballyPositioned { pageCoordinates[0] = it }.graphicsLayer {
             pageRadius[0] = pageShape.topStart.toPx(size, density) * renderedRounding
             shape = pageShape.copy(
@@ -373,8 +375,7 @@ internal fun NavigationPage(
                 bottomEnd = CornerSize(pageShape.bottomEnd.toPx(size, density) * renderedRounding),
             )
             clip = true
-        },
-        color = MaterialTheme.colorScheme.background,
+        }.background(MaterialTheme.colorScheme.background),
     ) {
         CompositionLocalProvider(
             LocalNavigationPageCoordinates provides { pageCoordinates[0] },

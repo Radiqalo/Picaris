@@ -8,8 +8,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -71,11 +72,10 @@ internal fun BottomNavigationPages(
                 coordinator?.animationFinished(animationKey, id)
             }
         }
-        Surface(
+        Box(
             modifier = Modifier.fillMaxSize().graphicsLayer {
                 translationX = size.width * position.value * 0.6f
-            },
-            color = MaterialTheme.colorScheme.background,
+            }.background(MaterialTheme.colorScheme.background),
         ) {
             CompositionLocalProvider(LocalNavigationTab provides currentTab) {
                 val permitted = navigationPermission()
