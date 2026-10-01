@@ -945,7 +945,7 @@ fun WorkCard(
             }
             if (labels.isNotEmpty())
                 Row(
-                    Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset).aboveWorkTransition(),
+                    Modifier.align(Alignment.TopEnd).padding(WorkImageBadgeInset).aboveWorkTransition(.5f),
                     horizontalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
                 ) {
                     labels.forEach { label ->
@@ -965,7 +965,7 @@ fun WorkCard(
                 }
             if (work.page_count > 1 || work.type == "ugoira" || work.isNovel)
                 Surface(
-                    Modifier.align(Alignment.TopStart).padding(WorkImageBadgeInset).aboveWorkTransition(),
+                    Modifier.align(Alignment.TopStart).padding(WorkImageBadgeInset).aboveWorkTransition(.5f),
                     shape = badgeShape,
                     color = Color.Black.copy(alpha = .52f),
                     contentColor = Color.White,
@@ -987,7 +987,7 @@ fun WorkCard(
                     modifier = Modifier.align(Alignment.BottomEnd)
                         .padding(WorkImageBadgeInset)
                         .size(32.dp)
-                        .aboveWorkTransition()
+                        .aboveWorkTransition(.5f)
                         .expressivePress(likeInteraction)
                         .testTag("like_${work.type}_${work.id}")
                         .semantics {

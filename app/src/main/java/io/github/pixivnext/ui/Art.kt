@@ -117,14 +117,14 @@ fun Modifier.workTransitionControls(): Modifier {
 }
 
 @Composable
-fun Modifier.aboveWorkTransition(): Modifier {
+fun Modifier.aboveWorkTransition(zIndexInOverlay: Float = 1f): Modifier {
     val gestureActive = LocalNavigationGestureInProgress.current
     val transition = LocalWorkTransition.current ?: return this
     val artwork = LocalNavigationArtwork.current
     val visible = LocalNavigationSharedElementVisible.current
     return with(transition) {
         this@aboveWorkTransition.renderInSharedTransitionScopeOverlay(
-            zIndexInOverlay = 1f,
+            zIndexInOverlay = zIndexInOverlay,
             renderInOverlay = {
                 artwork?.isActive == true && artwork.recordingSnapshot != true && !gestureActive && visible
             },
