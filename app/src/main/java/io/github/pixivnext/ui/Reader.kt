@@ -64,12 +64,17 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
     val bg = if (s.blackReader) Color.Black else MaterialTheme.colorScheme.background
     val text = if (s.blackReader) Color.White else MaterialTheme.colorScheme.onBackground
     val scope = rememberCoroutineScope()
-    var restored by remember { mutableStateOf(false) }
-    LaunchedEffect(work.id) {
-        vm.readingProgress(work)?.coerceIn(0, (count - 1).coerceAtLeast(0))?.let {
-            pager.scrollToPage(it)
-            list.scrollToItem(it)
+    var restored by remember(work.id) { mutableStateOf(false) }
+    var pendingLayoutPage by remember(work.id) { mutableStateOf<Int?>(null) }
+    LaunchedEffect(work.id, vertical, pendingLayoutPage) {
+        if (work.type != "ugoira" && count > 0) {
+            val targetPage = pendingLayoutPage ?: if (!restored) vm.readingProgress(work) else null
+            targetPage?.coerceIn(0, count - 1)?.let { page ->
+                if (vertical) list.scrollToItem(page)
+                else pager.scrollToPage(page)
+            }
         }
+        pendingLayoutPage = null
         restored = true
     }
     LaunchedEffect(vertical, restored) {
@@ -160,11 +165,9 @@ fun ReaderScreen(work: Work, vm: AppViewModel, back: () -> Unit) {
                         modifier = Modifier.navigationBarsPadding().padding(bottom = 16.dp),
                     ) {
                         IconButton(onClick = {
-                            scope.launch {
-                                if (vertical) pager.scrollToPage(page)
-                                else list.scrollToItem(page)
-                                vertical = !vertical
-                            }
+                            pendingLayoutPage = pendingLayoutPage ?: page
+                            restored = false
+                            vertical = !vertical
                         }) {
                             AppIcon(
                                 Glyph.Book,
