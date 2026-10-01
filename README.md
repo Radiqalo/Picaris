@@ -1,6 +1,6 @@
-# PixivNext
+# Picaris
 
-独立实现的 Android 17 / Material 3 Expressive Pixiv 客户端。包名 `io.github.pixivnext`，版本 `0.2.2`。只接受 Android 17（API 37）及以上，不包含旧系统兼容分支。
+独立实现的 Android 17 / Material 3 Expressive Pixiv 客户端。包名 `io.github.radiqalo.picaris`，版本 `0.2.2`。只接受 Android 17（API 37）及以上，不包含旧系统兼容分支。
 
 ## 0.2.2
 
@@ -8,7 +8,7 @@
 - 喜欢底框缩小，并保留 48dp 点击范围；与作品页数角标统一圆角和内边距。
 - 删除各页面顶部的说明性副标题及主页入口卡片的说明文字。
 - 顶部标题栏统一使用紧凑的单行布局，上滑收起、回滚出现；每个页面与底栏目的地独立保存标题栏状态。
-- QA 构建使用独立包名 `io.github.pixivnext.qa`、debug 签名及 R8/资源压缩，可与主包并行安装。
+- QA 构建使用独立包名 `io.github.radiqalo.picaris.qa`、debug 签名及 R8/资源压缩，可与主包并行安装。
 
 ## 0.2.0 交互调整
 
@@ -89,7 +89,7 @@ sdk.dir=/your/path/to/Android/Sdk
 ./gradlew :app:assembleBenchmark
 ```
 
-`debug` 使用独立包名 `io.github.pixivnext.qa`，开发和设备测试不会覆盖已登录的客户端。`benchmark` 是启用 R8 与资源压缩、使用本机 debug 证书签名的非 debuggable 测试版，也是本次交付 APK 所用变体；同签名可直接升级 0.1.0，保留应用数据。`release` 不绑定私人签名配置，正式发布前需要自行配置发布密钥。不要使用测试签名发布到商店。
+`debug` 使用独立包名 `io.github.radiqalo.picaris.qa`，开发和设备测试不会覆盖已登录的客户端。`benchmark` 是启用 R8 与资源压缩、使用本机 debug 证书签名的非 debuggable 测试版，也是本次交付 APK 所用变体；同签名可直接升级 0.1.0，保留应用数据。`release` 不绑定私人签名配置，正式发布前需要自行配置发布密钥。不要使用测试签名发布到商店。
 
 源码归档不含 `local.properties`、SDK、模拟器、Gradle 缓存、构建结果或用户凭据；首次构建需要下载依赖。
 
@@ -99,7 +99,7 @@ sdk.dir=/your/path/to/Android/Sdk
 
 ```sh
 ./gradlew :benchmark:connectedBenchmarkAndroidTest -PgenerateProfile \
-  -Pandroid.testInstrumentationRunnerArguments.class=io.github.pixivnext.benchmark.ClientBaselineProfile \
+  -Pandroid.testInstrumentationRunnerArguments.class=io.github.radiqalo.picaris.benchmark.ClientBaselineProfile \
   -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
 ```
 
@@ -109,7 +109,7 @@ sdk.dir=/your/path/to/Android/Sdk
 
 ## 登录与网络
 
-推荐使用「网页登录」，通过 Custom Tabs 打开 Pixiv 的官方页面，完成后回调到应用。应用不收集密码。若设备装有其它处理 `pixiv://` 的客户端，系统可能要求选择 PixivNext；refresh token 导入可作为替代入口。
+推荐使用「网页登录」，通过 Custom Tabs 打开 Pixiv 的官方页面，完成后回调到应用。应用不收集密码。若设备装有其它处理 `pixiv://` 的客户端，系统可能要求选择 Picaris；refresh token 导入可作为替代入口。
 
 应用内代理用于 API、图片与下载；Custom Tabs 遵循浏览器/系统网络设置。不内置域名绕过、内置节点或第三方登录服务。请不要把 refresh token 发给别人、写入源码或日志。
 

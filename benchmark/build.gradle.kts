@@ -1,7 +1,7 @@
 plugins { alias(libs.plugins.android.test) }
 
 android {
-    namespace = "io.github.pixivnext.benchmark"
+    namespace = "io.github.radiqalo.picaris.benchmark"
     compileSdk { version = release(37) { minorApiLevel = 2 } }
     defaultConfig {
         minSdk = 37

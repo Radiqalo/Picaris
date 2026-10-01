@@ -14,6 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PixivNext"
+rootProject.name = "Picaris"
 
 include(":app", ":core", ":designsystem", ":benchmark")

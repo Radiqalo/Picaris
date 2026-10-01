@@ -1,6 +1,6 @@
 # Third-party notices
 
-PixivNext uses the following libraries through Gradle. Versions and the complete resolved dependency graph can be inspected with `./gradlew :app:dependencies --configuration benchmarkRuntimeClasspath`.
+Picaris uses the following libraries through Gradle. Versions and the complete resolved dependency graph can be inspected with `./gradlew :app:dependencies --configuration benchmarkRuntimeClasspath`.
 
 | Dependency family | Project / license |
 | --- | --- |

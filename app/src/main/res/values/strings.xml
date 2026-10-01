@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">PixivNext</string>
+    <string name="app_name">Picaris</string>
     <string name="profile_bookmarks">我的收藏</string>
     <string name="profile_history">浏览历史</string>
     <string name="content_illust">图片</string>
@@ -46,7 +46,7 @@
     <string name="ui_2334433cb5">长按正文可以选择和复制文字</string>
     <string name="ui_23fee3cacc">添加或切换 Pixiv 账号</string>
     <string name="ui_255d6cabdc">下载作品</string>
-    <string name="ui_272209c708">关于 PixivNext</string>
+    <string name="ui_272209c708">关于 Picaris</string>
     <string name="ui_296adf9512">热度</string>
     <string name="ui_29f6711704">浏览历史</string>
     <string name="ui_29ffbeb614">相关作品</string>

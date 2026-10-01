@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.pixivnext.core"
+    namespace = "io.github.radiqalo.picaris.core"
     compileSdk { version = release(37) { minorApiLevel = 2 } }
     defaultConfig { minSdk = 37 }
     compileOptions {

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "io.github.pixivnext.designsystem"
+    namespace = "io.github.radiqalo.picaris.designsystem"
     compileSdk { version = release(37) { minorApiLevel = 2 } }
     defaultConfig { minSdk = 37 }
     buildFeatures { compose = true }
