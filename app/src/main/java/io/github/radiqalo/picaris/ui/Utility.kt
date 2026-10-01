@@ -36,15 +36,6 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import coil3.compose.AsyncImage
 import android.os.SystemClock
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -998,25 +989,13 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                     )
-                                    Text(
-                                        if (work.isNovel) "阅读进度 ${record.progress.coerceIn(0, 100)}%"
-                                        else "${maxOf(work.page_count, work.previews.size, 1)}P · 浏览记录",
+                                    if (work.isNovel) Text(
+                                        "阅读进度 ${record.progress.coerceIn(0, 100)}%",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                     )
                                 }
-                            }
-                            Column(
-                                Modifier.width(44.dp).fillMaxHeight().padding(end = 4.dp, top = 8.dp, bottom = 8.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                if (!work.isNovel && work.page_count > 0)
-                                    Text("${work.page_count}P", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                AppIcon(materialSymbol(MaterialSymbol.History), null, Modifier.size(19.dp),
-                                    tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -1074,7 +1053,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     var selected by remember(vm.accountId) { mutableStateOf(emptySet<Long>()) }
     var confirmRemoval by remember(vm.accountId) { mutableStateOf(false) }
     var keepDownloadedFiles by remember(vm.accountId) { mutableStateOf(true) }
-    var actionsExpanded by remember(vm.accountId) { mutableStateOf(false) }
+    var sortMenuExpanded by remember(vm.accountId) { mutableStateOf(false) }
     var sortMode by remember(vm.accountId) { mutableStateOf("recent") }
     var speeds by remember(vm.accountId) { mutableStateOf(emptyMap<Long, Long>()) }
     val speedSamples = remember(vm.accountId) { mutableMapOf<Long, DownloadSpeedSample>() }
@@ -1119,7 +1098,9 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         selected = selected.intersect(groups.map { it.workId }.toSet())
         if (selected.isEmpty()) selecting = false
     }
-    LaunchedEffect(selecting) { actionsExpanded = selecting }
+    LaunchedEffect(selecting) {
+        if (selecting) sortMenuExpanded = false
+    }
     fun toggleSelection(workId: Long) {
         selected = if (workId in selected) selected - workId else selected + workId
         selecting = selected.isNotEmpty()
@@ -1134,13 +1115,22 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     fun exitSelection() {
         selected = emptySet()
         selecting = false
-        actionsExpanded = false
+        sortMenuExpanded = false
     }
-    BackHandler(enabled = selecting) { exitSelection() }
+    fun closeFloatingMenu() {
+        if (selecting) exitSelection() else sortMenuExpanded = false
+    }
+    BackHandler(enabled = selecting || sortMenuExpanded) { closeFloatingMenu() }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(
             strings.getString(R.string.ui_18df1a67a2),
-            { if (selecting) exitSelection() else back() },
+            {
+                when {
+                    selecting -> exitSelection()
+                    sortMenuExpanded -> sortMenuExpanded = false
+                    else -> back()
+                }
+            },
             scrollBehavior = null,
         )
         LazyRow(
@@ -1162,14 +1152,6 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
-            Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                if (selecting) IconButton(
-                    onClick = { selecting = false; selected = emptySet() },
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    AppIcon(materialSymbol(MaterialSymbol.Close), "退出选择", Modifier.size(18.dp))
-                }
-            }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (filtered.isEmpty()) {
@@ -1259,20 +1241,11 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                             maxLines = 1,
                                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                         )
-                                        Text(
-                                            when (group.status) {
-                                                "running" -> "${downloadSizeText(groupSpeed)}/s · ${if (group.total > 0) "${(group.bytes * 100 / group.total).coerceIn(0L, 100)}%" else "下载中"}"
-                                                "queued" -> "等待下载"
-                                                "paused" -> "已暂停"
-                                                "failed" -> "下载失败"
-                                                "cancelled" -> "已取消"
-                                                else -> "已完成 · ${downloadSizeText(group.bytes)}"
-                                            },
+                                        if (group.status == "running") Text(
+                                            "${downloadSizeText(groupSpeed)}/s",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = if (group.status == "failed") MaterialTheme.colorScheme.error
-                                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
-                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                         )
                                     }
                                     if (group.status in setOf("running", "queued", "paused")) {
@@ -1345,87 +1318,86 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                     }
                 }
             }
-            Column(
-                Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AnimatedVisibility(
-                    visible = actionsExpanded,
-                    enter = fadeIn() + scaleIn(initialScale = 0.8f, animationSpec = spring()) +
-                        slideInVertically(initialOffsetY = { it / 3 }, animationSpec = spring()),
-                    exit = fadeOut() + scaleOut(targetScale = 0.8f, animationSpec = spring()) +
-                        slideOutVertically(targetOffsetY = { it / 3 }, animationSpec = spring()),
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        if (selecting) {
-                            FilledTonalIconButton(
-                                onClick = {
-                                    val visible = filtered.map { it.workId }.toSet()
-                                    selected = if (selected.containsAll(visible)) selected - visible else selected + visible
-                                    selecting = selected.isNotEmpty()
-                                },
-                                modifier = Modifier.size(48.dp),
-                            ) { AppIcon(materialSymbol(MaterialSymbol.Check), "全选") }
-                            FilledTonalIconButton(
-                                enabled = selectedTaskIds.isNotEmpty(),
-                                onClick = { vm.downloadBatchAction(selectedTaskIds, "queued"); actionsExpanded = false },
-                                modifier = Modifier.size(48.dp),
-                            ) { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), "开始") }
-                            FilledTonalIconButton(
-                                enabled = selectedTaskIds.isNotEmpty(),
-                                onClick = { vm.downloadBatchAction(selectedTaskIds, "paused"); actionsExpanded = false },
-                                modifier = Modifier.size(48.dp),
-                            ) { AppIcon(materialSymbol(MaterialSymbol.Pause), "暂停") }
-                            FilledTonalIconButton(
-                                enabled = selected.isNotEmpty(),
-                                onClick = { confirmRemoval = true; actionsExpanded = false },
-                                modifier = Modifier.size(48.dp),
-                            ) { AppIcon(materialSymbol(MaterialSymbol.Delete), "删除") }
-                        } else {
-                            FilledTonalIconButton(
-                                onClick = {
-                                    sortMode = when (sortMode) {
-                                        "recent" -> "title"
-                                        "title" -> "size"
-                                        "size" -> "pages"
-                                        else -> "recent"
-                                    }
-                                    actionsExpanded = false
-                                },
-                                modifier = Modifier.size(48.dp),
-                            ) {
-                                AppIcon(
-                                    materialSymbol(MaterialSymbol.Sort),
-                                    "排序方式：${when (sortMode) {
-                                        "title" -> "标题"
-                                        "size" -> "文件大小"
-                                        "pages" -> "图片数量"
-                                        else -> "最近下载"
-                                    }}",
-                                )
+            val menuExpanded = !confirmRemoval && (selecting || sortMenuExpanded)
+            val menuContainerColor = MaterialTheme.colorScheme.primaryContainer
+            FloatingActionButtonMenu(
+                expanded = menuExpanded,
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp),
+                button = {
+                    ToggleFloatingActionButton(
+                        checked = menuExpanded,
+                        onCheckedChange = { checked ->
+                            if (selecting) {
+                                if (!checked) exitSelection()
+                            } else {
+                                sortMenuExpanded = checked
                             }
-                        }
+                        },
+                        containerColor = { menuContainerColor },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AppIcon(
+                            materialSymbol(MaterialSymbol.Add),
+                            if (menuExpanded) "关闭操作" else "下载操作",
+                            Modifier.graphicsLayer { rotationZ = checkedProgress * 45f },
+                        )
                     }
-                }
-                val plusRotation by animateFloatAsState(
-                    targetValue = if (actionsExpanded) 45f else 0f,
-                    animationSpec = spring(),
-                    label = "downloadActionsPlusRotation",
-                )
-                FloatingActionButton(
-                    onClick = {
-                        if (actionsExpanded && selecting) exitSelection()
-                        else actionsExpanded = !actionsExpanded
-                    },
-                ) {
-                    AppIcon(
-                        materialSymbol(MaterialSymbol.Add),
-                        if (actionsExpanded) "关闭操作" else "下载操作",
-                        Modifier.graphicsLayer { rotationZ = plusRotation },
+                },
+            ) {
+                if (selecting) {
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            val visible = filtered.map { it.workId }.toSet()
+                            selected = if (selected.containsAll(visible)) selected - visible else selected + visible
+                            selecting = selected.isNotEmpty()
+                        },
+                        text = { Text("全选") },
+                        icon = { AppIcon(materialSymbol(MaterialSymbol.Check), null) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    FloatingActionButtonMenuItem(
+                        onClick = { vm.downloadBatchAction(selectedTaskIds, "queued") },
+                        text = { Text("开始") },
+                        icon = { AppIcon(materialSymbol(MaterialSymbol.PlayArrow), null) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    FloatingActionButtonMenuItem(
+                        onClick = { vm.downloadBatchAction(selectedTaskIds, "paused") },
+                        text = { Text("暂停") },
+                        icon = { AppIcon(materialSymbol(MaterialSymbol.Pause), null) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    FloatingActionButtonMenuItem(
+                        onClick = { confirmRemoval = true },
+                        text = { Text("删除") },
+                        icon = { AppIcon(materialSymbol(MaterialSymbol.Delete), null) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                } else {
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            sortMode = when (sortMode) {
+                                "recent" -> "title"
+                                "title" -> "size"
+                                "size" -> "pages"
+                                else -> "recent"
+                            }
+                            sortMenuExpanded = false
+                        },
+                        text = { Text("排序方式 · ${when (sortMode) {
+                            "title" -> "标题"
+                            "size" -> "文件大小"
+                            "pages" -> "图片数量"
+                            else -> "最近下载"
+                        }}") },
+                        icon = { AppIcon(materialSymbol(MaterialSymbol.Sort), null) },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
             }
