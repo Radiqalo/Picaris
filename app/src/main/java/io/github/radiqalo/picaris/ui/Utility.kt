@@ -936,38 +936,77 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
         else
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(history, key = { "${it.kind}:${it.workId}" }) { record ->
                     val work = remember(record.json) { AppJson.decodeFromString<Work>(record.json) }
                     Surface(
-                        onClick = { navigate(Detail(work)) },
+                        modifier = Modifier.clip(MaterialTheme.shapes.large),
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                     ) {
                         Row(
-                            Modifier.padding(12.dp),
+                            Modifier.fillMaxWidth().height(124.dp).clickable { navigate(Detail(work)) },
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            WorkImage(
-                                work,
-                                Modifier.size(72.dp, 88.dp).clip(MaterialTheme.shapes.small),
-                            )
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    work.title,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    maxLines = 2,
-                                )
-                                Text(
-                                    work.user.name,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            Box(
+                                Modifier.width(88.dp).fillMaxHeight().clip(MaterialTheme.shapes.medium)
+                                    .background(MaterialTheme.colorScheme.surfaceContainerLow),
+                            ) {
+                                AsyncImage(
+                                    model = work.previews.firstOrNull() ?: work.cover,
+                                    contentDescription = "${work.title} 缩略图",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
                                 )
                             }
-                            AppIcon(materialSymbol(MaterialSymbol.ChevronRight), null)
+                            Column(
+                                Modifier.weight(1f).fillMaxHeight()
+                                    .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+                                verticalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    work.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                    Text(
+                                        work.user.name.ifBlank { "未知作者" },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                                            .format(java.util.Date(record.viewedAt)),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                    )
+                                    Text(
+                                        if (work.isNovel) "阅读进度 ${record.progress.coerceIn(0, 100)}%"
+                                        else "${maxOf(work.page_count, work.previews.size, 1)}P · 浏览记录",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
+                            Column(
+                                Modifier.width(44.dp).fillMaxHeight().padding(end = 4.dp, top = 8.dp, bottom = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                if (!work.isNovel && work.page_count > 0)
+                                    Text("${work.page_count}P", style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                AppIcon(materialSymbol(MaterialSymbol.History), null, Modifier.size(19.dp),
+                                    tint = MaterialTheme.colorScheme.primary)
+                            }
                         }
                     }
                 }
