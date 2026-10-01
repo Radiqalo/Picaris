@@ -317,6 +317,7 @@ internal fun NavigationPage(
         animationSpec = shapeMotion,
         label = "navigation page rounding handoff",
     )
+    val renderedRounding = rounding.coerceIn(0f, 1f)
     SideEffect {
         if (visible && !seeking && !artwork.isActive && !coordinator.hasAnimations &&
             kotlin.math.abs(rounding - roundingTarget) < 0.001f &&
@@ -328,7 +329,7 @@ internal fun NavigationPage(
     }
     val pageCoordinates = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val pageRadius = remember { floatArrayOf(0f) }
-    val sampledRounding = rememberUpdatedState(rounding)
+    val sampledRounding = rememberUpdatedState(renderedRounding)
     val previewing = rememberUpdatedState(seeking)
     val sampledVisibility = rememberUpdatedState(
         if (seeking || (!coordinator.usesZoom(entryIds) && coordinator.returningTransitionId != id))
@@ -364,12 +365,12 @@ internal fun NavigationPage(
     }
     Surface(
         modifier = Modifier.fillMaxSize().onGloballyPositioned { pageCoordinates[0] = it }.graphicsLayer {
-            pageRadius[0] = pageShape.topStart.toPx(size, density) * rounding
+            pageRadius[0] = pageShape.topStart.toPx(size, density) * renderedRounding
             shape = pageShape.copy(
-                topStart = CornerSize(pageShape.topStart.toPx(size, density) * rounding),
-                topEnd = CornerSize(pageShape.topEnd.toPx(size, density) * rounding),
-                bottomStart = CornerSize(pageShape.bottomStart.toPx(size, density) * rounding),
-                bottomEnd = CornerSize(pageShape.bottomEnd.toPx(size, density) * rounding),
+                topStart = CornerSize(pageShape.topStart.toPx(size, density) * renderedRounding),
+                topEnd = CornerSize(pageShape.topEnd.toPx(size, density) * renderedRounding),
+                bottomStart = CornerSize(pageShape.bottomStart.toPx(size, density) * renderedRounding),
+                bottomEnd = CornerSize(pageShape.bottomEnd.toPx(size, density) * renderedRounding),
             )
             clip = true
         },
