@@ -35,8 +35,6 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import coil3.compose.AsyncImage
 import android.os.SystemClock
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
@@ -1327,16 +1325,14 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
             androidx.compose.material3.FloatingActionButtonMenu(
                 expanded = actionsExpanded,
                 button = {
-                    val rotation by animateFloatAsState(
-                        targetValue = if (actionsExpanded) 45f else 0f,
-                        animationSpec = spring(),
-                        label = "downloadFabPlusRotation",
-                    )
-                    FloatingActionButton(onClick = { actionsExpanded = !actionsExpanded }) {
+                    androidx.compose.material3.ToggleFloatingActionButton(
+                        checked = actionsExpanded,
+                        onCheckedChange = { actionsExpanded = it },
+                    ) {
                         AppIcon(
                             materialSymbol(MaterialSymbol.Add),
                             if (actionsExpanded) "关闭操作" else "下载操作",
-                            Modifier.graphicsLayer { rotationZ = rotation },
+                            Modifier.graphicsLayer { rotationZ = checkedProgress * 45f },
                         )
                     }
                 },
