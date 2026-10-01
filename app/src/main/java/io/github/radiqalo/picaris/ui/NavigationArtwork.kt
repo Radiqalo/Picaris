@@ -466,7 +466,9 @@ internal fun NavigationArtworkOverlay(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize().drawWithContent {
         artwork.refreshTargets()
         artwork.previewTick
-        artwork.flights.values.toList().forEach { flight ->
+        artwork.flights.values.sortedBy { flight ->
+            if (flight.key.startsWith("work-image:")) 0 else 1
+        }.forEach { flight ->
             val frame = artwork.currentFrame(flight)
             val bounds = frame.bounds
             val clip = frame.clip
