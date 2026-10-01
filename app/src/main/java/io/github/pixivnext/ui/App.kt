@@ -173,7 +173,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                             ) {
                                 val navigationMotion = rememberNavigationMotion()
                                 val imageNavigation = remember(navigationMotion) {
-                                    navigationMotion.metadata(NavigationMotionStyle.Zoom)
+                                    navigationMotion.metadata()
                                 }
                                 val pageDecorator = remember(navigationMotion) {
                                     NavigationPageSceneDecorator(navigationMotion::settled)

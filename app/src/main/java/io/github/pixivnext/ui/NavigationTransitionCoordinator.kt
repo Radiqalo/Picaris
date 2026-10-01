@@ -30,6 +30,7 @@ internal data class NavigationSceneFrame(
     val offsetVelocity: Float = 0f,
     val opacityVelocity: Float = 0f,
     val roundingVelocity: Float = 0f,
+    val preview: Boolean = false,
 )
 
 internal class NavigationTransitionCoordinator(
@@ -153,6 +154,8 @@ internal class NavigationTransitionCoordinator(
     fun usesZoom(entries: Set<Long>): Boolean = entries.any {
         destinations[it] is Detail || destinations[it] is Reader
     }
+
+    fun destination(instanceId: Long): NavKey? = destinations[instanceId]
 
     fun beginPreview() {
         if (disposed || phase == NavigationTransitionPhase.Previewing) return

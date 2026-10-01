@@ -182,22 +182,30 @@ internal class NavigationMotion(
     private var previewId: Long? = null
 
     private fun matchesPreview(scope: AnimatedContentTransitionScope<*>): Boolean =
-        predictiveScenes == ((scope.initialState as Scene<*>).key to (scope.targetState as Scene<*>).key) &&
+        coordinator.phase != NavigationTransitionPhase.Entering &&
+            coordinator.phase != NavigationTransitionPhase.Stable &&
+            predictiveScenes == ((scope.initialState as Scene<*>).key to (scope.targetState as Scene<*>).key) &&
             (previewId == coordinator.previewTransitionId ||
                 coordinator.returningTransitionId == coordinator.transitionId)
 
-    fun forward(
-        scope: AnimatedContentTransitionScope<*>,
-        style: NavigationMotionStyle = NavigationMotionStyle.Slide,
-    ): ContentTransform = with(scope) {
+    private fun destination(scene: Any?): NavKey? =
+        ((scene as? Scene<*>)?.entries?.lastOrNull()?.contentKey as? Long)?.let(coordinator::destination)
+
+    private fun style(scene: Any?): NavigationMotionStyle = when (destination(scene)) {
+        is Detail, is Reader -> NavigationMotionStyle.Zoom
+        else -> NavigationMotionStyle.Slide
+    }
+
+    fun forward(scope: AnimatedContentTransitionScope<*>): ContentTransform = with(scope) {
+        if (coordinator.phase == NavigationTransitionPhase.Returning) return@with back(scope)
         val frame = coordinator.incomingFrame
         if (matchesPreview(scope)) predictiveDirection?.let { return@with backPreview(it) }
-        when (style) {
+        when (style(targetState)) {
             NavigationMotionStyle.Slide -> {
                 val slide = slideInHorizontally(handoffSpec(position,
                     IntOffset(frame?.offsetVelocity?.toInt() ?: 0, 0), IntOffset.Zero,
                 )) { frame?.offset ?: (direction * it) }
-                val enter = if (frame == null) slide else slide +
+                val enter = if (frame?.preview != true) slide else slide +
                     scaleIn(handoffSpec(scale, frame.scaleVelocity, 0f),
                         initialScale = frame.scale.coerceIn(0.01f, 1.5f)) +
                     fadeIn(handoffSpec(effects, frame.opacityVelocity, 0f),
@@ -217,12 +225,11 @@ internal class NavigationMotion(
         }
     }
 
-    fun back(
-        scope: AnimatedContentTransitionScope<*>,
-        style: NavigationMotionStyle = NavigationMotionStyle.Slide,
-    ): ContentTransform {
+    fun back(scope: AnimatedContentTransitionScope<*>): ContentTransform {
+        if (coordinator.phase == NavigationTransitionPhase.Entering && destination(scope.targetState) != Home)
+            return forward(scope)
         if (matchesPreview(scope)) predictiveDirection?.let { return backPreview(it, committed = true) }
-        return when (style) {
+        return when (style(scope.initialState)) {
             NavigationMotionStyle.Slide ->
                 fadeIn(effects, initialAlpha = 1f) togetherWith
                     slideOutHorizontally(position) { direction * it }
@@ -247,9 +254,9 @@ internal class NavigationMotion(
             if (committed) previewExit + fadeOut(effects) else previewExit
     }
 
-    fun metadata(style: NavigationMotionStyle): Map<String, Any> =
-        NavDisplay.transitionSpec { forward(this, style) } +
-            NavDisplay.popTransitionSpec { back(this, style) } +
+    fun metadata(): Map<String, Any> =
+        NavDisplay.transitionSpec { forward(this) } +
+            NavDisplay.popTransitionSpec { back(this) } +
             NavDisplay.predictivePopTransitionSpec { swipeEdge ->
                 predictiveBack(
                     this,
@@ -331,6 +338,7 @@ internal fun NavigationPage(
     val pageRadius = remember { floatArrayOf(0f) }
     val sampledRounding = rememberUpdatedState(renderedRounding)
     val previewing = rememberUpdatedState(seeking)
+    val previewFrame = rememberUpdatedState(seeking || coordinator.returningTransitionId == id)
     val sampledVisibility = rememberUpdatedState(
         if (seeking || (!coordinator.usesZoom(entryIds) && coordinator.returningTransitionId != id))
             1f else opacity,
@@ -346,7 +354,7 @@ internal fun NavigationPage(
                 val scale = bounds.width / root.size.width
                 NavigationSceneFrame(
                     scale, (bounds.left - (1f - scale) * root.size.width / 2f).toInt(),
-                    sampledVisibility.value, sampledRounding.value,
+                    sampledVisibility.value, sampledRounding.value, preview = previewFrame.value,
                 )
             }
         }
