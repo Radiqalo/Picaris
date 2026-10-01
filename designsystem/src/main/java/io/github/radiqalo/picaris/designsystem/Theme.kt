@@ -40,6 +40,7 @@ fun PixivTheme(
     theme: String = "system",
     dynamic: Boolean = true,
     seed: Long = 0xFF6256CA,
+    pureBlackDarkTheme: Boolean = false,
     darkSystemBarIcons: Boolean? = null,
     content: @Composable () -> Unit,
 ) {
@@ -64,16 +65,29 @@ fun PixivTheme(
             if (dark) dynamicDarkColorScheme(LocalContext.current)
             else dynamicLightColorScheme(LocalContext.current)
         } else androidx.compose.runtime.remember(seed, dark) { seededColors(seed, dark) }
-    val colors = androidx.compose.runtime.remember(baseColors) {
-        baseColors.copy(
-            secondary = baseColors.primary,
-            onSecondary = baseColors.onPrimary,
-            secondaryContainer = baseColors.primaryContainer,
-            onSecondaryContainer = baseColors.onPrimaryContainer,
-            tertiary = baseColors.primary,
-            onTertiary = baseColors.onPrimary,
-            tertiaryContainer = baseColors.primaryContainer,
-            onTertiaryContainer = baseColors.onPrimaryContainer,
+    val colors = androidx.compose.runtime.remember(baseColors, pureBlackDarkTheme, dark) {
+        val surfaceColors = if (dark && pureBlackDarkTheme) {
+            baseColors.copy(
+                background = Color.Black,
+                surface = Color.Black,
+                surfaceDim = Color.Black,
+                surfaceBright = Color(0xFF242424),
+                surfaceContainerLowest = Color.Black,
+                surfaceContainerLow = Color(0xFF080808),
+                surfaceContainer = Color(0xFF0D0D0D),
+                surfaceContainerHigh = Color(0xFF141414),
+                surfaceContainerHighest = Color(0xFF1B1B1B),
+            )
+        } else baseColors
+        surfaceColors.copy(
+            secondary = surfaceColors.primary,
+            onSecondary = surfaceColors.onPrimary,
+            secondaryContainer = surfaceColors.primaryContainer,
+            onSecondaryContainer = surfaceColors.onPrimaryContainer,
+            tertiary = surfaceColors.primary,
+            onTertiary = surfaceColors.onPrimary,
+            tertiaryContainer = surfaceColors.primaryContainer,
+            onTertiaryContainer = surfaceColors.onPrimaryContainer,
         )
     }
     MaterialExpressiveTheme(

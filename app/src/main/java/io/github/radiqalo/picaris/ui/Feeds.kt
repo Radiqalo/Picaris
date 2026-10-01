@@ -698,15 +698,18 @@ fun CollectionScreen(
             ScreenBar(route.title, back = back, scrollBehavior = null,
                 modifier = Modifier.aboveWorkTransition())
         if (route.section == "series") {
-            FeedGrid(
-                FeedSpec(section = "series", kind = route.kind, userId = route.userId),
-                vm,
-                navigate,
-                Modifier.weight(1f),
-                header = { SeriesHeader(route, vm, navigate, back) },
-                scrollHeaderWhileEmpty = true,
-                topPadding = 0.dp,
-            )
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                FeedGrid(
+                    FeedSpec(section = "series", kind = route.kind, userId = route.userId),
+                    vm,
+                    navigate,
+                    Modifier.fillMaxSize(),
+                    header = { SeriesHeader(route, vm, navigate) },
+                    scrollHeaderWhileEmpty = true,
+                    topPadding = 0.dp,
+                )
+                SeriesOverlayActions(route, back, Modifier.align(Alignment.TopCenter))
+            }
         } else if (route.section == "ranking")
             RankingPages(vm, navigate, Modifier.weight(1f), rankingDate)
         else FeedGrid(
@@ -812,7 +815,6 @@ private fun SeriesHeader(
     route: Collection,
     vm: AppViewModel,
     navigate: (NavKey) -> Unit,
-    back: () -> Unit,
 ) {
     var details by remember(route.kind, route.userId, vm.accountId) {
         mutableStateOf(
@@ -827,7 +829,6 @@ private fun SeriesHeader(
     var watchBusy by remember(route.kind, route.userId, vm.accountId) { mutableStateOf(false) }
     var error by remember(route.kind, route.userId, vm.accountId) { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     LaunchedEffect(route.kind, route.userId, vm.accountId) {
         if (details == null) {
@@ -860,40 +861,14 @@ private fun SeriesHeader(
                             .requiredWidth(edgeToEdgeWidth)
                             .heightIn(min = 190.dp, max = 300.dp),
                     )
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = PixivSpacing.tight, vertical = PixivSpacing.tight),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        IconButton(
-                            onClick = back,
-                            modifier = Modifier.clip(CircleShape)
-                                .background(Color.Black.copy(alpha = .38f)),
-                        ) {
-                            AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回", tint = Color.White)
-                        }
-                        IconButton(
-                            onClick = {
-                                val url = if (route.kind == "novel")
-                                    "https://www.pixiv.net/novel/series/${route.userId}"
-                                else "https://www.pixiv.net/user/series/${route.userId}"
-                                context.startActivity(
-                                    Intent.createChooser(
-                                        Intent(Intent.ACTION_SEND).setType("text/plain")
-                                            .putExtra(Intent.EXTRA_TEXT, url),
-                                        "分享系列",
-                                    ),
-                                )
-                            },
-                            modifier = Modifier.clip(CircleShape)
-                                .background(Color.Black.copy(alpha = .38f)),
-                        ) {
-                            AppIcon(materialSymbol(MaterialSymbol.Share), "分享", tint = Color.White)
-                        }
-                    }
                 }
             }
+        } else {
+            Spacer(
+                Modifier.fillMaxWidth().height(
+                    WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 64.dp,
+                ),
+            )
         }
         Column(
             Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
@@ -940,6 +915,50 @@ private fun SeriesHeader(
             error?.let { message ->
                 Text(message, color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SeriesOverlayActions(route: Collection, back: () -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    Row(
+        modifier.fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = PixivSpacing.tight, vertical = PixivSpacing.tight)
+            .workTransitionControls(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        IconButton(onClick = back) {
+            Box(
+                Modifier.size(40.dp).clip(CircleShape)
+                    .background(Color.Black.copy(alpha = .38f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回", Modifier.size(24.dp), Color.White)
+            }
+        }
+        IconButton(
+            onClick = {
+                val url = if (route.kind == "novel")
+                    "https://www.pixiv.net/novel/series/${route.userId}"
+                else "https://www.pixiv.net/user/series/${route.userId}"
+                context.startActivity(
+                    Intent.createChooser(
+                        Intent(Intent.ACTION_SEND).setType("text/plain")
+                            .putExtra(Intent.EXTRA_TEXT, url),
+                        "分享系列",
+                    ),
+                )
+            },
+        ) {
+            Box(
+                Modifier.size(40.dp).clip(CircleShape)
+                    .background(Color.Black.copy(alpha = .38f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                AppIcon(materialSymbol(MaterialSymbol.Share), "分享", Modifier.size(24.dp), Color.White)
             }
         }
     }

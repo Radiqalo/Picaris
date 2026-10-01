@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
@@ -52,4 +53,8 @@ fun DateSelectionSheet(
     dismissButton: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) = ActionSheet(onDismissRequest, confirmButton, dismissButton,
-    title = { Text("选择日期") }, text = content)
+    title = { Text("选择日期") }, text = {
+        Box(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.extraLarge)) {
+            content()
+        }
+    })

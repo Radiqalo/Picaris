@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -369,25 +370,49 @@ fun DetailScreen(
                 .statusBarsPadding().padding(12.dp).workTransitionControls(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            IconButton(onClick = { back() }) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回") }
+            IconButton(onClick = { back() }) {
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape)
+                        .background(Color.Black.copy(alpha = .38f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回", Modifier.size(24.dp), Color.White)
+                }
+            }
             IconButton(onClick = { if (canOpenReader) moreMenu = true }) {
-                AppIcon(materialSymbol(MaterialSymbol.MoreHoriz), "更多操作")
+                Box(
+                    Modifier.size(40.dp).clip(CircleShape)
+                        .background(Color.Black.copy(alpha = .38f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppIcon(materialSymbol(MaterialSymbol.MoreHoriz), "更多操作", Modifier.size(24.dp), Color.White)
+                }
             }
         }
     }
-    if (moreMenu && permitted()) ModalBottomSheet(onDismissRequest = { moreMenu = false }) {
+    if (moreMenu && permitted()) ModalBottomSheet(
+        onDismissRequest = { moreMenu = false },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        val menuItemColors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        )
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = PixivSpacing.content)) {
             ListItem(
+                colors = menuItemColors,
                 content = { Text(if (work.isNovel) "开始阅读" else "查看原图") },
                 leadingContent = { AppIcon(if (work.isNovel) materialSymbol(MaterialSymbol.Book) else materialSymbol(MaterialSymbol.PlayArrow), null) },
                 onClick = { moreMenu = false; openReader(current) },
             )
             ListItem(
+                colors = menuItemColors,
                 content = { Text(strings.getString(R.string.ui_7a92434114)) },
                 leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Share), null) },
                 onClick = { moreMenu = false; share() },
             )
             ListItem(
+                colors = menuItemColors,
                 content = {
                     Text(if (work.page_count > 1 && !work.isNovel) "下载全部图片" else "下载作品")
                 },
@@ -413,6 +438,7 @@ fun DetailScreen(
             )
             if (work.page_count > 1 && !work.isNovel)
                 ListItem(
+                    colors = menuItemColors,
                     content = { Text("下载选中图片") },
                     leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Image), null) },
                     onClick = {
@@ -423,6 +449,7 @@ fun DetailScreen(
                 )
             if (!current.is_bookmarked && !actionBusy)
                 ListItem(
+                    colors = menuItemColors,
                     content = { Text("非公开收藏") },
                     leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Favorite), null) },
                     onClick = { moreMenu = false; privateDialog = true },
@@ -834,7 +861,21 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween) {
             IconButton(onClick = back) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回") }
-            IconButton(onClick = ::shareAuthor) { AppIcon(materialSymbol(MaterialSymbol.Share), "分享作者") }
+            Row {
+                val isBlocked = settings.blockedUsers.split(',', '\n').any { it.trim() == user.id.toString() }
+                IconButton(onClick = {
+                    vm.update { current ->
+                        val ids = current.blockedUsers.split(',', '\n').map(String::trim).filter(String::isNotEmpty)
+                        val updated = if (isBlocked) ids.filterNot { it == user.id.toString() }
+                        else ids + user.id.toString()
+                        current.copy(blockedUsers = updated.joinToString("\n"))
+                    }
+                    vm.message.tryEmit(if (isBlocked) "已取消屏蔽作者" else "已屏蔽作者")
+                }) {
+                    AppIcon(materialSymbol(MaterialSymbol.BlockedUser), if (isBlocked) "取消屏蔽作者" else "屏蔽作者")
+                }
+                IconButton(onClick = ::shareAuthor) { AppIcon(materialSymbol(MaterialSymbol.Share), "分享作者") }
+            }
         }
     }
     if (showProfile && navigationPermission()()) ModalBottomSheet(onDismissRequest = { showProfile = false }) {

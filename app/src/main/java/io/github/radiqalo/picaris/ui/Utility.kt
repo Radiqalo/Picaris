@@ -449,6 +449,19 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         position = SettingsRowPosition.First,
                     )
                     SettingRow(
+                        "纯黑深色主题",
+                        "深色模式下使用纯黑背景",
+                        icon = materialSymbol(MaterialSymbol.Contrast),
+                        action = {
+                            FeedbackSwitch(s.pureBlackDarkTheme, { enabled ->
+                                vm.update { it.copy(pureBlackDarkTheme = enabled) }
+                            })
+                        },
+                        position = SettingsRowPosition.Middle,
+                    ) {
+                        vm.update { it.copy(pureBlackDarkTheme = !it.pureBlackDarkTheme) }
+                    }
+                    SettingRow(
                         "悬浮底栏",
                         "启用悬浮底栏",
                         icon = materialSymbol(MaterialSymbol.Home),
@@ -485,7 +498,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                                 color = androidx.compose.ui.graphics.Color(s.seed),
                             ) {}
                         },
-                        position = SettingsRowPosition.Middle,
+                        position = SettingsRowPosition.Last,
                     ) {
                         dialog = "color"
                     }
@@ -508,6 +521,19 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         position = SettingsRowPosition.First,
                     ) {
                         vm.update { it.copy(showHomeMetadata = !it.showHomeMetadata) }
+                    }
+                    SettingRow(
+                        "显示标签翻译",
+                        "在标签旁显示译名",
+                        icon = materialSymbol(MaterialSymbol.Search),
+                        action = {
+                            FeedbackSwitch(s.showTagTranslations, { value ->
+                                vm.update { it.copy(showTagTranslations = value) }
+                            })
+                        },
+                        position = SettingsRowPosition.Middle,
+                    ) {
+                        vm.update { it.copy(showTagTranslations = !it.showTagTranslations) }
                     }
                     SettingRow(
                         strings.getString(R.string.ui_d5edf52f07),
@@ -550,22 +576,9 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         strings.getString(R.string.ui_0ed0fdd725),
                         strings.getString(R.string.ui_4544c7e538),
                         materialSymbol(MaterialSymbol.BlockedUser),
-                        position = SettingsRowPosition.Middle,
-                    ) {
-                        dialog = "users"
-                    }
-                    SettingRow(
-                        "显示标签翻译",
-                        "在标签旁显示译名",
-                        icon = materialSymbol(MaterialSymbol.Search),
-                        action = {
-                            FeedbackSwitch(s.showTagTranslations, { value ->
-                                vm.update { it.copy(showTagTranslations = value) }
-                            })
-                        },
                         position = SettingsRowPosition.Last,
                     ) {
-                        vm.update { it.copy(showTagTranslations = !it.showTagTranslations) }
+                        dialog = "users"
                     }
                 }
             }
@@ -703,22 +716,52 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
             var value by remember {
                 mutableStateOf(if (dialog == "tags") s.blockedTags else s.blockedUsers)
             }
+            var entry by remember { mutableStateOf("") }
+            val tags = dialog == "tags"
+            val entries = value.split(',', '\n').map(String::trim).filter(String::isNotEmpty).distinct()
             ActionSheet(
                 onDismissRequest = { dialog = null },
                 title = {
                     Text(
-                        if (dialog == "tags") strings.getString(R.string.ui_1a62da8063)
+                        if (tags) strings.getString(R.string.ui_1a62da8063)
                         else strings.getString(R.string.ui_0ed0fdd725)
                     )
                 },
                 text = {
-                    OutlinedTextField(
-                        value,
-                        { value = it },
-                        minLines = 3,
-                        maxLines = 6,
-                        label = { Text(strings.getString(R.string.ui_a91a2209d7)) },
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.related)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                entry,
+                                { entry = it },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                label = { Text(if (tags) "输入标签" else "输入用户 ID") },
+                            )
+                            IconButton(onClick = {
+                                val normalized = entry.trim().removePrefix("#")
+                                if (normalized.isNotEmpty() && entries.none { it.equals(normalized, true) }) {
+                                    value = (entries + normalized).joinToString("\n")
+                                }
+                                entry = ""
+                            }) { AppIcon(materialSymbol(MaterialSymbol.Add), "添加") }
+                        }
+                        if (entries.isEmpty()) {
+                            Text("暂无屏蔽项", style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                entries.forEach { blocked ->
+                                    InputChip(
+                                        selected = false,
+                                        onClick = { value = entries.filterNot { it == blocked }.joinToString("\n") },
+                                        label = { Text(blocked) },
+                                        trailingIcon = { AppIcon(materialSymbol(MaterialSymbol.Close), "移除", Modifier.size(18.dp)) },
+                                    )
+                                }
+                            }
+                        }
+                    }
                 },
                 confirmButton = {
                     TextButton({
@@ -1145,7 +1188,6 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     }
     val downloadListState = rememberLazyListState()
     val downloadGridState = rememberLazyStaggeredGridState()
-    var pendingSortAnchor by remember(vm.accountId) { mutableStateOf<Pair<Long, Int>?>(null) }
     var speeds by remember(vm.accountId) { mutableStateOf(emptyMap<Long, Long>()) }
     val speedSamples = remember(vm.accountId) { mutableMapOf<Long, DownloadSpeedSample>() }
     LaunchedEffect(tasks) {
@@ -1185,13 +1227,8 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         }
     }
     LaunchedEffect(sortMode) {
-        val anchor = pendingSortAnchor ?: return@LaunchedEffect
-        val index = filtered.indexOfFirst { it.workId == anchor.first }
-        if (index >= 0) {
-            if (galleryMode) downloadGridState.scrollToItem(index, anchor.second)
-            else downloadListState.scrollToItem(index, anchor.second)
-        }
-        pendingSortAnchor = null
+        if (galleryMode) downloadGridState.scrollToItem(0)
+        else downloadListState.scrollToItem(0)
     }
     val chosen = groups.filter { it.workId in selected }
     val selectedTaskIds = chosen.flatMap { it.tasks }.map { it.id }.toSet()
@@ -1272,15 +1309,6 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                         DropdownMenuItem(
                             text = { Text(label) },
                             onClick = {
-                                if (mode != sortMode) {
-                                    val visibleIndex = if (galleryMode) downloadGridState.firstVisibleItemIndex
-                                        else downloadListState.firstVisibleItemIndex
-                                    val anchorOffset = if (galleryMode) downloadGridState.firstVisibleItemScrollOffset
-                                        else downloadListState.firstVisibleItemScrollOffset
-                                    pendingSortAnchor = filtered.getOrNull(visibleIndex)?.let {
-                                        it.workId to anchorOffset
-                                    }
-                                }
                                 sortMode = mode
                                 sortOptionsExpanded = false
                             },

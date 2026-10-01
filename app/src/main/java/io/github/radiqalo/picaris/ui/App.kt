@@ -82,6 +82,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     SideEffect { coordinator.clearFocus = { focusManager.clearFocus(force = true) } }
     val snackbar = remember { SnackbarHostState() }
+    var tagAction by remember { mutableStateOf<Tag?>(null) }
     val navigate: (NavKey) -> Unit = {
         val route = it
         if (route != backStack.lastOrNull()) coordinator.commit(backStack, destination = route) {
@@ -154,6 +155,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
         settings.theme,
         settings.dynamicColor,
         settings.seed,
+        pureBlackDarkTheme = settings.pureBlackDarkTheme,
         darkSystemBarIcons =
             when (val current = backStack.lastOrNull()) {
                 is Reader -> if (!current.work.isNovel && settings.blackReader) false else null
@@ -181,6 +183,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                 LocalNavigationArtwork provides artwork,
                                 LocalArtworkReturnFeedback provides artworkReturn,
                                 LocalTagTranslationEnabled provides settings.showTagTranslations,
+                                LocalTagLongPress provides { tagAction = it },
                             ) {
                                 val navigationMotion = rememberNavigationMotion()
                                 val imageNavigation = remember(navigationMotion) {
@@ -265,6 +268,40 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                         .navigationBarsPadding()
                         .padding(bottom = 82.dp, start = 16.dp, end = 16.dp),
                 )
+                tagAction?.let { tag ->
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    ModalBottomSheet(onDismissRequest = { tagAction = null }) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                            verticalArrangement = Arrangement.spacedBy(PixivSpacing.related),
+                        ) {
+                            Text("#${tag.name}", style = MaterialTheme.typography.titleLarge)
+                            tag.translated_name?.takeIf {
+                                settings.showTagTranslations && it.isNotBlank() && !it.equals(tag.name, true)
+                            }?.let { Text(it, style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(onClick = {
+                                    val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)
+                                    clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("tag", tag.name))
+                                    vm.message.tryEmit("已复制标签")
+                                    tagAction = null
+                                }) { Text("复制") }
+                                TextButton(onClick = {
+                                    vm.update { current ->
+                                        val values = current.blockedTags.split(',', '\n').map(String::trim)
+                                            .filter(String::isNotEmpty)
+                                        if (values.any { it.equals(tag.name, true) }) current
+                                        else current.copy(blockedTags = (values + tag.name).joinToString("\n"))
+                                    }
+                                    vm.message.tryEmit("已屏蔽标签：${tag.name}")
+                                    tagAction = null
+                                }) { Text("屏蔽标签") }
+                            }
+                            Spacer(Modifier.navigationBarsPadding().height(PixivSpacing.compact))
+                        }
+                    }
+                }
             }
         }
     }

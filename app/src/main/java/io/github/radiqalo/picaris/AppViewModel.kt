@@ -90,6 +90,7 @@ constructor(
     val bookmarkBusy = MutableStateFlow<Set<WorkIdentity>>(emptySet())
     val comments = CommentThreads(viewModelScope, repo)
     private val peopleFeeds = mutableMapOf<Triple<Long, String, String>, Flow<PagingData<User>>>()
+    private val followedSeriesFeeds = mutableMapOf<Pair<Long, String>, Flow<PagingData<FollowedSeries>>>()
 
     fun people(section: String, restrict: String): Flow<PagingData<User>> {
         val account = accountId
@@ -101,7 +102,12 @@ constructor(
     fun feed(spec: FeedSpec) =
         feeds.get(FeedSession(accountId, spec, settings.value.contentFilter()))
 
-    fun followedSeries(kind: String) = repo.followedSeries(accountId, kind)
+    fun followedSeries(kind: String): Flow<PagingData<FollowedSeries>> {
+        val account = accountId
+        return followedSeriesFeeds.getOrPut(account to kind) {
+            repo.followedSeries(account, kind).cachedIn(viewModelScope)
+        }
+    }
 
     private val seriesDetailsCache = mutableMapOf<Triple<Long, String, Long>, SeriesDetails>()
 
