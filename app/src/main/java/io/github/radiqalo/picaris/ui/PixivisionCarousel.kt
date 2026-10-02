@@ -57,10 +57,10 @@ private data class PixivisionContent(
 )
 
 @Composable
-fun PixivisionCarousel(vm: AppViewModel) {
+fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
     val context = LocalContext.current
     var retry by remember { mutableIntStateOf(0) }
-    val result by produceState(PixivisionContent(vm.cachedPixivisionArticles()), retry) {
+    val result by produceState(PixivisionContent(vm.cachedPixivisionArticles()), retry, refreshVersion) {
         value = PixivisionContent(vm.cachedPixivisionArticles())
         value = try {
             PixivisionContent(vm.pixivisionArticles())

@@ -151,8 +151,15 @@ constructor(
         }
     }
 
-    fun feed(spec: FeedSpec) =
-        feeds.get(FeedSession(accountId, spec, settings.value.contentFilter()))
+    fun feed(spec: FeedSpec, refreshVersion: Int = 0) =
+        feeds.get(
+            FeedSession(
+                accountId,
+                spec,
+                settings.value.contentFilter(),
+                refreshVersion,
+            ),
+        )
 
     fun followedSeries(kind: String): Flow<PagingData<FollowedSeries>> {
         val account = accountId
@@ -333,6 +340,18 @@ constructor(
     fun cachedRecommendedAuthors(): List<UserPreview>? = discoveryAuthors.completed(discoveryKey())
 
     fun cachedPixivisionArticles(): List<PixivisionArticle>? = pixivisionCache.completed(Unit)
+
+    suspend fun refreshDiscovery() {
+        val key = discoveryKey()
+        discoveryTrends.remove(key)
+        discoveryAuthors.remove(key)
+        pixivisionCache.remove(Unit)
+        coroutineScope {
+            launch { trendingTags() }
+            launch { recommendedAuthors() }
+            launch { pixivisionArticles() }
+        }
+    }
 
     suspend fun pixivisionArticles(): List<PixivisionArticle> =
         pixivisionCache.get(Unit) { pixivision.articles() }.await()

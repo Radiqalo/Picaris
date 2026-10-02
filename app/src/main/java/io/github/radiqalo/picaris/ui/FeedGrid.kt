@@ -48,6 +48,9 @@ fun FeedGrid(
     pullToRefreshEnabled: Boolean = true,
     scrollHeaderWhileEmpty: Boolean = false,
     leadingWork: Work? = null,
+    onRefresh: (() -> Unit)? = null,
+    feedRefreshVersion: Int = 0,
+    refreshingOverride: Boolean? = null,
 ) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val flow =
@@ -58,8 +61,9 @@ fun FeedGrid(
             settings.hideAi,
             settings.blockedTags,
             settings.blockedUsers,
+            feedRefreshVersion,
         ) {
-            vm.feed(spec)
+            vm.feed(spec, feedRefreshVersion)
         }
     val items = flow.collectAsLazyPagingItems()
     val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
@@ -243,10 +247,17 @@ fun FeedGrid(
     }
     if (pullToRefreshEnabled) {
         val refreshState = rememberPullToRefreshState()
-        val isRefreshing = refreshing && items.itemCount > 0
+        val isRefreshing = refreshingOverride ?: (refreshing && items.itemCount > 0)
+        val isLoadingAfterRefresh = onRefresh != null && feedRefreshVersion > 0 && refreshing
         PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { items.refresh() },
+            isRefreshing = isRefreshing || isLoadingAfterRefresh,
+            onRefresh = {
+                if (onRefresh != null) {
+                    onRefresh()
+                } else {
+                    items.refresh()
+                }
+            },
             modifier = modifier.fillMaxWidth(),
             state = refreshState,
             indicator = {

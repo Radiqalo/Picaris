@@ -220,6 +220,7 @@ data class FeedSession(
     val account: Long,
     val spec: FeedSpec,
     val filter: ContentFilter,
+    val refreshVersion: Int = 0,
 )
 
 @Serializable

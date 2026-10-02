@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextOverflow
@@ -22,6 +21,7 @@ import io.github.radiqalo.picaris.AppViewModel
 import io.github.radiqalo.picaris.R
 import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun RecommendedHomeScreen(
@@ -56,13 +56,16 @@ private fun DiscoveryLanding(
     vm: AppViewModel,
     navigate: (NavKey) -> Unit,
 ) {
+    var refreshVersion by remember { mutableIntStateOf(0) }
+    var refreshingDiscovery by remember { mutableStateOf(false) }
+    val refreshScope = rememberCoroutineScope()
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val history by vm.history.collectAsStateWithLifecycle()
     val trendResult by produceState<List<TrendingTag>?>(
         vm.cachedTrendingTags(),
         vm.accountId,
         settings.contentKind,
         settings.contentFilter(),
+        refreshVersion,
     ) {
         value = vm.cachedTrendingTags()
         if (settings.contentKind == "novel") {
@@ -83,6 +86,7 @@ private fun DiscoveryLanding(
         vm.accountId,
         settings.contentKind,
         settings.contentFilter(),
+        refreshVersion,
     ) {
         value = vm.cachedRecommendedAuthors()
         value =
@@ -101,24 +105,6 @@ private fun DiscoveryLanding(
             }
     }
     val trends = trendResult.orEmpty()
-    // Pixiv's recommended tags are personalized; derive these from works the user
-    // actually viewed. Trending tags below remain the separate server-provided list.
-    val recommendedTags =
-        remember(history, settings.contentKind, settings.contentFilter()) {
-            val viewedWorks =
-                history.mapNotNull { entry ->
-                    runCatching { AppJson.decodeFromString<Work>(entry.json) }.getOrNull()
-                }
-            viewedWorks
-                .asSequence()
-                .filter { (settings.contentKind == "novel") == it.isNovel }
-                .filter(settings.contentFilter()::allows)
-                .flatMap { it.tags.asSequence() }
-                .filter { it.name.isNotBlank() }
-                .distinctBy { it.name }
-                .take(8)
-                .toList()
-        }
     val loadingTrends = trendResult == null && settings.contentKind != "novel"
     val rankingTitle = stringResource(R.string.ui_d00981d6ce)
     FeedGrid(
@@ -128,6 +114,29 @@ private fun DiscoveryLanding(
         Modifier.fillMaxSize(),
         topPadding =
             WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + PixivSpacing.content,
+        onRefresh = {
+            if (!refreshingDiscovery) {
+                refreshingDiscovery = true
+                refreshScope.launch {
+                    var succeeded = false
+                    try {
+                        vm.refreshDiscovery()
+                        refreshVersion++
+                        succeeded = true
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        // Keep the current discovery content when refresh fails.
+                    } finally {
+                        refreshingDiscovery = false
+                    }
+                    if (!succeeded) vm.message.emit("发现页刷新失败，请检查网络后重试")
+                }
+            }
+        },
+        feedRefreshVersion = refreshVersion,
+        refreshingOverride = refreshingDiscovery,
+        scrollHeaderWhileEmpty = true,
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
                 FilledTonalButton(
@@ -141,35 +150,18 @@ private fun DiscoveryLanding(
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(rankingTitle)
                 }
-                PixivisionCarousel(vm)
-                if (recommendedTags.isNotEmpty()) {
+                if (refreshVersion == 0) PixivisionCarousel(vm)
+                else PixivisionCarousel(vm, refreshVersion)
+                if (loadingTrends) {
+                    DiscoveryPlaceholders()
+                } else if (trends.isNotEmpty()) {
                     Text(
                         stringResource(R.string.discover_tags),
                         style = MaterialTheme.typography.titleLarge,
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(recommendedTags, key = { it.name }) { tag ->
+                        items(trends.take(8), key = { it.tag.name }) { trend ->
                             SuggestionChip(
-                                onClick = {
-                                    navigate(
-                                        Collection(tag.name, "search", word = tag.name),
-                                    )
-                                },
-                                label = { TagLabel(tag) },
-                            )
-                        }
-                    }
-                }
-                if (loadingTrends) {
-                    DiscoveryPlaceholders()
-                } else if (trends.isNotEmpty()) {
-                    Text(
-                        stringResource(R.string.discover_featured),
-                        style = MaterialTheme.typography.headlineSmall,
-                    )
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(trends.take(6), key = { it.tag.name }) { trend ->
-                            ElevatedCard(
                                 onClick = {
                                     navigate(
                                         Collection(
@@ -180,41 +172,13 @@ private fun DiscoveryLanding(
                                         ),
                                     )
                                 },
-                                modifier = Modifier.width(260.dp),
-                            ) {
-                                Box {
-                                    WorkImage(trend.cover, Modifier.fillMaxWidth().height(150.dp))
-                                    SuggestionChip(
-                                        onClick = {
-                                            navigate(
-                                                Collection(
-                                                    trend.tag.name,
-                                                    "search",
-                                                    word = trend.tag.name,
-                                                    tagCover = trend.cover,
-                                                ),
-                                            )
-                                        },
-                                        modifier =
-                                            Modifier
-                                                .align(Alignment.BottomStart)
-                                                .padding(12.dp),
-                                        border = null,
-                                        shape = MaterialTheme.shapes.extraSmall,
-                                        colors =
-                                            SuggestionChipDefaults.suggestionChipColors(
-                                                containerColor = Color.Black.copy(alpha = .52f),
-                                                labelColor = Color.White,
-                                            ),
-                                        label = {
-                                            TagLabel(trend.tag, translationFirst = false)
-                                        },
-                                    )
-                                }
-                            }
+                                label = { TagLabel(trend.tag) },
+                            )
                         }
                     }
-                    trends.take(3).forEach { trend -> DiscoveryTagWorks(trend, vm, navigate) }
+                    trends.take(3).forEach { trend ->
+                        DiscoveryTagWorks(trend, vm, navigate, refreshVersion)
+                    }
                 }
                 if (settings.contentKind != "novel") {
                     Text(
@@ -259,6 +223,7 @@ private fun DiscoveryTagWorks(
     trend: TrendingTag,
     vm: AppViewModel,
     navigate: (NavKey) -> Unit,
+    refreshVersion: Int,
 ) {
     val tag = trend.tag
     val settings by vm.settings.collectAsStateWithLifecycle()
@@ -266,7 +231,9 @@ private fun DiscoveryTagWorks(
         remember(tag.name, trend.cover.id) {
             FeedSpec(section = "related", userId = trend.cover.id)
         }
-    val flow = remember(spec, vm.accountId, settings.contentFilter()) { vm.feed(spec) }
+    val flow = remember(spec, vm.accountId, settings.contentFilter(), refreshVersion) {
+        vm.feed(spec, refreshVersion)
+    }
     val works = flow.collectAsLazyPagingItems()
     val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
     val busy by vm.bookmarkBusy.collectAsStateWithLifecycle()
@@ -421,22 +388,6 @@ private fun DiscoveryPlaceholders() {
                 modifier = Modifier.width(112.dp),
                 label = { Spacer(Modifier.height(20.dp)) },
             )
-        }
-    }
-    Text(
-        stringResource(R.string.discover_featured),
-        style = MaterialTheme.typography.headlineSmall,
-    )
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        items(3) {
-            ElevatedCard(Modifier.width(260.dp)) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(150.dp)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                )
-            }
         }
     }
     repeat(3) {

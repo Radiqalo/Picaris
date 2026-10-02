@@ -8,7 +8,6 @@
     <string name="follow_tab_updates">追更</string>
     <string name="follow_updates_empty">你关注的系列更新会显示在这里</string>
     <string name="follow_updates_count">%1$d 篇作品</string>
-    <string name="discover_featured">人气标签</string>
     <string name="discover_tags">推荐标签</string>
     <string name="discover_artists">推荐作者</string>
     <string name="discover_works">推荐作品</string>
