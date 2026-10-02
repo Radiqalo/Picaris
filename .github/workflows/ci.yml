@@ -21,7 +21,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Build and run unit tests
-        run: ./gradlew :app:assembleDebug :core:testDebugUnitTest :designsystem:testDebugUnitTest
+        run: ./gradlew :app:assembleDebug :app:testDebugUnitTest :core:testDebugUnitTest :designsystem:testDebugUnitTest
+
+      - name: Compile Android instrumentation tests
+        run: ./gradlew :app:compileDebugAndroidTestKotlin
 
       - name: Run Kotlin style and static checks
         run: ./gradlew ktlintCheck detekt
