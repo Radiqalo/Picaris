@@ -135,7 +135,7 @@ constructor(
         RetainedFeedStore(
             viewModelScope,
             { key ->
-                repo.feed(key.account, key.spec, key.filter)
+                repo.feed(key.account, key.spec, key.filter, key.refreshVersion)
             },
         )
     val bookmarkStates = MutableStateFlow<Map<WorkIdentity, BookmarkState>>(emptyMap())
@@ -340,18 +340,6 @@ constructor(
     fun cachedRecommendedAuthors(): List<UserPreview>? = discoveryAuthors.completed(discoveryKey())
 
     fun cachedPixivisionArticles(): List<PixivisionArticle>? = pixivisionCache.completed(Unit)
-
-    suspend fun refreshDiscovery() {
-        val key = discoveryKey()
-        discoveryTrends.remove(key)
-        discoveryAuthors.remove(key)
-        pixivisionCache.remove(Unit)
-        coroutineScope {
-            launch { trendingTags() }
-            launch { recommendedAuthors() }
-            launch { pixivisionArticles() }
-        }
-    }
 
     suspend fun pixivisionArticles(): List<PixivisionArticle> =
         pixivisionCache.get(Unit) { pixivision.articles() }.await()

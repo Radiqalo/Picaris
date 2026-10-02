@@ -29,6 +29,8 @@ import io.github.radiqalo.picaris.AppViewModel
 import io.github.radiqalo.picaris.R
 import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 private val WorkImageBadgeInset = 8.dp
 
@@ -51,6 +53,7 @@ fun FeedGrid(
     onRefresh: (() -> Unit)? = null,
     feedRefreshVersion: Int = 0,
     refreshingOverride: Boolean? = null,
+    onRefreshFinished: (() -> Unit)? = null,
 ) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val flow =
@@ -71,6 +74,18 @@ fun FeedGrid(
     val grid = gridState ?: key(spec) { rememberLazyStaggeredGridState() }
     val list = listState ?: key(spec) { rememberLazyListState() }
     val refreshing = items.loadState.refresh is LoadState.Loading
+    LaunchedEffect(feedRefreshVersion) {
+        if (feedRefreshVersion > 0 && onRefreshFinished != null) {
+            var observedLoading = false
+            withTimeoutOrNull(1_500) {
+                snapshotFlow { items.loadState.refresh }.first { loadState ->
+                    if (loadState is LoadState.Loading) observedLoading = true
+                    observedLoading && loadState !is LoadState.Loading
+                }
+            }
+            onRefreshFinished()
+        }
+    }
     val error = items.loadState.refresh as? LoadState.Error
     val showFeedMetadata = spec.section != "ranking" && settings.showHomeMetadata
     val feedContent: @Composable () -> Unit = {

@@ -8,6 +8,8 @@ import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextOverflow
@@ -21,7 +23,6 @@ import io.github.radiqalo.picaris.AppViewModel
 import io.github.radiqalo.picaris.R
 import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
-import kotlinx.coroutines.launch
 
 @Composable
 fun RecommendedHomeScreen(
@@ -58,7 +59,6 @@ private fun DiscoveryLanding(
 ) {
     var refreshVersion by remember { mutableIntStateOf(0) }
     var refreshingDiscovery by remember { mutableStateOf(false) }
-    val refreshScope = rememberCoroutineScope()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val trendResult by produceState<List<TrendingTag>?>(
         vm.cachedTrendingTags(),
@@ -117,51 +117,45 @@ private fun DiscoveryLanding(
         onRefresh = {
             if (!refreshingDiscovery) {
                 refreshingDiscovery = true
-                refreshScope.launch {
-                    var succeeded = false
-                    try {
-                        vm.refreshDiscovery()
-                        refreshVersion++
-                        succeeded = true
-                    } catch (e: kotlinx.coroutines.CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                        // Keep the current discovery content when refresh fails.
-                    } finally {
-                        refreshingDiscovery = false
-                    }
-                    if (!succeeded) vm.message.emit("发现页刷新失败，请检查网络后重试")
-                }
+                refreshVersion++
             }
         },
         feedRefreshVersion = refreshVersion,
         refreshingOverride = refreshingDiscovery,
+        onRefreshFinished = { refreshingDiscovery = false },
         scrollHeaderWhileEmpty = true,
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
-                FilledTonalButton(
-                    onClick = {
-                        navigate(Collection(rankingTitle, "ranking"))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shapes = ButtonDefaults.shapes(),
+                if (refreshVersion == 0) PixivisionCarousel(vm)
+                else PixivisionCarousel(vm, refreshVersion)
+                TextButton(
+                    onClick = { navigate(Collection(rankingTitle, "ranking")) },
+                    modifier = Modifier.align(Alignment.End),
                 ) {
                     AppIcon(materialSymbol(MaterialSymbol.Leaderboard), null)
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(rankingTitle)
                 }
-                if (refreshVersion == 0) PixivisionCarousel(vm)
-                else PixivisionCarousel(vm, refreshVersion)
                 if (loadingTrends) {
                     DiscoveryPlaceholders()
                 } else if (trends.isNotEmpty()) {
                     Text(
                         stringResource(R.string.discover_tags),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                     )
+                    val tagColors =
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.secondaryContainer,
+                            MaterialTheme.colorScheme.tertiaryContainer,
+                        )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(trends.take(8), key = { it.tag.name }) { trend ->
-                            SuggestionChip(
+                        itemsIndexed(
+                            trends.take(3),
+                            key = { _, trend -> trend.tag.name },
+                        ) { index, trend ->
+                            val containerColor = tagColors[index % tagColors.size]
+                            Surface(
                                 onClick = {
                                     navigate(
                                         Collection(
@@ -172,8 +166,73 @@ private fun DiscoveryLanding(
                                         ),
                                     )
                                 },
-                                label = { TagLabel(trend.tag) },
-                            )
+                                modifier = Modifier.height(48.dp),
+                                shape = MaterialTheme.shapes.small,
+                                color = containerColor,
+                                contentColor = contentColorFor(containerColor),
+                            ) {
+                                Box(
+                                    Modifier.padding(horizontal = 16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    TagLabel(trend.tag)
+                                }
+                            }
+                        }
+                    }
+                    if (trends.size > 3) {
+                        Text(
+                            stringResource(R.string.discover_popular_tags),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(trends.drop(3).take(7), key = { it.tag.name }) { trend ->
+                                Card(
+                                    onClick = {
+                                        navigate(
+                                            Collection(
+                                                trend.tag.name,
+                                                "search",
+                                                word = trend.tag.name,
+                                                tagCover = trend.cover,
+                                            ),
+                                        )
+                                    },
+                                    modifier = Modifier.width(124.dp).height(204.dp),
+                                    shape = MaterialTheme.shapes.medium,
+                                ) {
+                                    WorkImage(
+                                        trend.cover,
+                                        Modifier.fillMaxSize(),
+                                        rounded = false,
+                                        overlay = {
+                                            Box(
+                                                Modifier
+                                                    .fillMaxSize()
+                                                    .background(
+                                                        Brush.verticalGradient(
+                                                            listOf(
+                                                                Color.Transparent,
+                                                                Color.Black.copy(alpha = 0.78f),
+                                                            ),
+                                                        ),
+                                                    ),
+                                            )
+                                            Column(
+                                                Modifier
+                                                    .align(Alignment.BottomStart)
+                                                    .padding(10.dp),
+                                            ) {
+                                                CompositionLocalProvider(
+                                                    LocalContentColor provides Color.White,
+                                                ) {
+                                                    TagLabel(trend.tag, translationFirst = false)
+                                                }
+                                            }
+                                        },
+                                    )
+                                }
+                            }
                         }
                     }
                     trends.take(3).forEach { trend ->
@@ -378,15 +437,32 @@ private fun DiscoveryAuthorCard(
 private fun DiscoveryPlaceholders() {
     Text(
         stringResource(R.string.discover_tags),
-        style = MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.typography.titleMedium,
     )
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(4) {
+        items(3) {
             SuggestionChip(
                 onClick = {},
                 enabled = false,
                 modifier = Modifier.width(112.dp),
                 label = { Spacer(Modifier.height(20.dp)) },
+            )
+        }
+    }
+    Text(
+        stringResource(R.string.discover_popular_tags),
+        style = MaterialTheme.typography.titleMedium,
+    )
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(5) {
+            Spacer(
+                Modifier
+                    .width(124.dp)
+                    .height(204.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                        MaterialTheme.shapes.medium,
+                    ),
             )
         }
     }

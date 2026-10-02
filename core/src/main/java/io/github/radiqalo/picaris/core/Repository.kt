@@ -1,10 +1,12 @@
 package io.github.radiqalo.picaris.core
 
 import androidx.paging.*
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.*
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 @Singleton
 class WorkRepository
@@ -15,10 +17,19 @@ constructor(
     val dao: LibraryDao,
     val settings: SettingsStore,
 ) {
+    private data class FeedRefreshCursor(
+        val refreshVersion: Int,
+        val parameter: String,
+        val value: String,
+    )
+
+    private val feedRefreshCursors = ConcurrentHashMap<FeedSession, FeedRefreshCursor>()
+
     fun feed(
         account: Long,
         spec: FeedSpec,
         filter: ContentFilter? = null,
+        refreshVersion: Int = 0,
     ): Flow<PagingData<Work>> =
         Pager(PagingConfig(pageSize = 30, enablePlaceholders = false)) {
                 object : PagingSource<String, Work>() {
@@ -28,7 +39,26 @@ constructor(
                         params: LoadParams<String>
                     ): LoadResult<String, Work> =
                         try {
-                            val (path, query) = endpoint(spec, account)
+                            val (path, baseQuery) = endpoint(spec, account)
+                            val activeFilter = filter ?: settings.flow.first().contentFilter()
+                            val cursorKey = FeedSession(account, spec, activeFilter)
+                            val query = baseQuery.toMutableMap()
+                            val refreshParameter =
+                                when (spec.section) {
+                                    "recommended" -> "max_bookmark_id_for_recommend"
+                                    "related" -> "offset"
+                                    else -> null
+                                }
+                            if (
+                                params.key == null && refreshVersion > 0 &&
+                                    refreshParameter != null
+                            ) {
+                                feedRefreshCursors[cursorKey]
+                                    ?.takeIf { it.refreshVersion < refreshVersion }
+                                    ?.takeIf { it.parameter == refreshParameter }
+                                    ?.value
+                                    ?.let { query[refreshParameter] = it }
+                            }
                             val key = params.key ?: path + query.toSortedMap().toString()
                             val response =
                                 try {
@@ -55,16 +85,37 @@ constructor(
                                             e is kotlinx.coroutines.CancellationException
                                     )
                                         throw e
+                                    if (refreshVersion > 0) throw e
                                     dao.cached(account, key)?.let {
                                         AppJson.decodeFromString<FeedResponse>(it.json)
                                             .copy(next_url = null)
                                     } ?: throw e
                                 }
-                            val s = filter ?: settings.flow.first().contentFilter()
+                            if (params.key == null && refreshParameter != null) {
+                                response.next_url
+                                    ?.toHttpUrlOrNull()
+                                    ?.queryParameter(refreshParameter)
+                                    ?.let { nextCursor ->
+                                        feedRefreshCursors.compute(cursorKey) { _, current ->
+                                            if (
+                                                current == null ||
+                                                    refreshVersion >= current.refreshVersion
+                                            ) {
+                                                FeedRefreshCursor(
+                                                    refreshVersion,
+                                                    refreshParameter,
+                                                    nextCursor,
+                                                )
+                                            } else {
+                                                current
+                                            }
+                                        }
+                                    }
+                            }
                             LoadResult.Page(
                                 (response.illusts +
                                         response.novels.map { it.copy(type = "novel") })
-                                    .filter(s::allows),
+                                    .filter(activeFilter::allows),
                                 null,
                                 response.next_url,
                             )
