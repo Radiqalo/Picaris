@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.5.0-alpha07" type="baseline" client="gradle" dependencies="false" name="AGP (9.5.0-alpha07)" variant="all" version="9.5.0-alpha07">
+
+    <issue
+        id="NewApi"
+        message="`android:windowSplashScreenAnimatedIcon` requires API level 31 (current min is 30)"
+        errorLine1="&lt;resources>&lt;style name=&quot;Theme.Picaris&quot; parent=&quot;android:style/Theme.Material.Light.NoActionBar&quot;>&lt;item name=&quot;android:fontFamily&quot;>sans&lt;/item>&lt;item name=&quot;android:windowLightStatusBar&quot;>true&lt;/item>&lt;item name=&quot;android:windowActionModeOverlay&quot;>true&lt;/item>&lt;item name=&quot;android:windowSplashScreenBackground&quot;>#F5F4FB&lt;/item>&lt;item name=&quot;android:windowSplashScreenAnimatedIcon&quot;>@drawable/ic_launcher&lt;/item>&lt;item name=&quot;android:windowSoftInputMode&quot;>adjustResize&lt;/item>&lt;/style>&lt;/resources>"
+        errorLine2="                                                                                                                                                                                                                                                                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="1"
+            column="318"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="`android:windowSplashScreenBackground` requires API level 31 (current min is 30)"
+        errorLine1="&lt;resources>&lt;style name=&quot;Theme.Picaris&quot; parent=&quot;android:style/Theme.Material.Light.NoActionBar&quot;>&lt;item name=&quot;android:fontFamily&quot;>sans&lt;/item>&lt;item name=&quot;android:windowLightStatusBar&quot;>true&lt;/item>&lt;item name=&quot;android:windowActionModeOverlay&quot;>true&lt;/item>&lt;item name=&quot;android:windowSplashScreenBackground&quot;>#F5F4FB&lt;/item>&lt;item name=&quot;android:windowSplashScreenAnimatedIcon&quot;>@drawable/ic_launcher&lt;/item>&lt;item name=&quot;android:windowSoftInputMode&quot;>adjustResize&lt;/item>&lt;/style>&lt;/resources>"
+        errorLine2="                                                                                                                                                                                                                                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/styles.xml"
+            line="1"
+            column="254"/>
+    </issue>
+
+    <issue
+        id="NonObservableLocale"
+        message="Reading locale in a non-observable way in a composable function"
+        errorLine1="                                        java.text.SimpleDateFormat(&quot;yyyy-MM-dd HH:mm&quot;, java.util.Locale.getDefault())"
+        errorLine2="                                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/io/github/radiqalo/picaris/ui/Utility.kt"
+            line="1136"
+            column="88"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.application than 9.5.0-alpha07 is available: 9.5.0-alpha08"
+        errorLine1="agp = &quot;9.5.0-alpha07&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/Projects/Picaris/gradle/libs.versions.toml"
+            line="2"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.library than 9.5.0-alpha07 is available: 9.5.0-alpha08"
+        errorLine1="agp = &quot;9.5.0-alpha07&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/Projects/Picaris/gradle/libs.versions.toml"
+            line="2"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of com.android.test than 9.5.0-alpha07 is available: 9.5.0-alpha08"
+        errorLine1="agp = &quot;9.5.0-alpha07&quot;"
+        errorLine2="      ~~~~~~~~~~~~~~~">
+        <location
+            file="$HOME/Projects/Picaris/gradle/libs.versions.toml"
+            line="2"
+            column="7"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="        &lt;activity android:name=&quot;.MainActivity&quot; android:exported=&quot;true&quot; android:launchMode=&quot;singleTop&quot; android:screenOrientation=&quot;portrait&quot; android:windowSoftInputMode=&quot;adjustResize&quot;>"
+        errorLine2="                                                                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="7"
+            column="103"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/io/github/radiqalo/picaris/ui/Feeds.kt"
+            line="74"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/io/github/radiqalo/picaris/ui/Feeds.kt"
+            line="1289"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios."
+        errorLine1="        &lt;activity android:name=&quot;.MainActivity&quot; android:exported=&quot;true&quot; android:launchMode=&quot;singleTop&quot; android:screenOrientation=&quot;portrait&quot; android:windowSoftInputMode=&quot;adjustResize&quot;>"
+        errorLine2="                                                                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="7"
+            column="103"/>
+    </issue>
+
+    <issue
+        id="ChromeOsAbiSupport"
+        message="Missing x86_64 ABI support for ChromeOS"
+        errorLine1="            ndk { abiFilters += &quot;arm64-v8a&quot; }"
+        errorLine2="                                ~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="42"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="DataExtractionRules"
+        message="The attribute `android:dataExtractionRules` only applies for Android 12 and higher; since `minSdkVersion` is API 30 you should also set `android:fullBackupContent`"
+        errorLine1="    &lt;application android:name=&quot;.PixivApplication&quot; android:label=&quot;@string/app_name&quot; android:icon=&quot;@drawable/ic_launcher&quot; android:allowBackup=&quot;false&quot; android:dataExtractionRules=&quot;@xml/data_extraction_rules&quot; android:supportsRtl=&quot;true&quot; android:theme=&quot;@style/Theme.Picaris&quot; android:usesCleartextTraffic=&quot;false&quot;>"
+        errorLine2="                                                                                                                                                                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="6"
+            column="178"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var activeTab by mutableStateOf(restoredTab)"
+        errorLine2="                     ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/io/github/radiqalo/picaris/ui/NavigationTransitionCoordinator.kt"
+            line="54"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                val root = DocumentFile.fromTreeUri(appContext, Uri.parse(tree)) ?: return@runCatching false"
+        errorLine2="                                                                ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/io/github/radiqalo/picaris/AppViewModel.kt"
+            line="418"
+            column="65"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="            else -> appContext.contentResolver.openAssetFileDescriptor(Uri.parse(value), &quot;r&quot;)?.use { true } ?: false"
+        errorLine2="                                                                       ~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/io/github/radiqalo/picaris/AppViewModel.kt"
+            line="426"
+            column="72"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="        Uri.parse(if (dest.tree.isEmpty()) &quot;media-folder|${nested.path}/&quot; else &quot;saf-folder|${dest.tree}|${nested.path}&quot;)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/io/github/radiqalo/picaris/download/DownloadStorage.kt"
+            line="122"
+            column="9"/>
+    </issue>
+
+</issues>

@@ -7,6 +7,11 @@ plugins {
 }
 
 android {
+    lint {
+        baseline = file("lint-baseline.xml")
+        error += "UnusedResources"
+    }
+
     namespace = "io.github.radiqalo.picaris"
     compileSdk { version = release(37) { minorApiLevel = 2 } }
     defaultConfig {
