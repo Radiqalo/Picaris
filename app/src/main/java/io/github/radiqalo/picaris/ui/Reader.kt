@@ -1,5 +1,7 @@
 package io.github.radiqalo.picaris.ui
 
+import androidx.compose.ui.res.stringResource
+
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -39,7 +41,6 @@ fun ReaderScreen(
     initialPage: Int? = null,
     localUris: List<String> = emptyList(),
 ) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     if (work.isNovel) {
         NovelReader(work, vm, back)
@@ -143,7 +144,7 @@ fun ReaderScreen(
                     title = { Text(work.title, maxLines = 1) },
                     navigationIcon = {
                         IconButton(back) {
-                            AppIcon(materialSymbol(MaterialSymbol.ArrowBack), strings.getString(R.string.ui_11d0241540))
+                            AppIcon(materialSymbol(MaterialSymbol.ArrowBack), stringResource(R.string.ui_11d0241540))
                         }
                     },
                     actions = {
@@ -168,7 +169,7 @@ fun ReaderScreen(
                                 startDownload()
                             }
                         }) {
-                            AppIcon(materialSymbol(MaterialSymbol.Download), strings.getString(R.string.ui_255d6cabdc))
+                            AppIcon(materialSymbol(MaterialSymbol.Download), stringResource(R.string.ui_255d6cabdc))
                         }
                     },
                     colors =
@@ -199,8 +200,8 @@ fun ReaderScreen(
                         }) {
                             AppIcon(
                                 materialSymbol(MaterialSymbol.Book),
-                                if (vertical) strings.getString(R.string.ui_86380149bb)
-                                else strings.getString(R.string.ui_4a58070031),
+                                if (vertical) stringResource(R.string.ui_86380149bb)
+                                else stringResource(R.string.ui_4a58070031),
                             )
                         }
                         IconButton(
@@ -270,7 +271,6 @@ private fun ReaderImage(
     toggle: () -> Unit,
 ) {
     val context = LocalContext.current
-    val strings = androidx.compose.ui.platform.LocalResources.current
     var failed by remember(url) { mutableStateOf(false) }
     var retry by remember(url) { mutableIntStateOf(0) }
     val request =
@@ -288,9 +288,9 @@ private fun ReaderImage(
         ZoomableAsyncImage(request, title, Modifier.matchParentSize(), onClick = { toggle() })
         if (failed)
             EmptyState(
-                strings.getString(R.string.reader_image_error),
-                strings.getString(R.string.reader_image_error_detail),
-                action = strings.getString(R.string.ui_e2d53a6d3a),
+                stringResource(R.string.reader_image_error),
+                stringResource(R.string.reader_image_error_detail),
+                action = stringResource(R.string.ui_e2d53a6d3a),
             ) {
                 retry++
             }
@@ -299,7 +299,6 @@ private fun ReaderImage(
 
 @Composable
 fun UgoiraPlayer(work: Work, vm: AppViewModel, toggle: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
     var playing by remember { mutableStateOf(true) }
@@ -329,9 +328,9 @@ fun UgoiraPlayer(work: Work, vm: AppViewModel, toggle: () -> Unit) {
         when {
             error != null ->
                 EmptyState(
-                    strings.getString(R.string.ui_138a785284),
+                    stringResource(R.string.ui_138a785284),
                     error!!,
-                    action = strings.getString(R.string.ui_e2d53a6d3a),
+                    action = stringResource(R.string.ui_e2d53a6d3a),
                 ) {
                     retry++
                 }
@@ -347,8 +346,8 @@ fun UgoiraPlayer(work: Work, vm: AppViewModel, toggle: () -> Unit) {
             ) {
                 AppIcon(
                     if (playing) materialSymbol(MaterialSymbol.Pause) else materialSymbol(MaterialSymbol.PlayArrow),
-                    if (playing) strings.getString(R.string.ui_130448bce6)
-                    else strings.getString(R.string.ui_21925350de),
+                    if (playing) stringResource(R.string.ui_130448bce6)
+                    else stringResource(R.string.ui_21925350de),
                 )
             }
     }
@@ -356,7 +355,6 @@ fun UgoiraPlayer(work: Work, vm: AppViewModel, toggle: () -> Unit) {
 
 @Composable
 fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     val settings by vm.settings.collectAsStateWithLifecycle()
     var body by remember { mutableStateOf<NovelBody?>(null) }
@@ -392,12 +390,12 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
                 title = { Text(work.title, maxLines = 1) },
                 navigationIcon = {
                     IconButton(back) {
-                        AppIcon(materialSymbol(MaterialSymbol.ArrowBack), strings.getString(R.string.ui_11d0241540))
+                        AppIcon(materialSymbol(MaterialSymbol.ArrowBack), stringResource(R.string.ui_11d0241540))
                     }
                 },
                 actions = {
                     IconButton({ controls = true }) {
-                        AppIcon(materialSymbol(MaterialSymbol.Settings), strings.getString(R.string.ui_bc0832465e))
+                        AppIcon(materialSymbol(MaterialSymbol.Settings), stringResource(R.string.ui_bc0832465e))
                     }
                 },
             )
@@ -407,10 +405,10 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
             error != null ->
                 Box(Modifier.padding(padding)) {
                     EmptyState(
-                        strings.getString(R.string.ui_5c3b597ab6),
+                        stringResource(R.string.ui_5c3b597ab6),
                         error!!,
                         materialSymbol(MaterialSymbol.Book),
-                        strings.getString(R.string.ui_e2d53a6d3a),
+                        stringResource(R.string.ui_e2d53a6d3a),
                     ) {
                         retry++
                     }
@@ -446,13 +444,13 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
                                     if (url != null)
                                         AsyncImage(
                                             url,
-                                            strings.getString(R.string.ui_b0911e6444),
+                                            stringResource(R.string.ui_b0911e6444),
                                             Modifier.fillMaxWidth()
                                                 .heightIn(min = 100.dp, max = 600.dp),
                                         )
                                     else
                                         Text(
-                                            strings.getString(R.string.ui_3549b637f3),
+                                            stringResource(R.string.ui_3549b637f3),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                 }
@@ -477,7 +475,7 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
                         }
                         item {
                             Text(
-                                strings.getString(R.string.ui_4b65d10385),
+                                stringResource(R.string.ui_4b65d10385),
                                 Modifier.fillMaxWidth().padding(vertical = 40.dp),
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -494,7 +492,7 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    strings.getString(R.string.ui_bc0832465e),
+                    stringResource(R.string.ui_bc0832465e),
                     style = MaterialTheme.typography.titleLarge,
                 )
                 Text("字号 · ${settings.novelFont}")
@@ -518,7 +516,7 @@ fun NovelReader(work: Work, vm: AppViewModel, back: () -> Unit) {
                     onValueChange = { v -> vm.update { it.copy(novelSpacing = v.toInt()) } },
                 )
                 Text(
-                    strings.getString(R.string.ui_2334433cb5),
+                    stringResource(R.string.ui_2334433cb5),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -1,5 +1,7 @@
 package io.github.radiqalo.picaris.ui
 
+import androidx.compose.ui.res.stringResource
+
 import android.content.Intent
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -55,7 +57,6 @@ import androidx.compose.animation.core.tween
 
 @Composable
 fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     val context = LocalContext.current
     val busy by vm.busy.collectAsStateWithLifecycle()
@@ -66,7 +67,7 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
             settings,
             Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 12.dp),
         ) {
-            AppIcon(materialSymbol(MaterialSymbol.Settings), strings.getString(R.string.ui_7debf9cb03))
+            AppIcon(materialSymbol(MaterialSymbol.Settings), stringResource(R.string.ui_7debf9cb03))
         }
         Column(
             Modifier.align(Alignment.Center)
@@ -93,14 +94,14 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
             ) {
                 AppIcon(materialSymbol(MaterialSymbol.Person), null)
                 Spacer(Modifier.width(10.dp))
-                Text(strings.getString(R.string.ui_77373439fa))
+                Text(stringResource(R.string.ui_77373439fa))
             }
             OutlinedButton(
                 { import = true },
                 Modifier.fillMaxWidth().height(52.dp),
                 enabled = !busy,
             ) {
-                Text(strings.getString(R.string.ui_91e037beb0))
+                Text(stringResource(R.string.ui_91e037beb0))
             }
             if (busy) LinearWavyProgressIndicator(Modifier.fillMaxWidth())
         }
@@ -108,11 +109,11 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
     if (import)
         ActionSheet(
             onDismissRequest = { if (!busy) import = false },
-            title = { Text(strings.getString(R.string.ui_592bb1ace9)) },
+            title = { Text(stringResource(R.string.ui_592bb1ace9)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        strings.getString(R.string.ui_5c8d1c78fd),
+                        stringResource(R.string.ui_5c8d1c78fd),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     OutlinedSecureTextField(
@@ -132,7 +133,7 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
                     },
                     enabled = tokenState.text.isNotBlank() && !busy,
                 ) {
-                    Text(strings.getString(R.string.ui_21f1e88275))
+                    Text(stringResource(R.string.ui_21f1e88275))
                 }
             },
             dismissButton = {
@@ -143,7 +144,7 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
                     },
                     enabled = !busy,
                 ) {
-                    Text(strings.getString(R.string.ui_4d0b4688c7))
+                    Text(stringResource(R.string.ui_4d0b4688c7))
                 }
             },
         )
@@ -151,7 +152,6 @@ fun LoginScreen(vm: AppViewModel, settings: () -> Unit) {
 
 @Composable
 fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val account by vm.active.collectAsStateWithLifecycle()
     LaunchedEffect(account?.user?.id) { vm.syncAccountProfile() }
     LazyColumn(
@@ -216,8 +216,8 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             Column(Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                     listOf(
-                        Triple("settings", strings.getString(R.string.ui_7debf9cb03), materialSymbol(MaterialSymbol.Settings)),
-                        Triple("about", strings.getString(R.string.ui_272209c708), materialSymbol(MaterialSymbol.Explore)),
+                        Triple("settings", stringResource(R.string.ui_7debf9cb03), materialSymbol(MaterialSymbol.Settings)),
+                        Triple("about", stringResource(R.string.ui_272209c708), materialSymbol(MaterialSymbol.Explore)),
                     ).forEachIndexed { index, (page, label, icon) ->
                         SegmentedListItem(
                             colors = PixivContainerDefaults.listItemColors(),
@@ -236,7 +236,7 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     colors = PixivContainerDefaults.listItemColors(),
                     onClick = { navigate(Utility("accounts")) },
                     shapes = ListItemDefaults.segmentedShapes(0, 1),
-                    content = { Text(strings.getString(R.string.ui_9d4ca7f307)) },
+                    content = { Text(stringResource(R.string.ui_9d4ca7f307)) },
                     leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Person), null) },
                     trailingContent = { AppIcon(materialSymbol(MaterialSymbol.ChevronRight), null) },
                 )
@@ -247,11 +247,10 @@ fun ProfileScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 
 @Composable
 private fun ProfileLibraryActions(navigate: (NavKey) -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val actions = listOf(
-        Triple("bookmarks", strings.getString(R.string.profile_bookmarks), materialSymbol(MaterialSymbol.Favorite)),
-        Triple("history", strings.getString(R.string.profile_history), materialSymbol(MaterialSymbol.History)),
-        Triple("downloads", strings.getString(R.string.ui_18df1a67a2), materialSymbol(MaterialSymbol.Download)),
+        Triple("bookmarks", stringResource(R.string.profile_bookmarks), materialSymbol(MaterialSymbol.Favorite)),
+        Triple("history", stringResource(R.string.profile_history), materialSymbol(MaterialSymbol.History)),
+        Triple("downloads", stringResource(R.string.ui_18df1a67a2), materialSymbol(MaterialSymbol.Download)),
     )
     val sources = remember { List(3) { androidx.compose.foundation.interaction.MutableInteractionSource() } }
     ButtonGroup(
@@ -409,7 +408,6 @@ private fun SettingChoiceBlock(
 
 @Composable
 fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     val s by vm.settings.collectAsStateWithLifecycle()
     val cachedFeedBytes by vm.cachedFeedBytes.collectAsStateWithLifecycle()
@@ -438,7 +436,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
         }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(
-            strings.getString(R.string.ui_7debf9cb03),
+            stringResource(R.string.ui_7debf9cb03),
             back,
             scrollBehavior = null,
         )
@@ -448,9 +446,9 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item {
-                SettingsGroup(strings.getString(R.string.ui_09b58aa342)) {
+                SettingsGroup(stringResource(R.string.ui_09b58aa342)) {
                     SettingChoiceBlock(
-                        title = strings.getString(R.string.ui_e848ddd482),
+                        title = stringResource(R.string.ui_e848ddd482),
                         selected = s.theme,
                         options = listOf("system" to "系统", "light" to "浅色", "dark" to "深色"),
                         onSelect = { theme -> vm.update { it.copy(theme = theme) } },
@@ -485,8 +483,8 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         }
                     }
                     SettingRow(
-                        strings.getString(R.string.ui_9d180a2c78),
-                        strings.getString(R.string.ui_d80ba66133),
+                        stringResource(R.string.ui_9d180a2c78),
+                        stringResource(R.string.ui_d80ba66133),
                         icon = materialSymbol(MaterialSymbol.Wallpaper),
                         action = {
                             FeedbackSwitch(s.dynamicColor, { v -> vm.update { it.copy(dynamicColor = v) } })
@@ -495,9 +493,9 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         vm.update { it.copy(dynamicColor = !it.dynamicColor) }
                     }
                     SettingRow(
-                        strings.getString(R.string.ui_6f67371e05),
-                        if (s.dynamicColor) strings.getString(R.string.ui_be728419d8)
-                        else strings.getString(R.string.ui_f4564b0336),
+                        stringResource(R.string.ui_6f67371e05),
+                        if (s.dynamicColor) stringResource(R.string.ui_be728419d8)
+                        else stringResource(R.string.ui_f4564b0336),
                         icon = materialSymbol(MaterialSymbol.Palette),
                         action = {
                             Surface(
@@ -513,7 +511,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 }
             }
             item {
-                SettingsGroup(strings.getString(R.string.ui_10ea138040)) {
+                SettingsGroup(stringResource(R.string.ui_10ea138040)) {
                     SettingRow(
                         "显示作者与作品名",
                         "在图片流中显示作者与作品名",
@@ -544,8 +542,8 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         vm.update { it.copy(showTagTranslations = !it.showTagTranslations) }
                     }
                     SettingRow(
-                        strings.getString(R.string.ui_d5edf52f07),
-                        strings.getString(R.string.ui_5b34213640),
+                        stringResource(R.string.ui_d5edf52f07),
+                        stringResource(R.string.ui_5b34213640),
                         materialSymbol(MaterialSymbol.Contrast),
                         action = {
                             FeedbackSwitch(s.blackReader, { v -> vm.update { it.copy(blackReader = v) } })
@@ -555,8 +553,8 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         vm.update { it.copy(blackReader = !it.blackReader) }
                     }
                     SettingRow(
-                        strings.getString(R.string.ui_da33a1a4d5),
-                        strings.getString(R.string.ui_9cc2ab8295),
+                        stringResource(R.string.ui_da33a1a4d5),
+                        stringResource(R.string.ui_9cc2ab8295),
                         icon = materialSymbol(MaterialSymbol.Adult),
                         action = {
                             FeedbackSwitch(s.showAdult, { v -> vm.update { it.copy(showAdult = v) } })
@@ -565,24 +563,24 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         vm.update { it.copy(showAdult = !it.showAdult) }
                     }
                     SettingRow(
-                        strings.getString(R.string.ui_b7f564e542),
-                        strings.getString(R.string.ui_2b1cc7450b),
+                        stringResource(R.string.ui_b7f564e542),
+                        stringResource(R.string.ui_2b1cc7450b),
                         icon = materialSymbol(MaterialSymbol.Ai),
                         action = { FeedbackSwitch(s.hideAi, { v -> vm.update { it.copy(hideAi = v) } }) },
                     ) {
                         vm.update { it.copy(hideAi = !it.hideAi) }
                     }
                     SettingRow(
-                        strings.getString(R.string.ui_1a62da8063),
-                        strings.getString(R.string.ui_df855f5c93),
+                        stringResource(R.string.ui_1a62da8063),
+                        stringResource(R.string.ui_df855f5c93),
                         icon = materialSymbol(MaterialSymbol.BlockedTag),
                         position = SettingsRowPosition.Middle,
                     ) {
                         dialog = "tags"
                     }
                     SettingRow(
-                        strings.getString(R.string.ui_0ed0fdd725),
-                        strings.getString(R.string.ui_4544c7e538),
+                        stringResource(R.string.ui_0ed0fdd725),
+                        stringResource(R.string.ui_4544c7e538),
                         materialSymbol(MaterialSymbol.BlockedUser),
                         position = SettingsRowPosition.Last,
                     ) {
@@ -591,14 +589,14 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 }
             }
             item {
-                SettingsGroup(strings.getString(R.string.ui_5d3fbdf11e)) {
+                SettingsGroup(stringResource(R.string.ui_5d3fbdf11e)) {
                     SettingRow(
-                        strings.getString(R.string.ui_999365fe74),
+                        stringResource(R.string.ui_999365fe74),
                         when (s.proxyType) {
                             "http" -> "HTTP 代理 ${s.proxyHost}:${s.proxyPort}"
                             "socks" -> "SOCKS 代理 ${s.proxyHost}:${s.proxyPort}"
-                            "direct" -> strings.getString(R.string.ui_7d7358e103)
-                            else -> strings.getString(R.string.ui_8c99b2221d)
+                            "direct" -> stringResource(R.string.ui_7d7358e103)
+                            else -> stringResource(R.string.ui_8c99b2221d)
                         },
                         icon = materialSymbol(MaterialSymbol.Network),
                         position = SettingsRowPosition.First,
@@ -622,10 +620,10 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 }
             }
             item {
-                SettingsGroup(strings.getString(R.string.ui_6d4dcd7cb8)) {
+                SettingsGroup(stringResource(R.string.ui_6d4dcd7cb8)) {
                     SettingRow(
-                        strings.getString(R.string.ui_0a7bef0788),
-                        strings.getString(R.string.ui_be6850c1b8),
+                        stringResource(R.string.ui_0a7bef0788),
+                        stringResource(R.string.ui_be6850c1b8),
                         materialSymbol(MaterialSymbol.History),
                         position = SettingsRowPosition.First,
                     ) {
@@ -640,7 +638,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         importAppData.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
                     }
                     SettingRow(
-                        strings.getString(R.string.ui_92ec4c46d9),
+                        stringResource(R.string.ui_92ec4c46d9),
                         "作品列表 ${formatCacheSize(cachedFeedBytes)} · 图片 ${formatCacheSize(imageCacheBytes)}",
                         icon = materialSymbol(MaterialSymbol.ClearCache),
                         position = SettingsRowPosition.Last,
@@ -655,7 +653,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
         "color" ->
             ActionSheet(
                 onDismissRequest = { dialog = null },
-                title = { Text(strings.getString(R.string.ui_6f67371e05)) },
+                title = { Text(stringResource(R.string.ui_6f67371e05)) },
                 text = {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -708,7 +706,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 },
                 confirmButton = {
                     TextButton({ dialog = null }) {
-                        Text(strings.getString(R.string.ui_33246f6a5e))
+                        Text(stringResource(R.string.ui_33246f6a5e))
                     }
                 },
             )
@@ -724,8 +722,8 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                 onDismissRequest = { dialog = null },
                 title = {
                     Text(
-                        if (tags) strings.getString(R.string.ui_1a62da8063)
-                        else strings.getString(R.string.ui_0ed0fdd725)
+                        if (tags) stringResource(R.string.ui_1a62da8063)
+                        else stringResource(R.string.ui_0ed0fdd725)
                     )
                 },
                 text = {
@@ -773,12 +771,12 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         }
                         dialog = null
                     }) {
-                        Text(strings.getString(R.string.ui_fadf24dbc5))
+                        Text(stringResource(R.string.ui_fadf24dbc5))
                     }
                 },
                 dismissButton = {
                     TextButton({ dialog = null }) {
-                        Text(strings.getString(R.string.ui_4d0b4688c7))
+                        Text(stringResource(R.string.ui_4d0b4688c7))
                     }
                 },
             )
@@ -801,10 +799,10 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     TextButton({
                         vm.update { it.copy(downloadConcurrency = value.toInt().coerceIn(1, 10)) }
                         dialog = null
-                    }) { Text(strings.getString(R.string.ui_fadf24dbc5)) }
+                    }) { Text(stringResource(R.string.ui_fadf24dbc5)) }
                 },
                 dismissButton = {
-                    TextButton({ dialog = null }) { Text(strings.getString(R.string.ui_4d0b4688c7)) }
+                    TextButton({ dialog = null }) { Text(stringResource(R.string.ui_4d0b4688c7)) }
                 },
             )
         }
@@ -817,11 +815,11 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
         "cache" ->
             ActionSheet(
                 onDismissRequest = { dialog = null },
-                title = { Text(strings.getString(R.string.ui_21f227944e)) },
+                title = { Text(stringResource(R.string.ui_21f227944e)) },
                 text = {
                     Text(
                         if (dialog == "history") {
-                            "将清理当前账号的${strings.getString(R.string.ui_29f6711704)}。"
+                            "将清理当前账号的${stringResource(R.string.ui_29f6711704)}。"
                         } else {
                             "将清理当前账号的作品列表缓存和图片缓存。"
                         }
@@ -833,12 +831,12 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         vm.clearLibrary(history)
                         dialog = null
                     }) {
-                        Text(strings.getString(R.string.ui_907c3945d8))
+                        Text(stringResource(R.string.ui_907c3945d8))
                     }
                 },
                 dismissButton = {
                     TextButton({ dialog = null }) {
-                        Text(strings.getString(R.string.ui_4d0b4688c7))
+                        Text(stringResource(R.string.ui_4d0b4688c7))
                     }
                 },
             )
@@ -855,7 +853,6 @@ private fun formatCacheSize(bytes: Long): String {
 
 @Composable
 fun ProxyDialog(s: Settings, dismiss: () -> Unit, save: (String, String, Int) -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     var type by remember { mutableStateOf(s.proxyType) }
     var host by remember { mutableStateOf(s.proxyHost) }
@@ -864,14 +861,14 @@ fun ProxyDialog(s: Settings, dismiss: () -> Unit, save: (String, String, Int) ->
     val valid = !manual || (host.isNotBlank() && port.toIntOrNull() in 1..65535)
     ActionSheet(
         onDismissRequest = dismiss,
-        title = { Text(strings.getString(R.string.ui_999365fe74)) },
+        title = { Text(stringResource(R.string.ui_999365fe74)) },
         text = {
             Column {
                 listOf(
-                        "system" to strings.getString(R.string.ui_37e46b67a6),
-                        "direct" to strings.getString(R.string.ui_7d7358e103),
-                        "http" to strings.getString(R.string.ui_d95ef5ba39),
-                        "socks" to strings.getString(R.string.ui_f331d21383),
+                        "system" to stringResource(R.string.ui_37e46b67a6),
+                        "direct" to stringResource(R.string.ui_7d7358e103),
+                        "http" to stringResource(R.string.ui_d95ef5ba39),
+                        "socks" to stringResource(R.string.ui_f331d21383),
                     )
                     .forEach { (k, t) ->
                         Row(
@@ -886,19 +883,19 @@ fun ProxyDialog(s: Settings, dismiss: () -> Unit, save: (String, String, Int) ->
                     OutlinedTextField(
                         host,
                         { host = it },
-                        label = { Text(strings.getString(R.string.ui_ea1a03edfe)) },
+                        label = { Text(stringResource(R.string.ui_ea1a03edfe)) },
                         singleLine = true,
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         port,
                         { port = it },
-                        label = { Text(strings.getString(R.string.ui_6cbb7335b5)) },
+                        label = { Text(stringResource(R.string.ui_6cbb7335b5)) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     )
                     Text(
-                        strings.getString(R.string.ui_6a002621b8),
+                        stringResource(R.string.ui_6a002621b8),
                         Modifier.padding(top = 12.dp),
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -907,16 +904,15 @@ fun ProxyDialog(s: Settings, dismiss: () -> Unit, save: (String, String, Int) ->
         },
         confirmButton = {
             TextButton({ save(type, host.trim(), port.toIntOrNull() ?: 7890) }, enabled = valid) {
-                Text(strings.getString(R.string.ui_fadf24dbc5))
+                Text(stringResource(R.string.ui_fadf24dbc5))
             }
         },
-        dismissButton = { TextButton(dismiss) { Text(strings.getString(R.string.ui_4d0b4688c7)) } },
+        dismissButton = { TextButton(dismiss) { Text(stringResource(R.string.ui_4d0b4688c7)) } },
     )
 }
 
 @Composable
 fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     val data by vm.accounts.collectAsStateWithLifecycle()
     var add by remember { mutableStateOf(false) }
@@ -926,7 +922,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
     val context = LocalContext.current
     Column {
         ScreenBar(
-            strings.getString(R.string.ui_9d4ca7f307),
+            stringResource(R.string.ui_9d4ca7f307),
             back,
         )
         LazyColumn(
@@ -949,7 +945,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                                         Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                                             AppIcon(
                                                 materialSymbol(MaterialSymbol.Check),
-                                                strings.getString(R.string.ui_922c94aae3),
+                                                stringResource(R.string.ui_922c94aae3),
                                             )
                                         }
                                     IconButton({ export = a }) {
@@ -961,7 +957,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                                     IconButton({ remove = a }) {
                                         AppIcon(
                                             materialSymbol(MaterialSymbol.Close),
-                                            strings.getString(R.string.ui_63fd41f453),
+                                            stringResource(R.string.ui_63fd41f453),
                                         )
                                     }
                                 }
@@ -980,12 +976,12 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                     },
                     Modifier.fillMaxWidth(),
                 ) {
-                    Text(strings.getString(R.string.ui_63931d2cca))
+                    Text(stringResource(R.string.ui_63931d2cca))
                 }
             }
             item {
                 OutlinedButton({ add = true }, Modifier.fillMaxWidth()) {
-                    Text(strings.getString(R.string.ui_91e037beb0))
+                    Text(stringResource(R.string.ui_91e037beb0))
                 }
             }
         }
@@ -996,7 +992,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                 add = false
                 tokenState.clearText()
             },
-            title = { Text(strings.getString(R.string.ui_ef3ea55386)) },
+            title = { Text(stringResource(R.string.ui_ef3ea55386)) },
             text = {
                 OutlinedSecureTextField(
                     state = tokenState,
@@ -1013,7 +1009,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                     },
                     enabled = tokenState.text.isNotBlank(),
                 ) {
-                    Text(strings.getString(R.string.ui_21f1e88275))
+                    Text(stringResource(R.string.ui_21f1e88275))
                 }
             },
             dismissButton = {
@@ -1021,7 +1017,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                     tokenState.clearText()
                     add = false
                 }) {
-                    Text(strings.getString(R.string.ui_4d0b4688c7))
+                    Text(stringResource(R.string.ui_4d0b4688c7))
                 }
             },
         )
@@ -1029,17 +1025,17 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
         ActionSheet(
             onDismissRequest = { remove = null },
             title = { Text("移除 ${a.user.name}？") },
-            text = { Text(strings.getString(R.string.ui_ca05850133)) },
+            text = { Text(stringResource(R.string.ui_ca05850133)) },
             confirmButton = {
                 TextButton({
                     vm.removeAccount(a.user.id)
                     remove = null
                 }) {
-                    Text(strings.getString(R.string.ui_2f752c005e))
+                    Text(stringResource(R.string.ui_2f752c005e))
                 }
             },
             dismissButton = {
-                TextButton({ remove = null }) { Text(strings.getString(R.string.ui_4d0b4688c7)) }
+                TextButton({ remove = null }) { Text(stringResource(R.string.ui_4d0b4688c7)) }
             },
         )
     }
@@ -1060,7 +1056,7 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
                 }
             },
             dismissButton = {
-                TextButton({ export = null }) { Text(strings.getString(R.string.ui_4d0b4688c7)) }
+                TextButton({ export = null }) { Text(stringResource(R.string.ui_4d0b4688c7)) }
             },
         )
     }
@@ -1068,7 +1064,6 @@ fun AccountScreen(vm: AppViewModel, back: () -> Unit) {
 
 @Composable
 fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
     val visibleHistory = remember(history, settings.contentKind) {
@@ -1078,11 +1073,11 @@ fun HistoryScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit
         }
     }
     Column(Modifier.fillMaxSize()) {
-        ScreenBar(strings.getString(R.string.ui_29f6711704), back = back, scrollBehavior = null)
+        ScreenBar(stringResource(R.string.ui_29f6711704), back = back, scrollBehavior = null)
         if (visibleHistory.isEmpty())
             EmptyState(
-                strings.getString(R.string.ui_f1fd08eeb6),
-                strings.getString(R.string.ui_4a5a8a9f75),
+                stringResource(R.string.ui_f1fd08eeb6),
+                stringResource(R.string.ui_4a5a8a9f75),
                 materialSymbol(MaterialSymbol.History),
             )
         else
@@ -1216,7 +1211,6 @@ private data class DownloadGroup(val workId: Long, val tasks: List<DownloadEntit
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     val tasks by vm.downloadList.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
@@ -1321,7 +1315,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(
-            strings.getString(R.string.ui_18df1a67a2),
+            stringResource(R.string.ui_18df1a67a2),
             {
                 when {
                     selecting -> exitSelection()
@@ -1423,8 +1417,8 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (filtered.isEmpty()) {
                 EmptyState(
-                    if (tasks.isEmpty()) strings.getString(R.string.ui_92024c1013) else "没有匹配的下载",
-                    if (tasks.isEmpty()) strings.getString(R.string.ui_ed6ecba3e8) else "可以切换其他状态查看",
+                    if (tasks.isEmpty()) stringResource(R.string.ui_92024c1013) else "没有匹配的下载",
+                    if (tasks.isEmpty()) stringResource(R.string.ui_ed6ecba3e8) else "可以切换其他状态查看",
                     materialSymbol(MaterialSymbol.Download),
                 )
             } else {
@@ -1804,12 +1798,11 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
 
 @Composable
 fun AboutScreen(back: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     val context = LocalContext.current
     var licenses by remember { mutableStateOf(false) }
     Column {
-        ScreenBar(strings.getString(R.string.ui_bed172efc9), back = back, scrollBehavior = null)
+        ScreenBar(stringResource(R.string.ui_bed172efc9), back = back, scrollBehavior = null)
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(bottom = PixivSpacing.section),
@@ -1831,7 +1824,7 @@ fun AboutScreen(back: () -> Unit) {
                 )
                 Text("Picaris", style = MaterialTheme.typography.headlineMedium)
                 Text(
-                    strings.getString(R.string.about_tagline),
+                    stringResource(R.string.about_tagline),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1844,18 +1837,18 @@ fun AboutScreen(back: () -> Unit) {
             ) {
                 Column(Modifier.padding(vertical = PixivSpacing.compact)) {
                     AboutInfoRow(
-                        strings.getString(R.string.about_version),
+                        stringResource(R.string.about_version),
                         io.github.radiqalo.picaris.BuildConfig.VERSION_NAME,
                     )
                     AboutInfoRow(
-                        strings.getString(R.string.about_appearance),
-                        strings.getString(R.string.about_appearance_value),
+                        stringResource(R.string.about_appearance),
+                        stringResource(R.string.about_appearance_value),
                     )
                 }
             }
             Spacer(Modifier.height(PixivSpacing.section))
             Text(
-                strings.getString(R.string.ui_d70fcfc258),
+                stringResource(R.string.ui_d70fcfc258),
                 Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1873,12 +1866,12 @@ fun AboutScreen(back: () -> Unit) {
                     },
                     Modifier.fillMaxWidth(),
                 ) {
-                    Text(strings.getString(R.string.about_source_code))
+                    Text(stringResource(R.string.about_source_code))
                 }
             }
             Spacer(Modifier.height(PixivSpacing.section))
             Text(
-                strings.getString(R.string.about_license_note),
+                stringResource(R.string.about_license_note),
                 Modifier.fillMaxWidth()
                     .clip(MaterialTheme.shapes.small)
                     .clickable { licenses = true }
@@ -1892,7 +1885,7 @@ fun AboutScreen(back: () -> Unit) {
     if (licenses)
         ActionSheet(
             onDismissRequest = { licenses = false },
-            title = { Text(strings.getString(R.string.about_license)) },
+            title = { Text(stringResource(R.string.about_license)) },
             text = {
                 val text = remember {
                     listOf("THIRD_PARTY_NOTICES.md", "GPL-3.0.txt", "Apache-2.0.txt", "MIT.txt")
@@ -1905,7 +1898,7 @@ fun AboutScreen(back: () -> Unit) {
                 Text(text, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall)
             },
             confirmButton = {
-                TextButton({ licenses = false }) { Text(strings.getString(R.string.ui_33246f6a5e)) }
+                TextButton({ licenses = false }) { Text(stringResource(R.string.ui_33246f6a5e)) }
             },
         )
 }

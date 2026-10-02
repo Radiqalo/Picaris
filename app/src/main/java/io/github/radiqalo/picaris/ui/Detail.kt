@@ -1,5 +1,7 @@
 package io.github.radiqalo.picaris.ui
 
+import androidx.compose.ui.res.stringResource
+
 import android.Manifest
 import android.content.Intent
 import android.os.Build
@@ -48,7 +50,6 @@ fun DetailScreen(
     navigateRelatedDetail: (Detail) -> Unit,
     back: () -> Unit,
 ) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val permitted = navigationPermission()
     val canOpenReader = permitted()
     val tagTranslations = LocalTagTranslationEnabled.current
@@ -75,6 +76,7 @@ fun DetailScreen(
     var estimatingDownloadBytes by remember(work.id) { mutableStateOf(false) }
     var followBusy by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val shareLabel = stringResource(R.string.ui_df80b48aa7)
     val bookmarkFeedback = toggleFeedback()
     val bookmarkInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val ugoiraSourceFile = rememberLauncherForActivityResult(
@@ -132,7 +134,7 @@ fun DetailScreen(
                 Intent(Intent.ACTION_SEND)
                     .setType("text/plain")
                     .putExtra(Intent.EXTRA_TEXT, "${work.title}\n$link"),
-                strings.getString(R.string.ui_df80b48aa7),
+                shareLabel,
             )
         )
     }
@@ -268,10 +270,10 @@ fun DetailScreen(
                                 AppIcon(if (work.isNovel) materialSymbol(MaterialSymbol.Book) else materialSymbol(MaterialSymbol.PlayArrow), null)
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    if (work.isNovel) strings.getString(R.string.ui_f3be3e4b09)
+                                    if (work.isNovel) stringResource(R.string.ui_f3be3e4b09)
                                     else if (work.type == "ugoira")
-                                        strings.getString(R.string.ui_d3657fb0a3)
-                                    else strings.getString(R.string.ui_a0217cd1e4)
+                                        stringResource(R.string.ui_d3657fb0a3)
+                                    else stringResource(R.string.ui_a0217cd1e4)
                                 )
                             }
                         }
@@ -426,7 +428,7 @@ fun DetailScreen(
             )
             ListItem(
                 colors = menuItemColors,
-                content = { Text(strings.getString(R.string.ui_7a92434114)) },
+                content = { Text(stringResource(R.string.ui_7a92434114)) },
                 leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Share), null) },
                 onClick = { moreMenu = false; share() },
             )
@@ -586,19 +588,19 @@ fun DetailScreen(
     if (privateDialog && permitted())
         ActionSheet(
             onDismissRequest = { privateDialog = false },
-            title = { Text(strings.getString(R.string.ui_67c6787737)) },
-            text = { Text(strings.getString(R.string.ui_b6fe094725)) },
+            title = { Text(stringResource(R.string.ui_67c6787737)) },
+            text = { Text(stringResource(R.string.ui_b6fe094725)) },
             confirmButton = {
                 TextButton({
                     privateDialog = false
                     bookmark(false)
                 }) {
-                    Text(strings.getString(R.string.ui_67c6787737))
+                    Text(stringResource(R.string.ui_67c6787737))
                 }
             },
             dismissButton = {
                 TextButton({ privateDialog = false }) {
-                    Text(strings.getString(R.string.ui_4d0b4688c7))
+                    Text(stringResource(R.string.ui_4d0b4688c7))
                 }
             },
         )
@@ -693,18 +695,18 @@ private fun RelatedWorkStrip(
     navigate: (NavKey) -> Unit,
     navigateRelatedDetail: (Detail) -> Unit,
 ) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val spec = remember(work.id) { FeedSpec(section = "related", userId = work.id) }
     val flow = remember(spec, vm.accountId, settings.contentFilter()) { vm.feed(spec) }
     val related = flow.collectAsLazyPagingItems()
     val bookmarks by vm.bookmarkStates.collectAsStateWithLifecycle()
     val busy by vm.bookmarkBusy.collectAsStateWithLifecycle()
+    val relatedTitle = stringResource(R.string.ui_29ffbeb614)
     val openAll = {
-        navigate(Collection(strings.getString(R.string.ui_29ffbeb614), "related", userId = work.id))
+        navigate(Collection(relatedTitle, "related", userId = work.id))
     }
     Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
-        Text(strings.getString(R.string.ui_29ffbeb614),
+        Text(relatedTitle,
             Modifier.padding(horizontal = 20.dp), style = MaterialTheme.typography.titleMedium)
         LazyRow(
             contentPadding = PaddingValues(horizontal = 20.dp),

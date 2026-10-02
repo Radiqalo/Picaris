@@ -1,5 +1,7 @@
 package io.github.radiqalo.picaris.ui
 
+import androidx.compose.ui.res.stringResource
+
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -57,7 +59,6 @@ private data class PixivisionContent(
 
 @Composable
 fun PixivisionCarousel(vm: AppViewModel) {
-    val strings = LocalResources.current
     val context = LocalContext.current
     var retry by remember { mutableIntStateOf(0) }
     val result by produceState(PixivisionContent(vm.cachedPixivisionArticles()), retry) {
@@ -78,16 +79,17 @@ fun PixivisionCarousel(vm: AppViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact, Alignment.CenterVertically),
             ) {
-                Text(strings.getString(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
                 if (result.failed) {
-                    Text(strings.getString(R.string.pixivision_load_failed))
-                    TextButton(onClick = { retry++ }) { Text(strings.getString(R.string.pixivision_retry)) }
+                    Text(stringResource(R.string.pixivision_load_failed))
+                    TextButton(onClick = { retry++ }) { Text(stringResource(R.string.pixivision_retry)) }
                 } else CircularWavyProgressIndicator(Modifier.size(32.dp))
             }
         }
         return
     }
     val pager = rememberPagerState(pageCount = { articles.size })
+    val pageDescription = stringResource(R.string.pixivision_page, pager.currentPage + 1, articles.size)
     Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val pageWidth = (maxWidth * 0.9f).coerceAtMost(520.dp)
@@ -121,7 +123,7 @@ fun PixivisionCarousel(vm: AppViewModel) {
                             verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
                         ) {
                             Text(
-                                strings.getString(R.string.discover_pixivision),
+                                stringResource(R.string.discover_pixivision),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = Color.White.copy(alpha = 0.85f),
                             )
@@ -139,7 +141,7 @@ fun PixivisionCarousel(vm: AppViewModel) {
         }
         Row(
             modifier = Modifier.fillMaxWidth().semantics {
-                stateDescription = strings.getString(R.string.pixivision_page, pager.currentPage + 1, articles.size)
+                stateDescription = pageDescription
             },
             horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,

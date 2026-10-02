@@ -1,5 +1,7 @@
 package io.github.radiqalo.picaris.ui
 
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.SharedTransitionLayout
 import android.content.Intent
 import androidx.compose.foundation.*
@@ -316,7 +318,6 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
 
 @Composable
 fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
 
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -324,11 +325,11 @@ fun HomeScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val permitted = navigationPermission()
     val tabs =
         listOf(
-            strings.getString(R.string.tab_home),
-            strings.getString(R.string.ui_523e40a074),
-            strings.getString(R.string.ui_753ccc8e2e),
-            strings.getString(R.string.ui_f04090805c),
-            strings.getString(R.string.ui_a82c993d73),
+            stringResource(R.string.tab_home),
+            stringResource(R.string.ui_523e40a074),
+            stringResource(R.string.ui_753ccc8e2e),
+            stringResource(R.string.ui_f04090805c),
+            stringResource(R.string.ui_a82c993d73),
         )
     val icons = listOf(materialSymbol(MaterialSymbol.Home), materialSymbol(MaterialSymbol.Explore),
         materialSymbol(MaterialSymbol.Feed), materialSymbol(MaterialSymbol.Search), materialSymbol(MaterialSymbol.Person))

@@ -1,5 +1,7 @@
 package io.github.radiqalo.picaris.ui
 
+import androidx.compose.ui.res.stringResource
+
 import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -74,14 +76,13 @@ fun ScreenBar(
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     val titleContent: @Composable () -> Unit = {
         Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
     val navigationContent: @Composable () -> Unit = {
         if (back != null)
-            IconButton(back) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), strings.getString(R.string.ui_11d0241540)) }
+            IconButton(back) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), stringResource(R.string.ui_11d0241540)) }
     }
     TopAppBar(
         modifier = modifier,
@@ -203,7 +204,6 @@ fun DiscoverScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 
 @Composable
 private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
     val trendResult by produceState<List<TrendingTag>?>(vm.cachedTrendingTags(), vm.accountId, settings.contentKind, settings.contentFilter()) {
@@ -244,6 +244,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             .toList()
     }
     val loadingTrends = trendResult == null && settings.contentKind != "novel"
+    val rankingTitle = stringResource(R.string.ui_d00981d6ce)
     FeedGrid(
         FeedSpec(kind = settings.contentKind),
         vm,
@@ -254,18 +255,18 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.content)) {
                 FilledTonalButton(
                     onClick = {
-                        navigate(Collection(strings.getString(R.string.ui_d00981d6ce), "ranking"))
+                        navigate(Collection(rankingTitle, "ranking"))
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shapes = ButtonDefaults.shapes(),
                 ) {
                     AppIcon(materialSymbol(MaterialSymbol.Leaderboard), null)
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(strings.getString(R.string.ui_d00981d6ce))
+                    Text(rankingTitle)
                 }
                 PixivisionCarousel(vm)
                 if (recommendedTags.isNotEmpty()) {
-                    Text(strings.getString(R.string.discover_tags),
+                    Text(stringResource(R.string.discover_tags),
                         style = MaterialTheme.typography.titleLarge)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(recommendedTags, key = { it.name }) { tag ->
@@ -278,7 +279,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                 }
                 if (loadingTrends) DiscoveryPlaceholders()
                 else if (trends.isNotEmpty()) {
-                    Text(strings.getString(R.string.discover_featured),
+                    Text(stringResource(R.string.discover_featured),
                         style = MaterialTheme.typography.headlineSmall)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(trends.take(6), key = { it.tag.name }) { trend ->
@@ -323,7 +324,7 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     trends.take(3).forEach { trend -> DiscoveryTagWorks(trend, vm, navigate) }
                 }
                 if (settings.contentKind != "novel") {
-                    Text(strings.getString(R.string.discover_artists), style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.discover_artists), style = MaterialTheme.typography.titleLarge)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
                         if (authorResult == null) items(3) {
                             Spacer(Modifier.width(260.dp).height(300.dp)
@@ -334,8 +335,8 @@ private fun DiscoveryLanding(vm: AppViewModel, navigate: (NavKey) -> Unit) {
                     }
                 }
                 Text(
-                    if (settings.contentKind == "novel") strings.getString(R.string.discover_novels)
-                    else strings.getString(R.string.discover_works),
+                    if (settings.contentKind == "novel") stringResource(R.string.discover_novels)
+                    else stringResource(R.string.discover_works),
                     style = MaterialTheme.typography.titleLarge,
                 )
             }
@@ -425,8 +426,7 @@ private fun DiscoveryAuthorCard(preview: UserPreview, vm: AppViewModel, navigate
 
 @Composable
 private fun DiscoveryPlaceholders() {
-    val strings = androidx.compose.ui.platform.LocalResources.current
-    Text(strings.getString(R.string.discover_tags),
+    Text(stringResource(R.string.discover_tags),
         style = MaterialTheme.typography.titleLarge)
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(4) {
@@ -438,7 +438,7 @@ private fun DiscoveryPlaceholders() {
             )
         }
     }
-    Text(strings.getString(R.string.discover_featured),
+    Text(stringResource(R.string.discover_featured),
         style = MaterialTheme.typography.headlineSmall)
     LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items(3) {
@@ -466,7 +466,6 @@ private fun DiscoveryPlaceholders() {
 @Composable
 fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val pager = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize()) {
@@ -475,12 +474,12 @@ fun FollowScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
             Tab(
                 selected = pager.currentPage == 0,
                 onClick = { scope.launch { pager.animateScrollToPage(0) } },
-                text = { Text(strings.getString(R.string.follow_tab_activity)) },
+                text = { Text(stringResource(R.string.follow_tab_activity)) },
             )
             Tab(
                 selected = pager.currentPage == 1,
                 onClick = { scope.launch { pager.animateScrollToPage(1) } },
-                text = { Text(strings.getString(R.string.follow_tab_updates)) },
+                text = { Text(stringResource(R.string.follow_tab_updates)) },
             )
         }
         HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
@@ -511,7 +510,6 @@ private fun FollowedSeriesScreen(vm: AppViewModel, navigate: (NavKey) -> Unit) {
 
 @Composable
 private fun FollowedSeriesList(vm: AppViewModel, navigate: (NavKey) -> Unit, kind: String) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val entries = remember(vm.accountId, kind) { vm.followedSeries(kind) }.collectAsLazyPagingItems()
     val listState = rememberLazyListState()
     val padding = PaddingValues(
@@ -524,15 +522,15 @@ private fun FollowedSeriesList(vm: AppViewModel, navigate: (NavKey) -> Unit, kin
         entries.loadState.refresh is LoadState.Error && entries.itemCount == 0 -> {
             val error = (entries.loadState.refresh as LoadState.Error).error
             EmptyState(
-                strings.getString(R.string.follow_tab_updates),
-                error.message ?: strings.getString(R.string.ui_73a13d2b99),
+                stringResource(R.string.follow_tab_updates),
+                error.message ?: stringResource(R.string.ui_73a13d2b99),
                 materialSymbol(MaterialSymbol.Book),
-                strings.getString(R.string.ui_e2d53a6d3a),
+                stringResource(R.string.ui_e2d53a6d3a),
             ) { entries.retry() }
         }
         entries.itemCount == 0 -> EmptyState(
-            strings.getString(R.string.follow_tab_updates),
-            strings.getString(R.string.follow_updates_empty),
+            stringResource(R.string.follow_tab_updates),
+            stringResource(R.string.follow_updates_empty),
             materialSymbol(MaterialSymbol.Book),
         )
         else -> LazyColumn(
@@ -595,7 +593,7 @@ private fun FollowedSeriesList(vm: AppViewModel, navigate: (NavKey) -> Unit, kin
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                     Text(
-                                        strings.getString(R.string.follow_updates_count, resolvedWorkCount),
+                                        stringResource(R.string.follow_updates_count, resolvedWorkCount),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -615,7 +613,7 @@ private fun FollowedSeriesList(vm: AppViewModel, navigate: (NavKey) -> Unit, kin
                 when (val state = entries.loadState.append) {
                     is LoadState.Loading -> LoadingState()
                     is LoadState.Error -> TextButton(onClick = entries::retry) {
-                        Text(state.error.message ?: strings.getString(R.string.ui_73a13d2b99))
+                        Text(state.error.message ?: stringResource(R.string.ui_73a13d2b99))
                     }
                     else -> Spacer(Modifier.height(PixivSpacing.content))
                 }
@@ -626,12 +624,11 @@ private fun FollowedSeriesList(vm: AppViewModel, navigate: (NavKey) -> Unit, kin
 
 @Composable
 fun BookmarkScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     var private by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         ScreenBar(
-            strings.getString(R.string.ui_d07cee786a),
+            stringResource(R.string.ui_d07cee786a),
             back = back,
             scrollBehavior = null,
             modifier = Modifier.aboveWorkTransition(),
@@ -664,7 +661,6 @@ fun CollectionScreen(
     navigate: (NavKey) -> Unit,
     back: () -> Unit,
 ) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
 
     var rankingDate by rememberSaveable { mutableStateOf("") }
@@ -685,7 +681,7 @@ fun CollectionScreen(
                 },
                 navigationIcon = {
                     IconButton(back) {
-                        AppIcon(materialSymbol(MaterialSymbol.ArrowBack), strings.getString(R.string.ui_11d0241540))
+                        AppIcon(materialSymbol(MaterialSymbol.ArrowBack), stringResource(R.string.ui_11d0241540))
                     }
                 },
                 actions = {
@@ -769,16 +765,15 @@ fun CollectionScreen(
 
 @Composable
 private fun RankingPages(vm: AppViewModel, navigate: (NavKey) -> Unit, modifier: Modifier, date: String) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val modes =
         listOf(
-            "day" to strings.getString(R.string.ui_f8c9b6d5d8),
-            "week" to strings.getString(R.string.ui_5e00476f4e),
-            "month" to strings.getString(R.string.ui_0b554f5235),
-            "day_male" to strings.getString(R.string.ui_fbe010365d),
-            "day_female" to strings.getString(R.string.ui_b57634d889),
-            "week_rookie" to strings.getString(R.string.ui_8b7adaf587),
+            "day" to stringResource(R.string.ui_f8c9b6d5d8),
+            "week" to stringResource(R.string.ui_5e00476f4e),
+            "month" to stringResource(R.string.ui_0b554f5235),
+            "day_male" to stringResource(R.string.ui_fbe010365d),
+            "day_female" to stringResource(R.string.ui_b57634d889),
+            "week_rookie" to stringResource(R.string.ui_8b7adaf587),
         )
     val pager = rememberPagerState(pageCount = { modes.size })
     val scope = rememberCoroutineScope()
@@ -983,7 +978,6 @@ fun FeedGrid(
     scrollHeaderWhileEmpty: Boolean = false,
     leadingWork: Work? = null,
 ) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
 
     val settings by vm.settings.collectAsStateWithLifecycle()
     val flow =
@@ -1015,10 +1009,10 @@ fun FeedGrid(
                 FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty, grid, list, topPadding,
                     gridLayout = spec.kind != "novel") {
                     EmptyState(
-                        strings.getString(R.string.ui_590a4df471),
-                        error.error.message ?: strings.getString(R.string.ui_73a13d2b99),
+                        stringResource(R.string.ui_590a4df471),
+                        error.error.message ?: stringResource(R.string.ui_73a13d2b99),
                         materialSymbol(MaterialSymbol.Explore),
-                        strings.getString(R.string.ui_e2d53a6d3a),
+                        stringResource(R.string.ui_e2d53a6d3a),
                     ) {
                         items.retry()
                     }
@@ -1027,9 +1021,9 @@ fun FeedGrid(
                 FeedGridStatus(header, afterHeader, scrollHeaderWhileEmpty, grid, list, topPadding,
                     gridLayout = spec.kind != "novel") {
                     EmptyState(
-                        strings.getString(R.string.ui_37ce9e3518),
-                        if (spec.section == "bookmarks") strings.getString(R.string.ui_408822a29e)
-                        else strings.getString(R.string.ui_a588489241),
+                        stringResource(R.string.ui_37ce9e3518),
+                        if (spec.section == "bookmarks") stringResource(R.string.ui_408822a29e)
+                        else stringResource(R.string.ui_a588489241),
                         materialSymbol(MaterialSymbol.Book),
                     )
                 }
@@ -1204,17 +1198,16 @@ private fun NovelListItem(
 
 @Composable
 private fun FeedAppendState(state: LoadState, count: Int, retry: () -> Unit) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     when (state) {
         is LoadState.Loading ->
             Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) {
                 CircularWavyProgressIndicator(Modifier.size(32.dp))
             }
         is LoadState.Error -> TextButton(retry, Modifier.fillMaxWidth()) {
-            Text(strings.getString(R.string.ui_0aa214d301))
+            Text(stringResource(R.string.ui_0aa214d301))
         }
         else -> if (count > 0)
-            Text(strings.getString(R.string.ui_5f3621612f),
+            Text(stringResource(R.string.ui_5f3621612f),
                 Modifier.fillMaxWidth().padding(16.dp),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1290,7 +1283,6 @@ fun WorkCard(
     onLike: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val imageShape = MaterialTheme.shapes.small
     val badgeShape = MaterialTheme.shapes.small
     val permitted = navigationPermission()
@@ -1360,8 +1352,8 @@ fun WorkCard(
                     contentColor = Color.White,
                 ) {
                     Text(
-                        if (work.isNovel) strings.getString(R.string.content_novel)
-                        else if (work.type == "ugoira") strings.getString(R.string.ui_de9dcfdf88)
+                        if (work.isNovel) stringResource(R.string.content_novel)
+                        else if (work.type == "ugoira") stringResource(R.string.ui_de9dcfdf88)
                         else "${work.page_count}P",
                         Modifier.height(32.dp).wrapContentHeight()
                             .padding(horizontal = PixivSpacing.compact),
@@ -1463,7 +1455,6 @@ fun EmptyState(
 
 @Composable
 fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit)?, initialQuery: String? = null) {
-    val strings = androidx.compose.ui.platform.LocalResources.current
     val settings by vm.settings.collectAsStateWithLifecycle()
 
     val word = rememberTextFieldState(initialQuery.orEmpty())
@@ -1583,7 +1574,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                         word.setTextAndPlaceCursorAtEnd("")
                         if (initialQuery == null) submitted = ""
                     }) {
-                        AppIcon(materialSymbol(MaterialSymbol.Close), strings.getString(R.string.ui_7b15e5e8e7))
+                        AppIcon(materialSymbol(MaterialSymbol.Close), stringResource(R.string.ui_7b15e5e8e7))
                     }
             },
         )
@@ -1618,7 +1609,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
             back = back,
             actions = {
                 if (initialQuery != null) IconButton({ filter = true }) {
-                    AppIcon(materialSymbol(MaterialSymbol.Settings), strings.getString(R.string.ui_1c31f74a1d))
+                    AppIcon(materialSymbol(MaterialSymbol.Settings), stringResource(R.string.ui_1c31f74a1d))
                 }
             },
         )
@@ -1637,8 +1628,8 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
         else if (submitted.isNotEmpty()) {
             PrimaryTabRow(selectedTabIndex = resultPager.currentPage) {
                 listOf(
-                    strings.getString(R.string.ui_f394cdc91d),
-                    strings.getString(R.string.ui_698bea5124),
+                    stringResource(R.string.ui_f394cdc91d),
+                    stringResource(R.string.ui_698bea5124),
                 ).forEachIndexed { index, label ->
                     Tab(
                         selected = resultPager.currentPage == index,
@@ -1652,9 +1643,9 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                     if (userLoading) LoadingState()
                     else if (error != null)
                         EmptyState(
-                            strings.getString(R.string.ui_b9786d51c3),
+                            stringResource(R.string.ui_b9786d51c3),
                             error!!,
-                            action = strings.getString(R.string.ui_e2d53a6d3a),
+                            action = stringResource(R.string.ui_e2d53a6d3a),
                         ) {
                             userRetry++
                         }
@@ -1696,12 +1687,12 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                strings.getString(R.string.ui_b6f4afaf6d),
+                                stringResource(R.string.ui_b6f4afaf6d),
                                 style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.weight(1f),
                             )
                             TextButton({ vm.clearSearch() }) {
-                                Text(strings.getString(R.string.ui_7b15e5e8e7))
+                                Text(stringResource(R.string.ui_7b15e5e8e7))
                             }
                         }
                     }
@@ -1719,7 +1710,7 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                 }
                 item {
                     Text(
-                        strings.getString(R.string.ui_2fd71ef4d8),
+                        stringResource(R.string.ui_2fd71ef4d8),
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
@@ -1762,23 +1753,23 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
     if (filter)
         ActionSheet(
             onDismissRequest = { filter = false },
-            title = { Text(strings.getString(R.string.ui_1c31f74a1d)) },
+            title = { Text(stringResource(R.string.ui_1c31f74a1d)) },
             text = {
                 Column {
                     Text(
-                        strings.getString(R.string.ui_dc35af8d69),
+                        stringResource(R.string.ui_dc35af8d69),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     listOf(
-                            "date_desc" to strings.getString(R.string.ui_615547dc71),
-                            "date_asc" to strings.getString(R.string.ui_5196834bd3),
+                            "date_desc" to stringResource(R.string.ui_615547dc71),
+                            "date_asc" to stringResource(R.string.ui_5196834bd3),
                         )
                         .let { list ->
                             (if (active?.premium == true)
                                     list +
                                         listOf(
                                             "popular_desc" to
-                                                strings.getString(R.string.ui_296adf9512)
+                                                stringResource(R.string.ui_296adf9512)
                                         )
                                 else list)
                                 .forEach { (key, title) ->
@@ -1792,13 +1783,13 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                                 }
                         }
                     Text(
-                        strings.getString(R.string.ui_6a05dbdc88),
+                        stringResource(R.string.ui_6a05dbdc88),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     listOf(
-                            "partial_match_for_tags" to strings.getString(R.string.ui_f9ba0caac3),
-                            "exact_match_for_tags" to strings.getString(R.string.ui_74f182cacf),
-                            "title_and_caption" to strings.getString(R.string.ui_96a2fad9d9),
+                            "partial_match_for_tags" to stringResource(R.string.ui_f9ba0caac3),
+                            "exact_match_for_tags" to stringResource(R.string.ui_74f182cacf),
+                            "title_and_caption" to stringResource(R.string.ui_96a2fad9d9),
                         )
                         .forEach { (key, title) ->
                             Row(
@@ -1810,18 +1801,18 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                             }
                         }
                     Text(
-                        strings.getString(R.string.search_date_range),
+                        stringResource(R.string.search_date_range),
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier.padding(top = 12.dp),
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton({ dateField = "start" }, Modifier.weight(1f)) {
                             Text(
-                                startDate.ifEmpty { strings.getString(R.string.search_start_date) }
+                                startDate.ifEmpty { stringResource(R.string.search_start_date) }
                             )
                         }
                         OutlinedButton({ dateField = "end" }, Modifier.weight(1f)) {
-                            Text(endDate.ifEmpty { strings.getString(R.string.search_end_date) })
+                            Text(endDate.ifEmpty { stringResource(R.string.search_end_date) })
                         }
                     }
                     if (startDate.isNotEmpty() || endDate.isNotEmpty())
@@ -1829,12 +1820,12 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                             startDate = ""
                             endDate = ""
                         }) {
-                            Text(strings.getString(R.string.search_clear_dates))
+                            Text(stringResource(R.string.search_clear_dates))
                         }
                 }
             },
             confirmButton = {
-                TextButton({ filter = false }) { Text(strings.getString(R.string.ui_33246f6a5e)) }
+                TextButton({ filter = false }) { Text(stringResource(R.string.ui_33246f6a5e)) }
             },
         )
     dateField?.let { field ->
@@ -1871,11 +1862,11 @@ fun SearchScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: (() -> Unit
                     }
                     dateField = null
                 }) {
-                    Text(strings.getString(R.string.ui_33246f6a5e))
+                    Text(stringResource(R.string.ui_33246f6a5e))
                 }
             },
             dismissButton = {
-                TextButton({ dateField = null }) { Text(strings.getString(R.string.ui_11d0241540)) }
+                TextButton({ dateField = null }) { Text(stringResource(R.string.ui_11d0241540)) }
             },
         ) {
             DatePicker(state, showModeToggle = false)
