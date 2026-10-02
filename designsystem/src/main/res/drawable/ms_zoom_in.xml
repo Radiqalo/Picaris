@@ -1,4 +1,0 @@
-<!-- Google Material Symbols, Apache-2.0. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FF000000" android:pathData="M15.5,14h-0.79l-0.28,-0.27A6.5,6.5 0,1 0,14 15.5l0.27,0.28v0.79L20,22l2,-2 -6.5,-6ZM10,14v-3H7v-2h3V6h2v3h3v2h-3v3h-2Zm0,-9a5,5 0,1 1,0 10,5 0,0 1,0 -10Z" />
-</vector>

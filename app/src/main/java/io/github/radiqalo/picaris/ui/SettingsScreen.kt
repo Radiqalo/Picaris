@@ -361,7 +361,7 @@ fun SettingsScreen(
                     )
                     SettingChoiceBlock(
                         title = "插画详情页画质",
-                        icon = materialSymbol(MaterialSymbol.Hd),
+                        icon = materialSymbol(MaterialSymbol.Image),
                         selected = s.detailImageQuality,
                         options = listOf("medium" to "中", "large" to "高", "original" to "原图"),
                         onSelect = { quality -> vm.update { it.copy(detailImageQuality = quality) } },
@@ -369,7 +369,7 @@ fun SettingsScreen(
                     )
                     SettingChoiceBlock(
                         title = "查看器画质",
-                        icon = materialSymbol(MaterialSymbol.ZoomIn),
+                        icon = materialSymbol(MaterialSymbol.Hd),
                         selected = s.largeImageQuality,
                         options = listOf("large" to "高", "original" to "原图"),
                         onSelect = { quality -> vm.update { it.copy(largeImageQuality = quality) } },
@@ -471,7 +471,7 @@ fun SettingsScreen(
                     SettingRow(
                         "导出应用数据 ZIP",
                         "设置、历史和下载记录；不含图片缓存及登录凭据",
-                        materialSymbol(MaterialSymbol.Backup),
+                        materialSymbol(MaterialSymbol.Download),
                         position = SettingsRowPosition.Middle,
                     ) {
                         val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
@@ -480,7 +480,7 @@ fun SettingsScreen(
                     SettingRow(
                         "导入应用数据 ZIP",
                         "导入备份中的设置和本地记录",
-                        materialSymbol(MaterialSymbol.UploadFile),
+                        materialSymbol(MaterialSymbol.Inbox),
                         position = SettingsRowPosition.Middle,
                     ) {
                         importAppData.launch(
