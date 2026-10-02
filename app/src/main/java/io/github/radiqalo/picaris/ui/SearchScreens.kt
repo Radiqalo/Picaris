@@ -384,26 +384,47 @@ fun SearchScreen(
         }
     }
     ExpandedFullScreenSearchBar(state = searchState, inputField = searchField) {
-        idSuggestions()
-        tagSuggestionError?.let { message ->
-            Text(
-                "标签联想请求失败：$message",
-                Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-        tagSuggestions.forEach { suggestion ->
-            ListItem(
-                modifier = Modifier.clickable { submit(suggestion.name) },
-            ) { TagLabel(suggestion) }
-        }
-        history.take(8).forEach { entry ->
-            ListItem(
-                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.History), null) },
-                modifier = Modifier.clickable { submit(entry.word) },
-            ) {
-                Text(entry.word)
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(bottom = PixivSpacing.content),
+        ) {
+            item(key = "id-suggestions") {
+                idSuggestions()
+            }
+            tagSuggestionError?.let { message ->
+                item(key = "tag-suggestion-error") {
+                    Text(
+                        "标签联想请求失败：$message",
+                        Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+            itemsIndexed(
+                items = tagSuggestions,
+                key = { index, suggestion -> "tag-$index-${suggestion.name}" },
+            ) { _, suggestion ->
+                ListItem(
+                    modifier =
+                        Modifier.fillMaxWidth().clickable {
+                            submit(suggestion.name)
+                        },
+                ) { TagLabel(suggestion) }
+            }
+            itemsIndexed(
+                items = history.take(8),
+                key = { index, entry -> "history-$index-${entry.word}" },
+            ) { _, entry ->
+                ListItem(
+                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.History), null) },
+                    modifier =
+                        Modifier.fillMaxWidth().clickable {
+                            submit(entry.word)
+                        },
+                ) {
+                    Text(entry.word)
+                }
             }
         }
     }
