@@ -30,6 +30,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -65,6 +66,7 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.flow.collectLatest
 
 internal val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
+internal val LocalNavigationGestureVerticalOffset = staticCompositionLocalOf { 0f }
 private val LocalNavigationCurrentSceneKey = staticCompositionLocalOf<Any?> { null }
 internal val LocalNavigationSharedElementVisible = staticCompositionLocalOf { true }
 
@@ -106,6 +108,7 @@ internal fun NavigationPageDisplay(
     )
     var previousGestureInProgress by remember { mutableStateOf(false) }
     var previewEntries by remember { mutableStateOf<List<Long>?>(null) }
+    var maximumProgressTouchY by remember { mutableFloatStateOf(Float.NaN) }
     NavigationBackHandler(
         state = navigationEventState,
         isBackEnabled = scene.previousEntries.isNotEmpty() &&
@@ -115,15 +118,29 @@ internal fun NavigationPageDisplay(
                 onBack(entries.size - scene.previousEntries.size)
         },
     )
-    val gestureInProgress = navigationEventState.transitionState is NavigationEventTransitionState.InProgress
+    val backEvent =
+        (navigationEventState.transitionState as? NavigationEventTransitionState.InProgress)
+            ?.latestEvent
+    val gestureInProgress = backEvent != null
+    val gestureVerticalOffset =
+        if (gestureInProgress && backEvent!!.progress >= 1f && maximumProgressTouchY.isFinite()) {
+            backEvent.touchY - maximumProgressTouchY
+        } else {
+            0f
+        }
     SideEffect {
         if (gestureInProgress && !previousGestureInProgress) {
             coordinator.beginPreview()
             previewEntries = coordinator.instances.map { it.id }
+            maximumProgressTouchY = Float.NaN
+        }
+        if (gestureInProgress && backEvent!!.progress >= 1f && !maximumProgressTouchY.isFinite()) {
+            maximumProgressTouchY = backEvent.touchY
         } else if (!gestureInProgress && previousGestureInProgress) {
             coordinator.cancelPreview()
             if (coordinator.phase == NavigationTransitionPhase.Restoring) artwork.resumePreview()
             previewEntries = null
+            maximumProgressTouchY = Float.NaN
         }
         coordinator.updateSceneOwners(scene.entries.map { it.contentKey as Long }.toSet())
         artwork.refreshTargets()
@@ -131,6 +148,7 @@ internal fun NavigationPageDisplay(
     }
     CompositionLocalProvider(
         LocalNavigationGestureInProgress provides gestureInProgress,
+        LocalNavigationGestureVerticalOffset provides gestureVerticalOffset,
         LocalNavigationCurrentSceneKey provides scene.key,
     ) {
         NavDisplay(
@@ -328,6 +346,7 @@ internal fun NavigationPage(
         it.parentTransition
     }.toList()
     val seeking = LocalNavigationGestureInProgress.current
+    val gestureVerticalOffset = LocalNavigationGestureVerticalOffset.current
     val coordinator = checkNotNull(LocalNavigationCoordinator.current)
     val artwork = checkNotNull(LocalNavigationArtwork.current)
     val visible = LocalNavigationSharedElementVisible.current
@@ -405,6 +424,7 @@ internal fun NavigationPage(
     }
     Box(
         modifier = Modifier.fillMaxSize().onGloballyPositioned { pageCoordinates[0] = it }.graphicsLayer {
+            if (seeking && visible) translationY = gestureVerticalOffset
             pageRadius[0] = pageShape.topStart.toPx(size, density) * renderedRounding
             shape = pageShape.copy(
                 topStart = CornerSize(pageShape.topStart.toPx(size, density) * renderedRounding),
