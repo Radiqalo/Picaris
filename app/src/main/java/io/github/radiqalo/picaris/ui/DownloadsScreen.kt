@@ -482,8 +482,7 @@ fun DownloadsScreen(
                                                                     .isNotEmpty()
                                                             }?.coverUri
                                                             ?: group.localImageUris.firstOrNull()
-                                                            ?: work.previews.firstOrNull()
-                                                            ?: work.cover,
+                                                            ?: work.imageForQuality(settings.feedImageQuality),
                                                     contentDescription = "${group.title}，单击阅读，长按查看详情",
                                                     modifier =
                                                         Modifier
@@ -636,8 +635,7 @@ fun DownloadsScreen(
                                                                 it.coverUri.isNotEmpty()
                                                             }?.coverUri
                                                             ?: group.localImageUris.firstOrNull()
-                                                            ?: work.previews.firstOrNull()
-                                                            ?: work.cover,
+                                                            ?: work.imageForQuality(settings.feedImageQuality),
                                                     contentDescription = "预览 ${group.title} 全图或图集",
                                                     modifier =
                                                         Modifier.fillMaxSize().then(

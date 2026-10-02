@@ -264,7 +264,7 @@ fun HistoryScreen(
                                     .background(MaterialTheme.colorScheme.surfaceContainerLow),
                             ) {
                                 AsyncImage(
-                                    model = work.previews.firstOrNull() ?: work.cover,
+                                    model = work.imageForQuality(settings.feedImageQuality),
                                     contentDescription = "${work.title} 缩略图",
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop,

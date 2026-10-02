@@ -286,9 +286,10 @@ fun SearchScreen(
                     if (userLoading) {
                         LoadingState()
                     } else if (error != null) {
+                        val message = error
                         EmptyState(
                             stringResource(R.string.ui_b9786d51c3),
-                            error!!,
+                            message.orEmpty(),
                             action = stringResource(R.string.ui_e2d53a6d3a),
                         ) {
                             userRetry++
@@ -407,11 +408,9 @@ fun SearchScreen(
             try {
                 events.collect { event ->
                     expandedBackProgress = event.progress.coerceIn(0f, 1f)
-                    if (gestureStartTouchY == null) gestureStartTouchY = event.touchY
+                    val anchor = gestureStartTouchY ?: event.touchY.also { gestureStartTouchY = it }
                     expandedBackOffsetY =
-                        gestureStartTouchY?.let { anchor ->
-                            ((event.touchY - anchor) * 0.025f).coerceIn(-searchBackLimit, searchBackLimit)
-                        } ?: 0f
+                        ((event.touchY - anchor) * 0.025f).coerceIn(-searchBackLimit, searchBackLimit)
                 }
                 searchState.animateToCollapsed()
                 focus.clearFocus()

@@ -18,7 +18,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.enableEdgeToEdge(window)
-        window.isStatusBarContrastEnforced = false
         incoming = intent
         setContent { PixivApp(vm, incoming) { incoming = null } }
     }

@@ -80,7 +80,7 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
     val articles = result.articles
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val heroWidth =
-            (maxWidth - 2 * (PixivisionMinSmallItemWidth + PixivSpacing.compact))
+            (maxWidth - (PixivisionMinSmallItemWidth + PixivSpacing.compact) * 2)
                 .coerceAtLeast(0.dp)
                 .coerceAtMost(PixivisionMaxItemWidth)
         val heroHeight = heroWidth / PixivisionHeroAspectRatio

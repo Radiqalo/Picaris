@@ -125,12 +125,13 @@ internal fun NavigationPageDisplay(
     val backEvent =
         (navigationEventState.transitionState as? NavigationEventTransitionState.InProgress)
             ?.latestEvent
-    val gestureInProgress = backEvent != null
+    val currentBackEvent = backEvent
+    val gestureInProgress = currentBackEvent != null
     val maximumGestureOffset =
         androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height * 0.025f
     val gestureVerticalOffset =
-        if (gestureInProgress && gestureStartTouchY.isFinite()) {
-            ((backEvent!!.touchY - gestureStartTouchY) * 0.025f)
+        if (currentBackEvent != null && gestureStartTouchY.isFinite()) {
+            ((currentBackEvent.touchY - gestureStartTouchY) * 0.025f)
                 .coerceIn(-maximumGestureOffset, maximumGestureOffset)
         } else {
             0f
@@ -139,7 +140,7 @@ internal fun NavigationPageDisplay(
         if (gestureInProgress && !previousGestureInProgress) {
             coordinator.beginPreview()
             previewEntries = coordinator.instances.map { it.id }
-            gestureStartTouchY = backEvent!!.touchY
+            gestureStartTouchY = currentBackEvent.touchY
         } else if (!gestureInProgress && previousGestureInProgress) {
             coordinator.cancelPreview()
             if (coordinator.phase == NavigationTransitionPhase.Restoring) artwork.resumePreview()

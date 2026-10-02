@@ -127,7 +127,23 @@ data class Work(
         }
 
     val cover
-        get() = image_urls.large.ifEmpty { image_urls.medium }
+        get() = imageForQuality("medium")
+
+    fun imageForQuality(quality: String): String =
+        when (quality) {
+            "medium" -> image_urls.medium.ifEmpty { image_urls.large.ifEmpty { image_urls.original } }
+            "original" -> image_urls.original.ifEmpty { image_urls.large.ifEmpty { image_urls.medium } }
+            else -> image_urls.large.ifEmpty { image_urls.medium.ifEmpty { image_urls.original } }
+        }
+
+    fun pageImageForQuality(page: Int, quality: String): String {
+        val pageImages = meta_pages.getOrNull(page)?.image_urls ?: image_urls
+        return when (quality) {
+            "medium" -> pageImages.medium.ifEmpty { pageImages.large.ifEmpty { pageImages.original } }
+            "original" -> pageImages.original.ifEmpty { pageImages.large.ifEmpty { pageImages.medium } }
+            else -> pageImages.large.ifEmpty { pageImages.medium.ifEmpty { pageImages.original } }
+        }
+    }
 
     val aspect
         get() =
@@ -136,7 +152,7 @@ data class Work(
     val originals
         get() =
             if (meta_pages.isNotEmpty())
-                meta_pages.map { it.image_urls.original.ifEmpty { it.image_urls.large } }
+                meta_pages.map { it.image_urls.original.ifEmpty { it.image_urls.large.ifEmpty { it.image_urls.medium } } }
             else
                 listOf(
                     meta_single_page.original_image_url.ifEmpty {
@@ -145,9 +161,13 @@ data class Work(
                 )
 
     val previews
-        get() = if (meta_pages.isNotEmpty()) meta_pages.map { page ->
-            page.image_urls.large.ifEmpty { page.image_urls.medium.ifEmpty { page.image_urls.original } }
-        } else listOf(cover.ifEmpty { originals.first() })
+        get() = (0 until maxOf(page_count, meta_pages.size, 1)).map { pageImageForQuality(it, "medium") }
+
+    val largePreviews
+        get() = (0 until maxOf(page_count, meta_pages.size, 1)).map { pageImageForQuality(it, "large") }
+
+    val detailPageCount
+        get() = maxOf(page_count, meta_pages.size, 1)
 }
 
 private val AI_GENERATED_TAGS = setOf(
@@ -278,6 +298,9 @@ data class Settings(
     val blackReader: Boolean = true,
     val showHomeMetadata: Boolean = false,
     val showTagTranslations: Boolean = true,
+    val feedImageQuality: String = "medium",
+    val detailImageQuality: String = "medium",
+    val largeImageQuality: String = "large",
     val bottomBarStyle: String = "standard",
     val showAdult: Boolean = false,
     val hideAi: Boolean = false,

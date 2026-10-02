@@ -188,30 +188,32 @@ fun DetailScreen(
                                         enabled = canOpenReader,
                                     ) { openReader(current) }
                                     .testTag("detailImage"),
+                                url = work.imageForQuality(settings.detailImageQuality),
                                 sharedTransition = true,
                                 rounded = false,
                             )
                         } else {
                             val imageModifier =
-                                if (work.previews.size > 1) {
+                                if (work.detailPageCount > 1) {
                                     Modifier.fillMaxWidth()
                                 } else {
                                     Modifier.fillMaxWidth().height(firstImageHeight)
                                 }
-                            DetailArtworkPage(work, 0, imageModifier) { page ->
+                            DetailArtworkPage(work, 0, imageModifier, settings.detailImageQuality) { page ->
                                 if (permitted()) navigate(Reader(current, page))
                             }
                         }
                     }
-                    if (!work.isNovel && work.previews.size > 1) {
+                    if (!work.isNovel && work.detailPageCount > 1) {
                         if (expandedPages) {
-                            items(work.previews.size - 1, key = { index ->
+                            items(work.detailPageCount - 1, key = { index ->
                                 "page:${index + 1}"
                             }) { index ->
                                 DetailArtworkPage(
                                     work,
                                     index + 1,
                                     Modifier.fillMaxWidth(),
+                                    settings.detailImageQuality,
                                 ) { page ->
                                     if (permitted()) navigate(Reader(current, page))
                                 }
@@ -237,7 +239,7 @@ fun DetailScreen(
                                         vertical = 8.dp,
                                     ),
                             ) {
-                                Text(if (expandedPages) "收起图片" else "展开全部 ${work.previews.size} 张")
+                                Text(if (expandedPages) "收起图片" else "展开全部 ${work.detailPageCount} 张")
                             }
                         }
                     }
@@ -456,6 +458,7 @@ fun DetailScreen(
                 work = work,
                 modifier = modifier,
                 contentPadding = padding,
+                imageQuality = settings.detailImageQuality,
                 onOpenPage = { page ->
                     if (permitted()) navigate(Reader(current, page))
                 },
@@ -499,6 +502,7 @@ fun DetailScreen(
                                     .fillMaxWidth()
                                     .aspectRatio(work.aspect)
                                     .clickable(enabled = canOpenReader) { openReader(current) },
+                                url = work.imageForQuality(settings.detailImageQuality),
                                 sharedTransition = true,
                                 rounded = false,
                             )
@@ -707,7 +711,7 @@ fun DetailScreen(
         }
     }
     if (downloadPageSelection && permitted()) {
-        val pageCount = maxOf(work.page_count, work.originals.size, work.previews.size)
+        val pageCount = maxOf(work.detailPageCount, work.originals.size)
         ModalBottomSheet(onDismissRequest = { downloadPageSelection = false }) {
             Column(
                 Modifier
@@ -762,7 +766,7 @@ fun DetailScreen(
                         ) {
                             coil3.compose.AsyncImage(
                                 model =
-                                    work.previews.getOrNull(page) ?: work.originals.getOrNull(page),
+                                    work.largePreviews.getOrNull(page) ?: work.originals.getOrNull(page),
                                 contentDescription = "第 ${page + 1} 张",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,

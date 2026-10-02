@@ -20,6 +20,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import io.github.radiqalo.picaris.AppViewModel
 import io.github.radiqalo.picaris.R
 import io.github.radiqalo.picaris.core.*
@@ -338,6 +341,27 @@ fun SettingsScreen(
                     ) {
                         vm.update { it.copy(showTagTranslations = !it.showTagTranslations) }
                     }
+                    SettingChoiceBlock(
+                        title = "图流预览画质",
+                        selected = s.feedImageQuality,
+                        options = listOf("medium" to "中", "large" to "高", "original" to "原图"),
+                        onSelect = { quality -> vm.update { it.copy(feedImageQuality = quality) } },
+                        position = SettingsRowPosition.Middle,
+                    )
+                    SettingChoiceBlock(
+                        title = "插画详情页画质",
+                        selected = s.detailImageQuality,
+                        options = listOf("medium" to "中", "large" to "高", "original" to "原图"),
+                        onSelect = { quality -> vm.update { it.copy(detailImageQuality = quality) } },
+                        position = SettingsRowPosition.Middle,
+                    )
+                    SettingChoiceBlock(
+                        title = "查看器画质",
+                        selected = s.largeImageQuality,
+                        options = listOf("large" to "高", "original" to "原图"),
+                        onSelect = { quality -> vm.update { it.copy(largeImageQuality = quality) } },
+                        position = SettingsRowPosition.Middle,
+                    )
                     SettingRow(
                         stringResource(R.string.ui_d5edf52f07),
                         stringResource(R.string.ui_5b34213640),
@@ -446,7 +470,8 @@ fun SettingsScreen(
                         materialSymbol(MaterialSymbol.Download),
                         position = SettingsRowPosition.Middle,
                     ) {
-                        exportAppData.launch("picaris-app-data.zip")
+                        val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
+                        exportAppData.launch("picaris-app-data-$timestamp.zip")
                     }
                     SettingRow(
                         "导入应用数据 ZIP",
@@ -651,10 +676,12 @@ fun SettingsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.related)) {
                         Text("${value.toInt()} 个任务同时下载")
                         Slider(
-                            value = value,
+                            state = rememberSliderState(
+                                value = value,
+                                steps = 8,
+                                trackRange = 1f..10f,
+                            ).also { it.value = value },
                             onValueChange = { value = it },
-                            valueRange = 1f..10f,
-                            steps = 8,
                         )
                     }
                 },

@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -20,9 +22,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.radiqalo.picaris.AppViewModel
@@ -32,6 +37,9 @@ import io.github.radiqalo.picaris.designsystem.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.distinctUntilChanged
 import me.saket.telephoto.zoomable.coil3.ZoomableAsyncImage
+import me.saket.telephoto.zoomable.ZoomSpec
+import me.saket.telephoto.zoomable.rememberZoomableImageState
+import me.saket.telephoto.zoomable.rememberZoomableState
 
 @Composable
 fun ReaderScreen(
@@ -49,21 +57,33 @@ fun ReaderScreen(
     val s by vm.settings.collectAsStateWithLifecycle()
     var chrome by rememberSaveable { mutableStateOf(true) }
     var vertical by rememberSaveable { mutableStateOf(false) }
-    var showOriginal by rememberSaveable(work.id) { mutableStateOf(false) }
-    val originalFeedback = toggleFeedback()
+    var viewerQuality by rememberSaveable(work.type, work.id) { mutableStateOf(s.largeImageQuality) }
     val imagePages = when {
         localUris.isNotEmpty() -> localUris
-        showOriginal -> work.originals
-        else -> work.previews
+        viewerQuality == "original" -> work.originals
+        else -> (0 until maxOf(work.page_count, work.meta_pages.size, 1))
+            .map { work.pageImageForQuality(it, viewerQuality) }
     }
     var pageDialog by rememberSaveable { mutableStateOf(false) }
     var pageInput by rememberSaveable { mutableStateOf("") }
     var localPages by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    val loadingImageUrls = remember { mutableStateSetOf<String>() }
+    fun selectViewerQuality(quality: String) {
+        if (viewerQuality != quality) {
+            viewerQuality = quality
+        }
+    }
     fun pageUrl(page: Int): String = when {
         localUris.isNotEmpty() -> localUris[page]
-        showOriginal -> localPages[page] ?: imagePages[page]
+        viewerQuality == "original" -> localPages[page] ?: imagePages[page]
         else -> imagePages[page]
     }
+    fun settingsPageUrl(page: Int): String =
+        if (s.largeImageQuality == "original") {
+            work.originals.getOrNull(page).orEmpty()
+        } else {
+            work.pageImageForQuality(page, s.largeImageQuality)
+        }
     LaunchedEffect(work.id) {
         localPages =
             vm.completed(work)
@@ -122,6 +142,11 @@ fun ReaderScreen(
                             pageUrl(page),
                             "${work.title} 第${page+1}页",
                             Modifier.fillMaxWidth().aspectRatio(work.aspect),
+                            flashOnLoad = pageUrl(page) != settingsPageUrl(page),
+                            onLoadingChanged = { isLoading ->
+                                if (isLoading) loadingImageUrls.add(pageUrl(page))
+                                else loadingImageUrls.remove(pageUrl(page))
+                            },
                         ) {
                             chrome = !chrome
                         }
@@ -134,6 +159,11 @@ fun ReaderScreen(
                         pageUrl(page),
                         work.title,
                         Modifier.fillMaxSize(),
+                        flashOnLoad = pageUrl(page) != settingsPageUrl(page),
+                        onLoadingChanged = { isLoading ->
+                            if (isLoading) loadingImageUrls.add(pageUrl(page))
+                            else loadingImageUrls.remove(pageUrl(page))
+                        },
                     ) {
                         chrome = !chrome
                     }
@@ -148,19 +178,32 @@ fun ReaderScreen(
                         }
                     },
                     actions = {
-                        if (localUris.isEmpty() && work.type != "ugoira") IconToggleButton(
-                            checked = showOriginal,
-                            onCheckedChange = {
-                                originalFeedback(it)
-                                showOriginal = it
-                            },
-                            colors = IconButtonDefaults.iconToggleButtonColors(
-                                contentColor = text,
-                                checkedContentColor = MaterialTheme.colorScheme.primary,
-                            ),
-                        ) {
-                            Icon(materialSymbol(MaterialSymbol.Image),
-                                if (showOriginal) "原图已开启，点击切换预览图" else "查看原图")
+                        if (localUris.isEmpty() && work.type != "ugoira") {
+                            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                val currentPage = if (vertical) list.firstVisibleItemIndex else pager.currentPage
+                                if (viewerQuality == "original" && pageUrl(currentPage) in loadingImageUrls) {
+                                    CircularWavyProgressIndicator(Modifier.size(18.dp))
+                                }
+                                IconToggleButton(
+                                    checked = viewerQuality == "original",
+                                    onCheckedChange = { isOriginal ->
+                                        selectViewerQuality(if (isOriginal) "original" else "large")
+                                    },
+                                    modifier = Modifier.semantics {
+                                        stateDescription = "当前画质：${if (viewerQuality == "original") "原图" else "高"}"
+                                    },
+                                    colors = IconButtonDefaults.iconToggleButtonColors(
+                                        contentColor = text,
+                                        checkedContentColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                ) {
+                                    AppIcon(
+                                        materialSymbol(MaterialSymbol.Hd),
+                                        if (viewerQuality == "original") "切换到高画质" else "切换到原图",
+                                        tint = if (viewerQuality == "original") MaterialTheme.colorScheme.primary else text,
+                                    )
+                                }
+                            }
                         }
                         if (localUris.isEmpty()) IconButton(onClick = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -268,24 +311,51 @@ private fun ReaderImage(
     url: String,
     title: String,
     modifier: Modifier = Modifier,
+    flashOnLoad: Boolean = false,
+    onLoadingChanged: (Boolean) -> Unit = {},
     toggle: () -> Unit,
 ) {
     val context = LocalContext.current
     var failed by remember(url) { mutableStateOf(false) }
     var retry by remember(url) { mutableIntStateOf(0) }
+    val imageAlpha = remember(url) { Animatable(1f) }
+    val scope = rememberCoroutineScope()
+    val currentOnLoadingChanged by rememberUpdatedState(onLoadingChanged)
     val request =
         remember(url, retry) {
             coil3.request.ImageRequest.Builder(context)
                 .data(url)
                 .listener(
-                    onStart = { failed = false },
-                    onSuccess = { _, _ -> failed = false },
-                    onError = { _, _ -> failed = true },
+                    onStart = {
+                        failed = false
+                        currentOnLoadingChanged(true)
+                    },
+                    onSuccess = { _, _ ->
+                        failed = false
+                        currentOnLoadingChanged(false)
+                        if (flashOnLoad) scope.launch {
+                            imageAlpha.snapTo(0.72f)
+                            imageAlpha.animateTo(1f, tween(260))
+                        }
+                    },
+                    onError = { _, _ ->
+                        failed = true
+                        currentOnLoadingChanged(false)
+                    },
                 )
                 .build()
         }
+    val zoomableState = rememberZoomableImageState(
+        rememberZoomableState(zoomSpec = ZoomSpec(maxZoomFactor = 8f)),
+    )
     Box(modifier, contentAlignment = Alignment.Center) {
-        ZoomableAsyncImage(request, title, Modifier.matchParentSize(), onClick = { toggle() })
+        ZoomableAsyncImage(
+            request,
+            title,
+            Modifier.matchParentSize().graphicsLayer { alpha = imageAlpha.value },
+            state = zoomableState,
+            onClick = { toggle() },
+        )
         if (failed)
             EmptyState(
                 stringResource(R.string.reader_image_error),

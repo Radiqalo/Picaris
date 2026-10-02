@@ -88,7 +88,10 @@ fun AuthorProfileContent(details: AuthorDetails, vm: AppViewModel, loaded: Boole
 
 @Composable
 private fun ProfileField(label: String, value: String) {
-    ListItem(headlineContent = { Text(label, style = MaterialTheme.typography.labelLarge) },
-        supportingContent = { SelectionContainer { Text(value, style = MaterialTheme.typography.bodyLarge) } },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow))
+    ListItem(
+        overlineContent = { Text(label, style = MaterialTheme.typography.labelLarge) },
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        SelectionContainer { Text(value, style = MaterialTheme.typography.bodyLarge) }
+    }
 }

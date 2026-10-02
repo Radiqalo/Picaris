@@ -225,6 +225,7 @@ fun FeedGrid(
                             val current = bookmarks[identity]?.apply(leadingWork) ?: leadingWork
                             WorkCard(
                                 current,
+                                imageQuality = settings.feedImageQuality,
                                 likedBusy = identity in busy,
                                 showMetadata = showFeedMetadata,
                                 modifier = itemsModifier,
@@ -243,6 +244,7 @@ fun FeedGrid(
                                 WorkCard(
                                     current,
                                     index.takeIf { rank },
+                                    imageQuality = settings.feedImageQuality,
                                     likedBusy = identity in busy,
                                     showMetadata = showFeedMetadata,
                                     modifier = itemsModifier,
@@ -472,6 +474,7 @@ private fun FeedGridStatus(
 fun WorkCard(
     work: Work,
     rank: Int? = null,
+    imageQuality: String = "medium",
     likedBusy: Boolean = false,
     showMetadata: Boolean = true,
     sharedTransition: Boolean = true,
@@ -518,6 +521,7 @@ fun WorkCard(
                 .aspectRatio(
                     if (work.isNovel) .9f else work.aspect,
                 ).clip(imageShape),
+            url = work.imageForQuality(imageQuality),
             sharedTransition = sharedTransition,
         ) {
             val labels =

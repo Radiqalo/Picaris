@@ -311,8 +311,8 @@ class DownloadStorage @Inject constructor(
             throw e
         } finally { temp.delete() }
         sources.forEach { (_, uri) -> runCatching { context.contentResolver.delete(uri, null, null) } }
-        if (safTree != null && oldSafPath != null) pruneEmptySafParents(safTree!!, oldSafPath!!)
-        if (oldMediaPath != null) pruneEmptyManagedMediaParents(oldMediaPath!!)
+        safTree?.let { tree -> oldSafPath?.let { path -> pruneEmptySafParents(tree, path) } }
+        oldMediaPath?.let(::pruneEmptyManagedMediaParents)
     }
 
     /** Removes an old document after its replacement is recorded, then prunes empty app-owned parents. */

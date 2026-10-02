@@ -16,6 +16,7 @@ enum class MaterialSymbol(val resource: Int) {
     Person(R.drawable.ms_person),
     PersonFilled(R.drawable.ms_person_filled),
     Image(R.drawable.ms_image),
+    Hd(R.drawable.ms_hd),
     Book(R.drawable.ms_menu_book),
     Lock(R.drawable.ms_lock),
     LockOpen(R.drawable.ms_lock_open),

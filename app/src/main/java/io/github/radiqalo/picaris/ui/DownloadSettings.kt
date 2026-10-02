@@ -108,7 +108,10 @@ private fun TokenEditor(initial: List<String>, separator: String, author: Boolea
     val currentParts = rememberUpdatedState(parts)
     var draggingToken by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
     ModalBottomSheet(onDismissRequest = dismiss, sheetState = sheetState) {
         Column(Modifier.fillMaxWidth().padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -28,9 +28,10 @@ internal fun DetailArtworkPage(
     work: Work,
     page: Int,
     modifier: Modifier,
+    imageQuality: String,
     onOpenPage: (Int) -> Unit,
 ) {
-    val url = work.previews.getOrNull(page) ?: return
+    val url = work.pageImageForQuality(page, imageQuality).ifEmpty { return }
     val fallbackAspect =
         if (work.width > 1 && work.height > 1) {
             work.width.toFloat() / work.height
@@ -69,9 +70,11 @@ internal fun DetailArtworkFlow(
     work: Work,
     modifier: Modifier,
     contentPadding: PaddingValues,
+    imageQuality: String,
     onOpenPage: (Int) -> Unit,
 ) {
-    val pages = work.previews
+    val pages = (0 until work.detailPageCount)
+        .map { work.pageImageForQuality(it, imageQuality) }
     if (pages.size == 1) {
         val url = pages.first()
         val fallbackAspect =
@@ -193,6 +196,7 @@ internal fun RelatedWorkStrip(
                         val imageAspect = if (current.isNovel) .9f else current.aspect
                         WorkCard(
                             current,
+                            imageQuality = settings.feedImageQuality,
                             likedBusy = identity in busy,
                             showMetadata = false,
                             modifier = Modifier

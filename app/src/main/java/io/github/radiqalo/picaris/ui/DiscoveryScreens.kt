@@ -193,6 +193,7 @@ private fun DiscoveryLanding(
                                 WorkImage(
                                     trend.cover,
                                     Modifier.fillMaxSize(),
+                                    url = trend.cover.imageForQuality(settings.feedImageQuality),
                                     rounded = false,
                                     overlay = {
                                         Box(
@@ -405,6 +406,7 @@ private fun DiscoveryAuthorCard(
     vm: AppViewModel,
     navigate: (NavKey) -> Unit,
 ) {
+    val settings by vm.settings.collectAsStateWithLifecycle()
     var user by remember(preview.user) { mutableStateOf(preview.user) }
     var busy by remember { mutableStateOf(false) }
     val background by produceState<String?>(null, preview.user.id, vm.accountId) {
@@ -477,6 +479,7 @@ private fun DiscoveryAuthorCard(
                             vm.record(work)
                             navigate(Detail(work))
                         },
+                    url = work.imageForQuality(settings.feedImageQuality),
                 )
             }
         }
