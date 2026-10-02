@@ -39,7 +39,11 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.platform.LocalDensity
@@ -154,7 +158,38 @@ internal fun NavigationPageDisplay(
         NavDisplay(
             sceneState = sceneState,
             navigationEventState = navigationEventState,
-            modifier = modifier.navigationInteractionGate {
+            modifier = modifier.pointerInput(coordinator, artwork) {
+                var activePointer: PointerId? = null
+                var pointerDownPosition: Offset? = null
+                val touchSlop = viewConfiguration.touchSlop
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val down = event.changes.firstOrNull { it.pressed && !it.previousPressed }
+                        if (down != null) {
+                            activePointer = down.id
+                            pointerDownPosition = down.position
+                        }
+                        val pointer = activePointer?.let { id ->
+                            event.changes.firstOrNull { it.id == id }
+                        }
+                        val origin = pointerDownPosition
+                        if (pointer != null && origin != null && pointer.pressed &&
+                            kotlin.math.abs(pointer.position.y - origin.y) > touchSlop &&
+                            kotlin.math.abs(pointer.position.y - origin.y) >
+                            kotlin.math.abs(pointer.position.x - origin.x) &&
+                            coordinator.phase == NavigationTransitionPhase.Returning && artwork.isActive
+                        ) {
+                            artwork.finishForInteraction()
+                            activePointer = null
+                            pointerDownPosition = null
+                        } else if (pointer != null && !pointer.pressed) {
+                            activePointer = null
+                            pointerDownPosition = null
+                        }
+                    }
+                }
+            }.navigationInteractionGate {
                 coordinator.permits(null)
             }.onGloballyPositioned { artwork.root = it },
             transitionSpec = { motion.forward(this) },

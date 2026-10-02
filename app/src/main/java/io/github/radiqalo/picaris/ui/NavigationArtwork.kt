@@ -234,6 +234,18 @@ internal class NavigationArtwork(
         }
     }
 
+    fun finishForInteraction() {
+        pending.values.forEach { it.first.release() }
+        pending.clear()
+        previews.clear()
+        flights.values.toList().forEach { flight ->
+            flight.job?.cancel()
+            flight.generation++
+            finish(flight)
+        }
+        layers.forEach { it.placement.alpha = 1f }
+    }
+
     fun register(layer: ArtworkLayer) { layers.add(layer) }
     fun unregister(layer: ArtworkLayer) {
         layers.remove(layer)
