@@ -1,6 +1,9 @@
 package io.github.radiqalo.picaris
 
 import android.content.Context
+import java.io.ByteArrayOutputStream
+import android.net.Uri
+import android.provider.MediaStore
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -14,10 +17,14 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.download.DownloadManager
 import io.github.radiqalo.picaris.download.DownloadEvents
+import io.github.radiqalo.picaris.download.resolveDownloadFolder
 import java.io.File
 import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import kotlinx.coroutines.*
+import kotlinx.serialization.Serializable
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -34,6 +41,7 @@ constructor(
     val settingsStore: SettingsStore,
     val downloads: DownloadManager,
     private val downloadEvents: DownloadEvents,
+    private val downloadStorage: io.github.radiqalo.picaris.download.DownloadStorage,
     val dao: LibraryDao,
     val network: Network,
     private val pixivision: PixivisionRepository,
@@ -322,7 +330,94 @@ constructor(
 
     suspend fun beginLogin() = auth.startLogin()
 
-    suspend fun setDownloadTree(uri: String) = settingsStore.update { it.copy(downloadTree = uri) }
+    suspend fun setDownloadTree(uri: String, novel: Boolean = false) = settingsStore.update {
+        if (novel) it.copy(novelDownloadTree = uri) else it.copy(downloadTree = uri)
+    }
+
+    fun organizeDownloads() = run {
+        val (done, failed) = downloadStorage.organize(accountId)
+        message.emit("已整理 $done 项，失败 $failed 项；失败项保留原文件")
+    }
+
+    fun exportAppData(uri: Uri) = run {
+        withContext(Dispatchers.IO) {
+            val archive = AppDataArchive(
+                version = 1,
+                settings = settingsStore.flow.first(),
+                history = dao.allHistory(),
+                searches = dao.allSearches(),
+                downloads = dao.allDownloads(),
+                downloadFolders = dao.allDownloadFolders(),
+            )
+            val entries = linkedMapOf(
+                "app-data.json" to AppJson.encodeToString(archive).encodeToByteArray(),
+            )
+            val total = entries.values.sumOf { it.size.toLong() }
+            require(total <= MAX_APP_DATA_BACKUP) { "应用数据超过备份限制" }
+            appContext.contentResolver.openOutputStream(uri, "w")?.use { output ->
+                ZipOutputStream(output).use { zip ->
+                    entries.forEach { (name, bytes) ->
+                        zip.putNextEntry(java.util.zip.ZipEntry(name))
+                        zip.write(bytes)
+                        zip.closeEntry()
+                    }
+                }
+            } ?: error("无法写入应用数据备份")
+        }
+        message.emit("应用数据 ZIP 已导出（不含图片缓存和登录凭据）")
+    }
+
+    fun importAppData(uri: Uri) = run {
+        withContext(Dispatchers.IO) {
+            val bytes = appContext.contentResolver.openInputStream(uri)?.use { input ->
+                val zip = ZipInputStream(input)
+                var payload: ByteArray? = null
+                while (true) {
+                    val entry = zip.nextEntry ?: break
+                    require(entry.name == "app-data.json" && payload == null) { "备份 ZIP 内容无效" }
+                    val out = ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val count = zip.read(buffer)
+                        if (count < 0) break
+                        require(out.size() + count <= MAX_APP_DATA_BACKUP) { "应用数据备份超过限制" }
+                        out.write(buffer, 0, count)
+                    }
+                    payload = out.toByteArray()
+                    zip.closeEntry()
+                }
+                payload ?: error("ZIP 中没有应用数据")
+            } ?: error("无法读取应用数据备份")
+            val backup = AppJson.decodeFromString<AppDataArchive>(bytes.decodeToString())
+            require(backup.version == 1) { "不支持的应用数据备份版本" }
+            require(backup.history.size <= MAX_APP_DATA_ROWS && backup.searches.size <= MAX_APP_DATA_ROWS &&
+                backup.downloads.size <= MAX_APP_DATA_ROWS && backup.downloadFolders.size <= MAX_APP_DATA_ROWS) {
+                "应用数据记录数量超过限制"
+            }
+            settingsStore.update { backup.settings }
+            dao.restoreHistory(backup.history)
+            dao.restoreSearches(backup.searches)
+            dao.restoreDownloads(backup.downloads.map { if (it.status == "running") it.copy(status = "paused") else it })
+            dao.restoreDownloadFolders(backup.downloadFolders)
+        }
+        message.emit("应用数据已导入；未包含缓存图片与登录凭据")
+    }
+
+    private fun savedFileExists(value: String): Boolean = runCatching {
+        when {
+            value.startsWith("saf-folder|") -> {
+                val (_, tree, path) = value.split('|', limit = 3)
+                val root = DocumentFile.fromTreeUri(appContext, Uri.parse(tree)) ?: return@runCatching false
+                resolveDownloadFolder(root, path)?.listFiles()?.isNotEmpty() == true
+            }
+            value.startsWith("media-folder|") -> appContext.contentResolver.query(
+                MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.MediaColumns._ID),
+                "${MediaStore.MediaColumns.RELATIVE_PATH} = ?", arrayOf(value.substringAfter('|')), null,
+            )?.use { it.moveToFirst() } == true
+            value.isBlank() -> false
+            else -> appContext.contentResolver.openAssetFileDescriptor(Uri.parse(value), "r")?.use { true } ?: false
+        }
+    }.getOrDefault(false)
 
     fun refreshImageCacheSize() = run {
         imageCacheBytes.value = withContext(Dispatchers.IO) {
@@ -525,25 +620,13 @@ constructor(
         }
     }
 
-    fun saveUgoiraSource(work: Work, directory: android.net.Uri) {
+    fun saveUgoiraSource(work: Work, destination: android.net.Uri) {
         run {
             val metadata = repo.ugoira(accountId, work.id)
             val url = metadata.zip_urls.original.ifEmpty { metadata.zip_urls.medium }
             require(url.toUri().scheme == "https" && url.toUri().host?.endsWith(".pximg.net") == true) {
                 "无效的动图源文件地址"
             }
-            val folder = DocumentFile.fromTreeUri(appContext, directory)?.takeIf { it.isDirectory }
-                ?: error("所选目录不可用")
-            val name = "${work.id}_ugoira.zip"
-            var targetName = name
-            var suffix = 1
-            while (folder.findFile(targetName) != null) {
-                targetName = "${work.id}_ugoira_${suffix++}.zip"
-            }
-            val temporaryName = "${work.id}_ugoira.zip.part"
-            folder.findFile(temporaryName)?.delete()
-            val document = folder.createFile("application/octet-stream", temporaryName)
-                ?: error("无法在所选目录创建临时文件")
             try {
                 withContext(Dispatchers.IO) {
                     val call = network.okHttp().newCall(Request.Builder().url(url).build())
@@ -557,8 +640,8 @@ constructor(
                     try {
                         call.execute().use { response ->
                             check(response.isSuccessful) { "源文件下载失败（${response.code}）" }
-                            val output = appContext.contentResolver.openOutputStream(document.uri, "w")
-                                ?: error("无法写入所选目录")
+                            val output = appContext.contentResolver.openOutputStream(destination, "w")
+                                ?: error("无法写入所选文件")
                             response.body.byteStream().use { input ->
                                 output.use { input.copyTo(it) }
                             }
@@ -567,10 +650,9 @@ constructor(
                         cancellation.cancel()
                     }
                 }
-                check(document.renameTo(targetName)) { "ZIP 已下载，但无法在所选目录完成重命名" }
                 message.emit("${work.title} 源文件已保存")
             } catch (error: Exception) {
-                document.delete()
+                appContext.contentResolver.delete(destination, null, null)
                 throw error
             }
         }
@@ -615,3 +697,17 @@ constructor(
         revision.value++
     }
 }
+
+private const val MAX_APP_DATA_BACKUP = 128 * 1024 * 1024
+private const val MAX_APP_DATA_ROWS = 200_000
+private const val MAX_WORK_JSON = 1024 * 1024
+
+@Serializable
+private data class AppDataArchive(
+    val version: Int,
+    val settings: Settings,
+    val history: List<HistoryEntity>,
+    val searches: List<SearchEntity>,
+    val downloads: List<DownloadEntity>,
+    val downloadFolders: List<DownloadFolder>,
+)

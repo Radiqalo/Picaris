@@ -1314,7 +1314,7 @@ fun WorkCard(
         ) {
             val labels = buildList {
                 if (rank != null) add("${rank + 1}")
-                if (work.illust_ai_type == 2) add("AI")
+                if (work.isAiGenerated) add("AI")
                 if (work.x_restrict > 0) add(if (work.x_restrict == 2) "R18G" else "R18")
             }
             val imageKey = "work-image:${work.type}:${work.id}"

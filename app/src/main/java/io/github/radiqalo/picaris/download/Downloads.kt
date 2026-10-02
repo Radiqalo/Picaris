@@ -135,7 +135,7 @@ constructor(
                 when {
                     task.uri.startsWith("saf-folder|") -> {
                         val (_, tree, name) = task.uri.split("|", limit = 3)
-                        DocumentFile.fromTreeUri(context, tree.toUri())?.findFile(name)?.isDirectory == true
+                        DocumentFile.fromTreeUri(context, tree.toUri())?.let { resolveDownloadFolder(it, name) }?.isDirectory == true
                     }
                     task.uri.startsWith("media-folder|") -> {
                         val path = task.uri.substringAfter('|')
@@ -219,6 +219,11 @@ constructor(
                             else -> context.contentResolver.delete(task.uri.toUri(), null, null)
                         }
                     }
+                if (deleteFiles && task.coverUri.isNotEmpty()) runCatching {
+                    val cover = task.coverUri.toUri()
+                    if (cover.scheme == "file") cover.path?.let(::File)?.delete()
+                    else context.contentResolver.delete(cover, null, null)
+                }
                 if (dao.deleteFinishedDownload(account, id) > 0)
                     File(context.filesDir, "transfer/$account/$id.part").delete()
             }
@@ -232,8 +237,14 @@ private fun safeFolderName(title: String): String = title
     .take(80)
     .ifBlank { "ugoira" }
 
+internal fun resolveDownloadFolder(root: DocumentFile, path: String): DocumentFile? {
+    var current = root
+    for (part in path.split('/').filter { it.isNotEmpty() }) current = current.findFile(part) ?: return null
+    return current
+}
+
 private fun deleteSafFolder(context: Context, treeUri: Uri, name: String) {
-    val folder = DocumentFile.fromTreeUri(context, treeUri)?.findFile(name) ?: return
+    val folder = DocumentFile.fromTreeUri(context, treeUri)?.let { resolveDownloadFolder(it, name) } ?: return
     fun remove(document: DocumentFile) {
         document.listFiles().forEach { child ->
             if (child.isDirectory) remove(child) else child.delete()
@@ -262,6 +273,7 @@ class DownloadService : JobService() {
     @Inject lateinit var downloadEvents: DownloadEvents
     @Inject lateinit var network: Network
     @Inject lateinit var settings: SettingsStore
+    @Inject lateinit var storage: DownloadStorage
     @Inject lateinit var repo: WorkRepository
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var running: Job? = null
@@ -271,12 +283,11 @@ class DownloadService : JobService() {
         nm.createNotificationChannel(
             NotificationChannel("downloads", "作品下载", NotificationManager.IMPORTANCE_LOW)
         )
-        setNotification(
-            params,
-            2001,
-            notification("准备下载", 0, 0),
-            JOB_END_NOTIFICATION_POLICY_REMOVE,
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            setNotification(params, 2001, notification("准备下载", 0, 0), JOB_END_NOTIFICATION_POLICY_REMOVE)
+        } else {
+            nm.notify(2001, notification("准备下载", 0, 0))
+        }
         running = scope.launch {
             try {
                 dao.recoverDownloads()
@@ -300,6 +311,7 @@ class DownloadService : JobService() {
                 }
             } finally {
                 withContext(NonCancellable) { dao.recoverDownloads() }
+                getSystemService(NotificationManager::class.java).cancel(2001)
                 jobFinished(params, false)
             }
         }
@@ -308,7 +320,7 @@ class DownloadService : JobService() {
 
     override fun onStopJob(params: JobParameters): Boolean {
         running?.cancel()
-        return params.stopReason != JobParameters.STOP_REASON_USER
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S || params.stopReason != JobParameters.STOP_REASON_USER
     }
 
     override fun onDestroy() {
@@ -342,9 +354,23 @@ class DownloadService : JobService() {
             task = task.copy(bytes = result.bytes, total = result.total, etag = result.validator)
         }
         if (dao.download(task.id)?.status != "running") return
-        val uri = publish(task, part)
-        if (dao.completeDownload(task.id, part.length(), uri.toString()) == 0)
+        val cover = File(dir, "${task.id}.cover.part")
+        val uri = try {
+            if (task.kind == "novel") {
+                val work = AppJson.decodeFromString<Work>(task.workJson)
+                val source = work.cover.toUri()
+                require(source.scheme == "https" && source.host?.endsWith(".pximg.net") == true) { "小说封面不可用" }
+                ResumableTransfer(network.okHttp()).transfer(work.cover, cover, "") { _, _, _ ->
+                    dao.download(task.id)?.status == "running"
+                } ?: return
+                storage.save(task, part, cover)
+            } else publish(task, part)
+        } finally { cover.delete() }
+        if (dao.completeDownload(task.id, part.length(), uri.toString()) == 0) {
             deletePublished(uri)
+            dao.download(task.id)?.coverUri?.takeIf { it.isNotEmpty() }?.let { deletePublished(it.toUri()) }
+            return
+        }
         part.delete()
         if (dao.activeDownloadsForWork(task.accountId, task.workId) == 0) {
             val title = runCatching { AppJson.decodeFromString<Work>(task.workJson).title }
@@ -356,156 +382,18 @@ class DownloadService : JobService() {
     private suspend fun publish(task: DownloadEntity, file: File): Uri {
         if (task.kind == "ugoira-originals") return publishUgoiraOriginals(task, file)
         if (task.kind == "ugoira-gif") return publishUgoiraGif(task, file)
-        val s = settings.flow.first()
-        val mime =
-            when (file.extension) {
-                else ->
-                    when (task.name.substringAfterLast('.')) {
-                        "jpg",
-                        "jpeg" -> "image/jpeg"
-                        "png" -> "image/png"
-                        "webp" -> "image/webp"
-                        "gif" -> "image/gif"
-                        "zip" -> "application/zip"
-                        "json" -> "application/json"
-                        else -> "text/plain"
-                    }
-            }
-        if (s.downloadTree.isNotEmpty()) {
-            val root = DocumentFile.fromTreeUri(this, s.downloadTree.toUri()) ?: error("下载目录不可用")
-            val doc = root.createFile(mime, task.name) ?: error("无法创建文件，请重新授权下载目录")
-            try {
-                contentResolver.openOutputStream(doc.uri, "w")!!.use { out ->
-                    file.inputStream().use { it.copyTo(out) }
-                }
-            } catch (e: Exception) {
-                doc.delete()
-                throw e
-            }
-            return doc.uri
-        }
-        val collection =
-            if (mime.startsWith("image/")) MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            else MediaStore.Downloads.EXTERNAL_CONTENT_URI
-        val values =
-            ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, task.name)
-                put(MediaStore.MediaColumns.MIME_TYPE, mime)
-                put(
-                    MediaStore.MediaColumns.RELATIVE_PATH,
-                    if (mime.startsWith("image/")) "Pictures/Picaris" else "Download/Picaris",
-                )
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-        val uri = contentResolver.insert(collection, values) ?: error("无法创建下载文件")
-        try {
-            contentResolver.openOutputStream(uri, "w")!!.use { out ->
-                file.inputStream().use { it.copyTo(out) }
-            }
-            contentResolver.update(
-                uri,
-                ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
-                null,
-                null,
-            )
-        } catch (e: Exception) {
-            contentResolver.delete(uri, null, null)
-            throw e
-        }
-        return uri
+        return storage.save(task, file)
     }
 
     private suspend fun publishUgoiraOriginals(task: DownloadEntity, archive: File): Uri {
         val metadata = repo.ugoira(task.accountId, task.workId)
         require(metadata.frames.isNotEmpty()) { "动图没有可用帧" }
-        val s = settings.flow.first()
-        val folderName = "${task.workId}_${safeFolderName(AppJson.decodeFromString<Work>(task.workJson).title)}"
-        val archiveName = "${task.workId}_ugoira.zip"
-        val framesName = "${task.workId}_frames.json"
-        val framesJson = AppJson.encodeToString(metadata).toByteArray(Charsets.UTF_8)
-        if (s.downloadTree.isNotEmpty()) {
-            val tree = s.downloadTree.toUri()
-            val root = DocumentFile.fromTreeUri(this, tree) ?: error("下载目录不可用")
-            root.findFile(folderName)?.let { deleteDocumentFolder(it) }
-            val folder = root.createDirectory(folderName) ?: error("无法创建作品文件夹")
-            try {
-                copyToDocument(folder, archiveName, "application/zip", archive)
-                writeToDocument(folder, framesName, "application/json", framesJson)
-            } catch (e: Exception) {
-                deleteDocumentFolder(folder)
-                throw e
-            }
-            return Uri.parse("saf-folder|${tree}|${folderName}")
-        }
-        val relativePath = "Download/Picaris/$folderName/"
-        deleteMediaFolder(this, relativePath)
-        val published = mutableListOf<Uri>()
-        try {
-            published += writeToMediaStore(archiveName, "application/zip", relativePath, archive)
-            published += writeToMediaStore(framesName, "application/json", relativePath, framesJson)
-        } catch (e: Exception) {
-            published.forEach { contentResolver.delete(it, null, null) }
-            throw e
-        }
-        return Uri.parse("media-folder|$relativePath")
-    }
-
-    private fun copyToDocument(folder: DocumentFile, name: String, mime: String, source: File) {
-        val document = folder.createFile(mime, name) ?: error("无法创建 $name")
-        try {
-            contentResolver.openOutputStream(document.uri, "w")!!.use { output ->
-                source.inputStream().use { it.copyTo(output) }
-            }
-        } catch (e: Exception) {
-            document.delete()
-            throw e
-        }
-    }
-
-    private fun writeToDocument(folder: DocumentFile, name: String, mime: String, bytes: ByteArray) {
-        val document = folder.createFile(mime, name) ?: error("无法创建 $name")
-        try {
-            contentResolver.openOutputStream(document.uri, "w")!!.use { it.write(bytes) }
-        } catch (e: Exception) {
-            document.delete()
-            throw e
-        }
-    }
-
-    private fun writeToMediaStore(name: String, mime: String, path: String, source: File): Uri =
-        writeToMediaStore(name, mime, path) { output -> source.inputStream().use { it.copyTo(output) } }
-
-    private fun writeToMediaStore(name: String, mime: String, path: String, bytes: ByteArray): Uri =
-        writeToMediaStore(name, mime, path) { output -> output.write(bytes) }
-
-    private inline fun writeToMediaStore(
-        name: String,
-        mime: String,
-        path: String,
-        write: (java.io.OutputStream) -> Unit,
-    ): Uri {
-        val values = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, path)
-            put(MediaStore.MediaColumns.IS_PENDING, 1)
-        }
-        val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            ?: error("无法创建下载文件")
-        try {
-            contentResolver.openOutputStream(uri, "w")!!.use(write)
-            contentResolver.update(uri, ContentValues().apply {
-                put(MediaStore.MediaColumns.IS_PENDING, 0)
-            }, null, null)
-        } catch (e: Exception) {
-            contentResolver.delete(uri, null, null)
-            throw e
-        }
-        return uri
+        return storage.saveArchive(task, archive, AppJson.encodeToString(metadata).toByteArray(Charsets.UTF_8))
     }
 
     private fun deletePublished(uri: Uri) {
         when {
+            uri.scheme == "file" -> uri.path?.let(::File)?.delete()
             uri.toString().startsWith("saf-folder|") -> {
                 val (_, tree, name) = uri.toString().split("|", limit = 3)
                 deleteSafFolder(this, tree.toUri(), name)
@@ -529,19 +417,6 @@ class DownloadService : JobService() {
         } finally {
             gif.delete()
         }
-    }
-
-    private fun mimeForImage(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
-        "png" -> "image/png"
-        "webp" -> "image/webp"
-        else -> "image/jpeg"
-    }
-
-    private fun deleteDocumentFolder(folder: DocumentFile) {
-        folder.listFiles().forEach { child ->
-            if (child.isDirectory) deleteDocumentFolder(child) else child.delete()
-        }
-        folder.delete()
     }
 
     private fun notification(title: String, bytes: Long, total: Long): Notification {

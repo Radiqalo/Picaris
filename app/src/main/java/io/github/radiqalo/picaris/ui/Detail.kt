@@ -75,16 +75,10 @@ fun DetailScreen(
     val context = LocalContext.current
     val bookmarkFeedback = toggleFeedback()
     val bookmarkInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val ugoiraSourceDirectory = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree(),
+    val ugoiraSourceFile = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri ->
-        if (uri != null) {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-            )
-            vm.saveUgoiraSource(work, uri)
-        }
+        uri?.let { vm.saveUgoiraSource(work, it) }
     }
     val permission =
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -430,9 +424,9 @@ fun DetailScreen(
                 ListItem(
                     colors = menuItemColors,
                     content = { Text("下载源文件") },
-                    supportingContent = { Text("选择保存目录") },
+                    supportingContent = { Text("选择保存文件") },
                     leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Download), null) },
-                    onClick = { moreMenu = false; ugoiraSourceDirectory.launch(null) },
+                    onClick = { moreMenu = false; ugoiraSourceFile.launch("${work.id}_ugoira.zip") },
                 )
                 ListItem(
                     colors = menuItemColors,

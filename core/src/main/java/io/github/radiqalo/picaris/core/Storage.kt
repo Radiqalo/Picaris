@@ -18,6 +18,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
 
 val AppJson = Json {
     ignoreUnknownKeys = true
@@ -98,10 +99,10 @@ class TokenVault @Inject constructor(@ApplicationContext context: Context) : Cre
     }
 }
 
-@Entity(primaryKeys = ["accountId", "key"])
+@Serializable @Entity(primaryKeys = ["accountId", "key"])
 data class CachedFeed(val accountId: Long, val key: String, val json: String, val savedAt: Long)
 
-@Entity(primaryKeys = ["accountId", "workId", "kind"])
+@Serializable @Entity(primaryKeys = ["accountId", "workId", "kind"])
 data class HistoryEntity(
     val accountId: Long,
     val workId: Long,
@@ -111,10 +112,10 @@ data class HistoryEntity(
     val progress: Int = 0,
 )
 
-@Entity(primaryKeys = ["accountId", "word"])
+@Serializable @Entity(primaryKeys = ["accountId", "word"])
 data class SearchEntity(val accountId: Long, val word: String, val usedAt: Long)
 
-@Entity(
+@Serializable @Entity(
     tableName = "downloads",
     indices = [Index(value = ["accountId", "workId", "page", "kind"], unique = true)],
 )
@@ -134,11 +135,38 @@ data class DownloadEntity(
     val uri: String = "",
     val etag: String = "",
     val createdAt: Long = System.currentTimeMillis(),
+    @ColumnInfo(defaultValue = "''") val coverUri: String = "",
     val workJson: String = "",
 )
 
+@Serializable @Entity(tableName = "download_folders")
+data class DownloadFolder(@PrimaryKey val key: String, val name: String)
+
 @Dao
 interface LibraryDao {
+    @Query("SELECT * FROM HistoryEntity") suspend fun allHistory(): List<HistoryEntity>
+    @Query("SELECT * FROM SearchEntity") suspend fun allSearches(): List<SearchEntity>
+    @Query("SELECT * FROM downloads") suspend fun allDownloads(): List<DownloadEntity>
+    @Query("SELECT * FROM download_folders") suspend fun allDownloadFolders(): List<DownloadFolder>
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun restoreHistory(items: List<HistoryEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun restoreSearches(items: List<SearchEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun restoreDownloads(items: List<DownloadEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun restoreDownloadFolders(items: List<DownloadFolder>)
+    @Query("SELECT name FROM download_folders WHERE `key`=:key")
+    suspend fun downloadFolder(key: String): String?
+    @Query("SELECT * FROM download_folders")
+    suspend fun downloadFolders(): List<DownloadFolder>
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun rememberDownloadFolder(folder: DownloadFolder)
+    @Query("UPDATE downloads SET name=:name WHERE id=:id AND status='running'")
+    suspend fun savedDownloadName(id: Long, name: String)
+    @Query("UPDATE downloads SET coverUri=:uri WHERE id=:id AND status='running'")
+    suspend fun savedDownloadCover(id: Long, uri: String): Int
+    @Query("SELECT * FROM downloads WHERE accountId=:account AND status='complete' ORDER BY createdAt DESC")
+    suspend fun finishedDownloads(account: Long): List<DownloadEntity>
+    @Query("UPDATE downloads SET name=:name,uri=:uri,coverUri=:cover WHERE id=:id AND status='complete'")
+    suspend fun relocateDownload(id: Long, name: String, uri: String, cover: String): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun cache(feed: CachedFeed)
 
     @Query("SELECT * FROM CachedFeed WHERE accountId=:account AND `key`=:key")
@@ -249,8 +277,9 @@ interface LibraryDao {
 
 @Database(
     entities =
-        [CachedFeed::class, HistoryEntity::class, SearchEntity::class, DownloadEntity::class],
-    version = 1,
+        [CachedFeed::class, HistoryEntity::class, SearchEntity::class, DownloadEntity::class, DownloadFolder::class],
+    version = 2,
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
     exportSchema = true,
 )
 abstract class PixivDatabase : RoomDatabase() {

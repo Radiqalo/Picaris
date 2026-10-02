@@ -354,7 +354,7 @@ fun SettingRow(
         shapes = ListItemDefaults.segmentedShapes(index, count),
         verticalAlignment = Alignment.CenterVertically,
         content = { Text(title, style = MaterialTheme.typography.titleMedium) },
-        supportingContent = { Text(summary, style = MaterialTheme.typography.bodyMedium) },
+        supportingContent = { Text(summary.ifBlank { " " }, style = MaterialTheme.typography.bodyMedium) },
         leadingContent = {
             Box(
                 Modifier.size(40.dp)
@@ -417,6 +417,13 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
     val context = LocalContext.current
     var dialog by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(vm) { vm.refreshImageCacheSize() }
+    var choosingNovelTree by remember { mutableStateOf(false) }
+    val exportAppData = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        uri?.let(vm::exportAppData)
+    }
+    val importAppData = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(vm::importAppData)
+    }
     val tree =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri != null)
@@ -426,7 +433,7 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         Intent.FLAG_GRANT_READ_URI_PERMISSION or
                             Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                     )
-                    vm.setDownloadTree(uri.toString())
+                    vm.setDownloadTree(uri.toString(), choosingNovelTree)
                 }
         }
     Column(Modifier.fillMaxSize()) {
@@ -598,24 +605,11 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     ) {
                         dialog = "proxy"
                     }
-                    SettingRow(
-                        strings.getString(R.string.ui_4cd5da4f1c),
-                        if (s.downloadTree.isEmpty()) strings.getString(R.string.ui_ef4c6139ae)
-                        else strings.getString(R.string.ui_218f19435d),
-                        materialSymbol(MaterialSymbol.Download),
-                        position = SettingsRowPosition.Middle,
-                    ) {
-                        tree.launch(null)
-                    }
-                    if (s.downloadTree.isNotEmpty())
-                        SettingRow(
-                            strings.getString(R.string.ui_7e9cc10823),
-                            strings.getString(R.string.ui_50c005951d),
-                            materialSymbol(MaterialSymbol.Download),
-                            position = SettingsRowPosition.Middle,
-                        ) {
-                            vm.update { it.copy(downloadTree = "") }
-                        }
+                    DownloadSettingsRows(
+                        s,
+                        vm,
+                        chooseTree = { novel -> choosingNovelTree = novel; tree.launch(null) },
+                    )
                     SettingRow(
                         "同时下载任务数",
                         "当前 ${s.downloadConcurrency.coerceIn(1, 10)} 个并发任务",
@@ -636,6 +630,14 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                         position = SettingsRowPosition.First,
                     ) {
                         dialog = "history"
+                    }
+                    SettingRow("导出应用数据 ZIP", "设置、历史和下载记录；不含图片缓存及登录凭据",
+                        materialSymbol(MaterialSymbol.Download), position = SettingsRowPosition.Middle) {
+                        exportAppData.launch("picaris-app-data.zip")
+                    }
+                    SettingRow("导入应用数据 ZIP", "导入备份中的设置和本地记录",
+                        materialSymbol(MaterialSymbol.Download), position = SettingsRowPosition.Middle) {
+                        importAppData.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
                     }
                     SettingRow(
                         strings.getString(R.string.ui_92ec4c46d9),
@@ -1238,6 +1240,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
     var galleryMode by androidx.compose.runtime.saveable.rememberSaveable(vm.accountId) {
         mutableStateOf(false)
     }
+    val novelMode = settings.contentKind == "novel"
     val downloadListState = rememberLazyListState()
     val downloadGridState = rememberLazyStaggeredGridState()
     var speeds by remember(vm.accountId) { mutableStateOf(emptyMap<Long, Long>()) }
@@ -1277,7 +1280,9 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         grouped.sortedWith(if (sortMode.endsWith("_asc")) comparator else comparator.reversed())
     }
     val filtered = groups.filter { group ->
-        when (filter) {
+        val novel = group.tasks.any { it.kind == "novel" } || group.work?.isNovel == true
+        val matchesKind = novel == novelMode
+        matchesKind && when (filter) {
             "not_started" -> group.status == "cancelled" ||
                 (group.status == "paused" && group.progress == 0f)
             "waiting" -> group.status == "queued"
@@ -1289,6 +1294,10 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         }
     }
     LaunchedEffect(sortMode) {
+        if (galleryMode) downloadGridState.scrollToItem(0)
+        else downloadListState.scrollToItem(0)
+    }
+    LaunchedEffect(novelMode) {
         if (galleryMode) downloadGridState.scrollToItem(0)
         else downloadListState.scrollToItem(0)
     }
@@ -1463,7 +1472,7 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                         if (selecting) toggleSelection(group.workId)
                                             else work?.let {
                                                 vm.record(it)
-                                                if (it.isNovel) navigate(Detail(it))
+                                                if (it.isNovel) navigate(Reader(it))
                                                 else navigate(Reader(it, localUris = group.localImageUris))
                                             }
                                     },
@@ -1481,10 +1490,10 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                             ) {
                                 Column {
                                     Box {
-                                        if (work != null && !work.isNovel) {
+                                        if (work != null) {
                                             AsyncImage(
-                                                model = group.localImageUris.firstOrNull() ?: work.previews.firstOrNull() ?: work.cover,
-                                                contentDescription = "${group.title}，单击预览，长按查看作品",
+                                                model = group.tasks.firstOrNull { it.coverUri.isNotEmpty() }?.coverUri ?: group.localImageUris.firstOrNull() ?: work.previews.firstOrNull() ?: work.cover,
+                                                contentDescription = "${group.title}，单击阅读，长按查看详情",
                                                 modifier = Modifier.fillMaxWidth()
                                                     .aspectRatio(if (work.isNovel) .9f else work.aspect),
                                                 contentScale = ContentScale.Crop,
@@ -1573,9 +1582,9 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
                                     Modifier.width(88.dp).fillMaxHeight().clip(MaterialTheme.shapes.medium)
                                         .background(MaterialTheme.colorScheme.surfaceContainerLow),
                                 ) {
-                                    if (work != null && !work.isNovel) {
+                                    if (work != null) {
                                         AsyncImage(
-                                            model = group.localImageUris.firstOrNull() ?: work.previews.firstOrNull() ?: work.cover,
+                                            model = group.tasks.firstOrNull { it.coverUri.isNotEmpty() }?.coverUri ?: group.localImageUris.firstOrNull() ?: work.previews.firstOrNull() ?: work.cover,
                                             contentDescription = "预览 ${group.title} 全图或图集",
                                             modifier = Modifier.fillMaxSize().then(
                                                 if (!selecting) Modifier.clickable {
@@ -1741,10 +1750,13 @@ fun DownloadsScreen(vm: AppViewModel, navigate: (NavKey) -> Unit, back: () -> Un
         }
         if (selecting && !confirmRemoval) {
             BottomAppBar(
+                modifier = Modifier.windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal),
+                ),
                 actions = {
                     Text(
                         "${selected.size} 项已选",
-                        Modifier.weight(1f),
+                        Modifier.weight(1f).padding(start = 12.dp),
                         maxLines = 1,
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelLarge,

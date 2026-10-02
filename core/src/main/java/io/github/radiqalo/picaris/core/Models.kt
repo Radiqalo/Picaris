@@ -118,6 +118,14 @@ data class Work(
     val isNovel
         get() = type == "novel"
 
+    val isAiGenerated: Boolean
+        get() = illust_ai_type == 2 || tags.any { tag ->
+            sequenceOf(tag.name, tag.translated_name.orEmpty()).any { value ->
+                val normalized = value.trim().lowercase().filter(Char::isLetterOrDigit)
+                normalized in AI_GENERATED_TAGS
+            }
+        }
+
     val cover
         get() = image_urls.large.ifEmpty { image_urls.medium }
 
@@ -141,6 +149,11 @@ data class Work(
             page.image_urls.large.ifEmpty { page.image_urls.medium.ifEmpty { page.image_urls.original } }
         } else listOf(cover.ifEmpty { originals.first() })
 }
+
+private val AI_GENERATED_TAGS = setOf(
+    "ai", "aigenerated", "aigeneratedwork", "ai生成", "ai生成作品", "ai生成画像",
+    "aiイラスト", "ai作画", "ai绘图", "ai绘制", "aiart", "madebyai", "generatedbyai",
+)
 
 @Serializable
 data class FeedResponse(
@@ -274,6 +287,15 @@ data class Settings(
     val proxyPort: Int = 7890,
     val downloadConcurrency: Int = 1,
     val downloadTree: String = "",
+    val novelDownloadTree: String = "",
+    val downloadAiFolder: Boolean = false,
+    val downloadAdultFolder: Boolean = false,
+    val downloadAuthorFolder: Boolean = false,
+    val downloadOmitPageZero: Boolean = false,
+    val downloadAuthorTokens: List<String> = listOf("authorId"),
+    val downloadAuthorSeparator: String = "_",
+    val downloadFileTokens: List<String> = listOf("id", "title", "page"),
+    val downloadFileSeparator: String = "_",
     val novelFont: Int = 20,
     val novelSpacing: Int = 32,
 )
