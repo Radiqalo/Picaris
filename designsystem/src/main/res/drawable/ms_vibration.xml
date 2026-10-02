@@ -1,0 +1,4 @@
+<!-- Google Material Symbols, Apache-2.0. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FF000000" android:pathData="M2,8v8h2V8H2Zm4,-3v14h2V5H6Zm4,-2v18h2V3h-2Zm4,2v14h2V5h-2Zm4,3v8h2V8h-2Zm4,2v4h2v-4h-2Z" />
+</vector>

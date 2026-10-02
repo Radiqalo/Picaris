@@ -194,6 +194,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                 LocalNavigationArtwork provides artwork,
                                 LocalArtworkReturnFeedback provides artworkReturn,
                                 LocalTagTranslationEnabled provides settings.showTagTranslations,
+                                LocalTouchFeedbackEnabled provides settings.touchFeedbackEnabled,
                                 LocalTagLongPress provides { tagAction = it },
                             ) {
                                 val navigationMotion = rememberNavigationMotion()

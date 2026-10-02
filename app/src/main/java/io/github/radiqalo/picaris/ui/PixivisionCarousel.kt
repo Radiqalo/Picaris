@@ -151,7 +151,7 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
                         .fillMaxWidth()
                         .height(heroHeight)
                         .clip(MaterialTheme.shapes.extraLarge)
-                        .clickable {
+                        .feedbackClickable {
                             if (carousel.currentItem == articleIndex) {
                                 if (article.url.isNotBlank()) {
                                     CustomTabsIntent.Builder().build().launchUrl(context, article.url.toUri())

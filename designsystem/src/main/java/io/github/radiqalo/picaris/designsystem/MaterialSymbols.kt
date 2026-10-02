@@ -21,6 +21,7 @@ enum class MaterialSymbol(val resource: Int) {
     DockToBottom(R.drawable.ms_dock_to_bottom),
     FolderOpen(R.drawable.ms_folder_open),
     Speed(R.drawable.ms_speed),
+    Vibration(R.drawable.ms_vibration),
     Edit(R.drawable.ms_edit),
     Book(R.drawable.ms_menu_book),
     Lock(R.drawable.ms_lock),

@@ -54,7 +54,7 @@ internal fun DetailArtworkPage(
             Modifier
                 .width(imageWidth)
                 .aspectRatio(aspect)
-                .clickable { onOpenPage(page) }
+                .feedbackClickable { onOpenPage(page) }
                 .testTag(if (page == 0) "detailImage" else "detailImage:$page"),
             url = url,
             scale = ContentScale.Fit,
@@ -93,7 +93,7 @@ internal fun DetailArtworkFlow(
                 Modifier
                     .width(minOf(maxWidth, maxHeight * aspect))
                     .aspectRatio(aspect)
-                    .clickable { onOpenPage(0) }
+                    .feedbackClickable { onOpenPage(0) }
                     .testTag("detailImage"),
                 url = url,
                 scale = ContentScale.Fit,
@@ -123,7 +123,7 @@ internal fun DetailArtworkFlow(
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(aspect)
-                    .clickable { onOpenPage(page) }
+                    .feedbackClickable { onOpenPage(page) }
                     .testTag(if (page == 0) "detailImage" else "detailImage:$page"),
                 url = url,
                 scale = ContentScale.Fit,

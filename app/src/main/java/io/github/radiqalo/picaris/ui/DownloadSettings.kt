@@ -53,7 +53,7 @@ internal fun DownloadSettingsRows(
             else -> it.copy(downloadAuthorFolder = value)
         } }
         SettingRow(label, "", materialSymbol(icon),
-            action = { Switch(checked = enabled, onCheckedChange = { change(it) }) },
+            action = { FeedbackSwitch(checked = enabled, onCheckedChange = { change(it) }) },
             position = SettingsRowPosition.Middle) { change(!enabled) }
     }
     listOf(
@@ -77,7 +77,7 @@ internal fun DownloadSettingsRows(
                 else -> MaterialSymbol.Lock
             },
         ),
-            action = { Switch(checked = enabled, onCheckedChange = { change(it) }) },
+            action = { FeedbackSwitch(checked = enabled, onCheckedChange = { change(it) }) },
             position = SettingsRowPosition.Middle) { change(!enabled) }
     }
     SettingRow("作者文件夹命名", DownloadNaming.preview(s.downloadAuthorTokens.filter { it in DownloadNaming.tokens }, separator = s.downloadAuthorSeparator),

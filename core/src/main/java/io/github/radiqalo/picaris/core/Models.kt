@@ -302,6 +302,7 @@ data class Settings(
     val detailImageQuality: String = "medium",
     val largeImageQuality: String = "large",
     val bottomBarStyle: String = "standard",
+    val touchFeedbackEnabled: Boolean = true,
     val showAdult: Boolean = false,
     val hideAi: Boolean = false,
     val blockedTags: String = "",

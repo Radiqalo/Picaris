@@ -64,6 +64,7 @@ private fun DiscoveryLanding(
     vm: AppViewModel,
     navigate: (NavKey) -> Unit,
 ) {
+    val discoveryFeedback = selectionFeedback()
     var refreshVersion by remember { mutableIntStateOf(0) }
     var refreshingDiscovery by remember { mutableStateOf(false) }
     val settings by vm.settings.collectAsStateWithLifecycle()
@@ -154,6 +155,7 @@ private fun DiscoveryLanding(
                         items(trends, key = { it.tag.name }) { trend ->
                             SuggestionChip(
                                 onClick = {
+                                    discoveryFeedback()
                                     navigate(
                                         Collection(
                                             trend.tag.name,
@@ -222,6 +224,7 @@ private fun DiscoveryLanding(
                                 )
                                 Surface(
                                     onClick = {
+                                        discoveryFeedback()
                                         navigate(
                                             Collection(
                                                 trend.tag.name,
@@ -290,6 +293,7 @@ private fun DiscoveryTagWorks(
     navigate: (NavKey) -> Unit,
     refreshVersion: Int,
 ) {
+    val tagFeedback = selectionFeedback()
     val tag = trend.tag
     val settings by vm.settings.collectAsStateWithLifecycle()
     val spec =
@@ -312,6 +316,7 @@ private fun DiscoveryTagWorks(
                 overflow = TextOverflow.Ellipsis,
             )
             TextButton(onClick = {
+                tagFeedback()
                 navigate(Collection(tag.name, "search", word = tag.name, tagCover = trend.cover))
             }) { Text("查看全部", style = MaterialTheme.typography.labelLarge) }
         }
@@ -349,7 +354,7 @@ private fun DiscoveryTagWorks(
                                 .width(imageHeight * imageAspect)
                                 .height(imageHeight)
                                 .carouselParallaxScrollEffect(index, parallaxState, cardShape)
-                                .clickable {
+                                .feedbackClickable {
                                     vm.record(current)
                                     navigate(Detail(current, spec, index))
                                 },

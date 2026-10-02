@@ -510,7 +510,7 @@ fun WorkCard(
     Column(
         modifier
             .clip(imageShape)
-            .clickable { if (permitted()) onClick() }
+            .feedbackClickable(enabled = permitted()) { onClick() }
             .semantics {
                 if (!showMetadata) contentDescription = "${work.title}，${work.user.name}"
             }.padding(bottom = if (showMetadata) 2.dp else 0.dp),

@@ -321,6 +321,27 @@ fun SettingsScreen(
                 }
             }
             item {
+                SettingsGroup("交互") {
+                    SettingRow(
+                        "触摸震动反馈",
+                        "点击、切换和选择时提供轻微震动",
+                        icon = materialSymbol(MaterialSymbol.Vibration),
+                        action = {
+                            FeedbackSwitch(
+                                checked = s.touchFeedbackEnabled,
+                                onCheckedChange = { enabled ->
+                                    vm.update { it.copy(touchFeedbackEnabled = enabled) }
+                                },
+                                feedbackWhenDisabled = true,
+                            )
+                        },
+                        position = SettingsRowPosition.Only,
+                    ) {
+                        vm.update { it.copy(touchFeedbackEnabled = !it.touchFeedbackEnabled) }
+                    }
+                }
+            }
+            item {
                 SettingsGroup(stringResource(R.string.ui_10ea138040)) {
                     SettingRow(
                         "显示作者与作品名",

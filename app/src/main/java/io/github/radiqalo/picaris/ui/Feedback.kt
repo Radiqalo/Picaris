@@ -5,10 +5,12 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.*
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -17,24 +19,59 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import io.github.radiqalo.picaris.designsystem.AppIcon
 
+val LocalTouchFeedbackEnabled = staticCompositionLocalOf { true }
+
 /** Platform feedback respects the user's system haptic preference. */
 @Composable
 fun toggleFeedback(): (Boolean) -> Unit {
     val haptic = LocalHapticFeedback.current
-    return { enabled -> haptic.performHapticFeedback(
-        if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff) }
+    val feedbackEnabled = LocalTouchFeedbackEnabled.current
+    return { enabled ->
+        if (feedbackEnabled) {
+            haptic.performHapticFeedback(
+                if (enabled) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+            )
+        }
+    }
 }
 
 @Composable
 fun selectionFeedback(): () -> Unit {
     val haptic = LocalHapticFeedback.current
-    return { haptic.performHapticFeedback(HapticFeedbackType.SegmentTick) }
+    val feedbackEnabled = LocalTouchFeedbackEnabled.current
+    return {
+        if (feedbackEnabled) haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+    }
 }
 
 @Composable
-fun FeedbackSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    val feedback = toggleFeedback()
-    Switch(checked, { next -> feedback(next); onCheckedChange(next) })
+fun FeedbackSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    feedbackWhenDisabled: Boolean = false,
+) {
+    val haptic = LocalHapticFeedback.current
+    val feedbackEnabled = LocalTouchFeedbackEnabled.current || feedbackWhenDisabled
+    Switch(checked, { next ->
+        if (feedbackEnabled) {
+            haptic.performHapticFeedback(
+                if (next) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+            )
+        }
+        onCheckedChange(next)
+    })
+}
+
+@Composable
+fun Modifier.feedbackClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): Modifier {
+    val feedback = selectionFeedback()
+    return clickable(enabled = enabled) {
+        feedback()
+        onClick()
+    }
 }
 
 @Composable

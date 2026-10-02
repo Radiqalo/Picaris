@@ -55,6 +55,7 @@ fun ReaderScreen(
         return
     }
     val s by vm.settings.collectAsStateWithLifecycle()
+    val qualityToggleFeedback = toggleFeedback()
     var chrome by rememberSaveable { mutableStateOf(true) }
     var vertical by rememberSaveable { mutableStateOf(false) }
     var viewerQuality by rememberSaveable(work.type, work.id) { mutableStateOf(s.largeImageQuality) }
@@ -187,6 +188,7 @@ fun ReaderScreen(
                                 IconToggleButton(
                                     checked = viewerQuality == "original",
                                     onCheckedChange = { isOriginal ->
+                                        qualityToggleFeedback(isOriginal)
                                         selectViewerQuality(if (isOriginal) "original" else "large")
                                     },
                                     modifier = Modifier.semantics {
