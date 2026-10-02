@@ -2,6 +2,8 @@ package io.github.radiqalo.picaris.ui
 
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -126,6 +128,11 @@ fun DownloadsScreen(
     back: () -> Unit,
 ) {
     val tasks by vm.downloadList.collectAsStateWithLifecycle()
+    val unreadable by vm.unreadableDownloadCount.collectAsStateWithLifecycle()
+    val restoreFiles =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            uri?.let(vm::restoreDownloadAccess)
+        }
     val settings by vm.settings.collectAsStateWithLifecycle()
     var filter by androidx.compose.runtime.saveable
         .rememberSaveable { mutableStateOf("all") }
@@ -270,6 +277,14 @@ fun DownloadsScreen(
             },
             scrollBehavior = null,
         )
+        if (unreadable > 0) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Text(stringResource(R.string.download_access_required, unreadable))
+                TextButton(onClick = { restoreFiles.launch(null) }) {
+                    Text(stringResource(R.string.download_restore_access))
+                }
+            }
+        }
         Row(
             Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -212,6 +212,18 @@ interface LibraryDao {
     @Query("UPDATE downloads SET name=:name,uri=:uri,coverUri=:cover WHERE id=:id AND status='complete'")
     suspend fun relocateDownload(id: Long, name: String, uri: String, cover: String): Int
 
+    @Query(
+        """UPDATE downloads SET uri=:uri,coverUri=:cover
+        WHERE id=:id AND status='complete' AND uri=:expectedUri AND coverUri=:expectedCover""",
+    )
+    suspend fun rebindDownloadUri(
+        id: Long,
+        expectedUri: String,
+        expectedCover: String,
+        uri: String,
+        cover: String,
+    ): Int
+
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun cache(feed: CachedFeed)
 
     @Query("SELECT * FROM CachedFeed WHERE accountId=:account AND `key`=:key")

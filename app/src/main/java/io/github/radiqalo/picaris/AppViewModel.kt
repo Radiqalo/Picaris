@@ -3,6 +3,7 @@ package io.github.radiqalo.picaris
 import android.content.Context
 import java.io.ByteArrayOutputStream
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
@@ -15,8 +16,11 @@ import coil3.SingletonImageLoader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.radiqalo.picaris.core.*
-import io.github.radiqalo.picaris.download.DownloadManager
+import io.github.radiqalo.picaris.download.DownloadAccessRecovery
 import io.github.radiqalo.picaris.download.DownloadEvents
+import io.github.radiqalo.picaris.download.DownloadFileState
+import io.github.radiqalo.picaris.download.DownloadManager
+import io.github.radiqalo.picaris.download.downloadFileState
 import io.github.radiqalo.picaris.download.resolveDownloadFolder
 import io.github.radiqalo.picaris.download.useCancellable
 import java.io.File
@@ -97,6 +101,34 @@ constructor(
             activeAccountIds
                 .flatMapLatest { dao.cachedFeedBytes(it) }
                 .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+        private val downloadAccessRevision = MutableStateFlow(0)
+        val unreadableDownloadCount =
+            combine(downloadList, downloadAccessRevision) { tasks, _ -> tasks }
+                .mapLatest { tasks ->
+                    withContext(Dispatchers.IO) {
+                        tasks.count {
+                            ensureActive()
+                            it.status == "complete" &&
+                                downloadFileState(appContext, it.uri) != DownloadFileState.AVAILABLE
+                        }
+                    }
+                }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+        fun restoreDownloadAccess(tree: Uri) =
+            run {
+                val count =
+                    withContext(Dispatchers.IO) {
+                        appContext.contentResolver.takePersistableUriPermission(
+                            tree,
+                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                        )
+                        DownloadAccessRecovery(appContext, dao).restore(tree)
+                    }
+                downloadAccessRevision.value++
+                message.emit("已恢复 $count 条下载记录的本地文件访问；未匹配的记录保持原样")
+            }
+
     val imageCacheBytes = MutableStateFlow(0L)
 
     private val feeds =
@@ -392,7 +424,9 @@ constructor(
             dao.restoreDownloads(backup.downloads.map { if (it.status == "running") it.copy(status = "paused") else it })
             dao.restoreDownloadFolders(backup.downloadFolders)
         }
-        message.emit("应用数据已导入；未包含缓存图片与登录凭据")
+        message.emit(
+            "应用数据已导入（不含缓存图片和登录凭据）；如本地下载无法读取，请到下载页重新授权原目录",
+        )
     }
 
     private fun savedFileExists(value: String): Boolean = runCatching {
@@ -699,7 +733,7 @@ private const val MAX_APP_DATA_ROWS = 200_000
 private const val MAX_WORK_JSON = 1024 * 1024
 
 @Serializable
-private data class AppDataArchive(
+internal data class AppDataArchive(
     val version: Int,
     val settings: Settings,
     val history: List<HistoryEntity>,

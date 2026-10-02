@@ -131,27 +131,12 @@ constructor(
 
     private suspend fun downloadedFileExists(task: DownloadEntity): Boolean =
         withContext(Dispatchers.IO) {
-            runCatching {
-                when {
-                    task.uri.startsWith("saf-folder|") -> {
-                        val (_, tree, name) = task.uri.split("|", limit = 3)
-                        DocumentFile.fromTreeUri(context, tree.toUri())?.let { resolveDownloadFolder(it, name) }?.isDirectory == true
-                    }
-                    task.uri.startsWith("media-folder|") -> {
-                        val path = task.uri.substringAfter('|')
-                        context.contentResolver.query(
-                            MediaStore.Files.getContentUri("external"),
-                            arrayOf(MediaStore.MediaColumns._ID),
-                            "${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
-                            arrayOf(path),
-                            null,
-                        )?.use { it.moveToFirst() } == true
-                    }
-                    else -> context.contentResolver
-                        .openAssetFileDescriptor(task.uri.toUri(), "r")
-                        ?.use { true } ?: false
-                }
-            }.getOrDefault(false)
+            when (downloadFileState(context, task.uri)) {
+                DownloadFileState.AVAILABLE -> true
+                DownloadFileState.MISSING -> false
+                DownloadFileState.ACCESS_REQUIRED ->
+                    error("本地文件无法读取，请在下载页重新授权原目录，或确认文件已删除后移除记录")
+            }
         }
 
     fun schedule() {

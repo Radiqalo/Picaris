@@ -148,4 +148,6 @@
     <string name="about_license">开源许可</string>
     <string name="credential_read_failed">无法读取已保存的登录信息，可能是密钥不可用或数据损坏。原始凭据已保留，请重试。</string>
     <string name="credential_read_retry">重新读取登录信息</string>
+    <string name="download_access_required">%1$d 条已完成下载无法读取。清除应用数据后，请重新选择原来的 Picaris 下载目录。</string>
+    <string name="download_restore_access">重新授权本地文件目录</string>
 </resources>
