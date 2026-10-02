@@ -151,7 +151,7 @@ internal class NavigationTransitionCoordinator(
     }
 
     fun usesZoom(entries: Set<Long>): Boolean = entries.any {
-        destinations[it] is Detail || destinations[it] is Reader
+        destinations[it] is Detail || destinations[it] is Reader || destinations[it] is Author
     }
 
     fun destination(instanceId: Long): NavKey? = destinations[instanceId]

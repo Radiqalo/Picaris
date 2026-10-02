@@ -87,9 +87,23 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
     SideEffect { coordinator.clearFocus = { focusManager.clearFocus(force = true) } }
     val snackbar = remember { SnackbarHostState() }
     var tagAction by remember { mutableStateOf<Tag?>(null) }
+    val pop: (Int) -> Unit = { count ->
+        if (backStack.size > 1) {
+            coordinator.commit(backStack, returning = true) {
+                (backStack.lastOrNull() as? Detail)?.work?.let {
+                    artworkReturn = ArtworkReturnFeedback(it.type, it.id)
+                }
+                repeat(count.coerceAtMost(backStack.size - 1)) { backStack.removeAt(backStack.lastIndex) }
+            }
+        }
+    }
     val navigate: (NavKey) -> Unit = {
         val route = it
-        if (route != backStack.lastOrNull()) coordinator.commit(backStack, destination = route) {
+        val previousAuthor = backStack.getOrNull(backStack.lastIndex - 1) as? Author
+        if (route is Author && backStack.lastOrNull() is Detail && previousAuthor?.user?.id == route.user.id) {
+            // Reuse the source author instance and the same transition as Back.
+            pop(1)
+        } else if (route != backStack.lastOrNull()) coordinator.commit(backStack, destination = route) {
             if (route == Home) {
                 while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
             } else if (route is Detail && backStack.lastOrNull() is Detail)
@@ -104,16 +118,6 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
         val route = it
         coordinator.commit(backStack, destination = route) {
             backStack.add(route)
-        }
-    }
-    val pop: (Int) -> Unit = { count ->
-        if (backStack.size > 1) {
-            coordinator.commit(backStack, returning = true) {
-                (backStack.lastOrNull() as? Detail)?.work?.let {
-                    artworkReturn = ArtworkReturnFeedback(it.type, it.id)
-                }
-                repeat(count.coerceAtMost(backStack.size - 1)) { backStack.removeAt(backStack.lastIndex) }
-            }
         }
     }
     val back: () -> Unit = { pop(1) }
@@ -173,6 +177,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                 else
                     key(account?.user?.id, revision) {
                         val strategy = rememberListDetailSceneStrategy<NavKey>()
+                        val detailStrategy = remember(strategy, coordinator) { DetailSceneStrategy(strategy, coordinator) }
                         SharedTransitionLayout {
                             val artwork = rememberNavigationArtwork(coordinator)
                             SideEffect {
@@ -204,9 +209,7 @@ fun PixivApp(vm: AppViewModel, incoming: Intent?, handled: () -> Unit) {
                                         listOf(rememberSaveableStateHolderNavEntryDecorator()),
                                     sceneDecoratorStrategies = listOf(pageDecorator),
                                     onBack = pop,
-                                    sceneStrategies =
-                                        if (backStack.lastOrNull() is Detail) listOf(strategy)
-                                        else emptyList(),
+                                    sceneStrategies = listOf(detailStrategy),
                                     entryProvider =
                                         entryProvider {
                                             entry<Home>(metadata = ListDetailSceneStrategy.listPane()) {

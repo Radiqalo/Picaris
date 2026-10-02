@@ -54,6 +54,7 @@ import androidx.navigation3.scene.SceneDecoratorStrategy
 import androidx.navigation3.scene.SceneDecoratorStrategyScope
 import androidx.navigation3.scene.SceneInfo
 import androidx.navigation3.scene.SceneStrategy
+import androidx.navigation3.scene.SceneStrategyScope
 import androidx.navigation3.scene.rememberSceneState
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
@@ -154,6 +155,19 @@ internal class NavigationPageSceneDecorator(
         NavigationPageScene(scene, onSettled)
 }
 
+// Scene strategies also resolve previous backstack prefixes. Keep this strategy
+// installed while another page covers Detail so its return scene keeps its identity.
+internal class DetailSceneStrategy(
+    private val delegate: SceneStrategy<NavKey>,
+    private val coordinator: NavigationTransitionCoordinator,
+) : SceneStrategy<NavKey> {
+    override fun SceneStrategyScope<NavKey>.calculateScene(entries: List<NavEntry<NavKey>>): Scene<NavKey>? {
+        val id = entries.lastOrNull()?.contentKey as? Long ?: return null
+        if (coordinator.destination(id) !is Detail) return null
+        return with(delegate) { calculateScene(entries) }
+    }
+}
+
 private data class NavigationPageScene(
     val scene: Scene<NavKey>,
     val onSettled: (Long) -> Unit,
@@ -192,12 +206,24 @@ internal class NavigationMotion(
         ((scene as? Scene<*>)?.entries?.lastOrNull()?.contentKey as? Long)?.let(coordinator::destination)
 
     private fun style(scene: Any?): NavigationMotionStyle = when (destination(scene)) {
-        is Detail, is Reader -> NavigationMotionStyle.Zoom
+        is Detail, is Reader, is Author -> NavigationMotionStyle.Zoom
         else -> NavigationMotionStyle.Slide
     }
 
+    private fun returnsToExistingPage(scope: AnimatedContentTransitionScope<*>): Boolean {
+        val initialId = (scope.initialState as? Scene<*>)?.entries?.lastOrNull()?.contentKey
+        val targetId = (scope.targetState as? Scene<*>)?.entries?.lastOrNull()?.contentKey
+        val initialIndex = coordinator.instances.indexOfFirst { it.id == initialId }
+        val targetIndex = coordinator.instances.indexOfFirst { it.id == targetId }
+        return initialIndex >= 0 && targetIndex >= 0 && targetIndex < initialIndex
+    }
+
     fun forward(scope: AnimatedContentTransitionScope<*>): ContentTransform = with(scope) {
-        if (coordinator.phase == NavigationTransitionPhase.Returning) return@with back(scope)
+        // A deferred back target is composed before beginPreview's SideEffect.
+        // Resolve direction from stable entry IDs instead of caching a forward
+        // scale-in while the coordinator still reports Stable/Entering.
+        if (returnsToExistingPage(scope) || coordinator.phase == NavigationTransitionPhase.Returning)
+            return@with back(scope)
         val frame = coordinator.incomingFrame
         if (matchesPreview(scope)) predictiveDirection?.let { return@with backPreview(it) }
         when (style(targetState)) {
@@ -222,15 +248,16 @@ internal class NavigationMotion(
     }
 
     fun back(scope: AnimatedContentTransitionScope<*>): ContentTransform {
-        if (coordinator.phase == NavigationTransitionPhase.Entering && destination(scope.targetState) != Home)
+        if (coordinator.phase == NavigationTransitionPhase.Entering &&
+            !returnsToExistingPage(scope) && destination(scope.targetState) != Home)
             return forward(scope)
         if (matchesPreview(scope)) predictiveDirection?.let { return backPreview(it, committed = true) }
         return when (style(scope.initialState)) {
             NavigationMotionStyle.Slide ->
-                fadeIn(effects, initialAlpha = 1f) togetherWith
+                stationaryBackTarget() togetherWith
                     slideOutHorizontally(position) { direction * it }
             NavigationMotionStyle.Zoom ->
-                fadeIn(effects, initialAlpha = 1f) togetherWith (
+                stationaryBackTarget() togetherWith (
                     scaleOut(scale, targetScale = 0.92f) + fadeOut(effects)
                 )
         }
@@ -243,10 +270,18 @@ internal class NavigationMotion(
         return backPreview(swipeDirection)
     }
 
+    // DeferredAnimatedContent falls back to the target's original enter animation for
+    // properties not manually set during preview. Explicit identity transforms prevent
+    // a returning page from replaying its original slide/scale-in underneath the gesture.
+    private fun stationaryBackTarget() =
+        fadeIn(effects, initialAlpha = 1f) +
+            scaleIn(scale, initialScale = 1f) +
+            slideInHorizontally(position) { 0 }
+
     private fun backPreview(swipeDirection: Int, committed: Boolean = false): ContentTransform {
         val previewExit = scaleOut(scale, targetScale = 0.90f) +
             slideOutHorizontally(position) { swipeDirection * it / 32 }
-        return fadeIn(effects, initialAlpha = 1f) togetherWith
+        return stationaryBackTarget() togetherWith
             if (committed) previewExit + fadeOut(effects) else previewExit
     }
 
