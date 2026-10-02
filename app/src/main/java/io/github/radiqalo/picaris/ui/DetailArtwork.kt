@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.*
+import androidx.compose.material3.carousel.CarouselParallaxScrollEffectState
+import androidx.compose.material3.carousel.carouselParallaxScrollEffect
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clipToBounds
@@ -147,6 +149,9 @@ internal fun RelatedWorkStrip(
     val openAll = {
         navigate(Collection(relatedTitle, "related", userId = work.id))
     }
+    val relatedListState = key(work.id) { rememberLazyListState() }
+    val parallaxState = remember(relatedListState) { CarouselParallaxScrollEffectState(relatedListState) }
+    val showPlaceholders = related.itemCount == 0 && related.loadState.refresh is LoadState.Loading
     Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
         Text(
             relatedTitle,
@@ -154,41 +159,52 @@ internal fun RelatedWorkStrip(
             style = MaterialTheme.typography.titleMedium,
         )
         LazyRow(
+            state = relatedListState,
             contentPadding = PaddingValues(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
             verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().height(180.dp),
         ) {
-            if (related.itemCount == 0 && related.loadState.refresh is LoadState.Loading) {
-                items(5) {
+            items(
+                count = if (showPlaceholders) 5 else minOf(5, related.itemCount),
+                key = { index ->
+                    if (showPlaceholders) {
+                        "related_placeholder_$index"
+                    } else {
+                        related.peek(index)?.let { "${it.type}_${it.id}" } ?: "related_$index"
+                    }
+                },
+            ) { index ->
+                if (showPlaceholders || index >= related.itemCount) {
                     Spacer(
                         Modifier
                             .width(144.dp)
-                            .height(180.dp)
+                            .height(164.dp)
+                            .carouselParallaxScrollEffect(index, parallaxState, MaterialTheme.shapes.small)
                             .background(
                                 MaterialTheme.colorScheme.surfaceContainerHigh,
                                 MaterialTheme.shapes.small,
                             ),
                     )
-                }
-            } else {
-                items(minOf(5, related.itemCount), key = { index ->
-                    related.peek(index)?.let { "${it.type}_${it.id}" } ?: "related_$index"
-                }) { index ->
+                } else {
                     related[index]?.let { artwork ->
                         val identity = artwork.identity(vm.accountId)
                         val current = bookmarks[identity]?.apply(artwork) ?: artwork
-                        Box(Modifier.width(180.dp * current.aspect)) {
-                            WorkCard(
-                                current,
-                                likedBusy = identity in busy,
-                                showMetadata = false,
-                                onLike = { vm.run { vm.bookmark(current) } },
-                                onClick = {
-                                    vm.record(current)
-                                    navigateRelatedDetail(Detail(current, spec, index))
-                                },
-                            )
-                        }
+                        val imageAspect = if (current.isNovel) .9f else current.aspect
+                        WorkCard(
+                            current,
+                            likedBusy = identity in busy,
+                            showMetadata = false,
+                            modifier = Modifier
+                                .width(180.dp * imageAspect)
+                                .height(180.dp)
+                                .carouselParallaxScrollEffect(index, parallaxState, MaterialTheme.shapes.small),
+                            onLike = { vm.run { vm.bookmark(current) } },
+                            onClick = {
+                                vm.record(current)
+                                navigateRelatedDetail(Detail(current, spec, index))
+                            },
+                        )
                     }
                 }
             }
