@@ -58,7 +58,6 @@ fun DetailScreen(
     val current = bookmarks[identity]?.apply(work) ?: work
     val actionBusy = identity in busy
     var bookmarkPrivate by remember(identity) { mutableStateOf<Boolean?>(null) }
-    var privateDialog by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
     var downloadPageSelection by remember(work.id) { mutableStateOf(false) }
     var selectedDownloadPages by remember(work.id) { mutableStateOf(emptySet<Int>()) }
@@ -678,7 +677,7 @@ fun DetailScreen(
                         leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Favorite), null) },
                         onClick = {
                             moreMenu = false
-                            privateDialog = true
+                            bookmark(false)
                         },
                     )
                 }
@@ -804,25 +803,5 @@ fun DetailScreen(
                 }
             }
         }
-    }
-    if (privateDialog && permitted()) {
-        ActionSheet(
-            onDismissRequest = { privateDialog = false },
-            title = { Text(stringResource(R.string.ui_67c6787737)) },
-            text = { Text(stringResource(R.string.ui_b6fe094725)) },
-            confirmButton = {
-                TextButton({
-                    privateDialog = false
-                    bookmark(false)
-                }) {
-                    Text(stringResource(R.string.ui_67c6787737))
-                }
-            },
-            dismissButton = {
-                TextButton({ privateDialog = false }) {
-                    Text(stringResource(R.string.ui_4d0b4688c7))
-                }
-            },
-        )
     }
 }

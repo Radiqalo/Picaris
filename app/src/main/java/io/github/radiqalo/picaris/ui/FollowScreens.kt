@@ -248,12 +248,20 @@ fun BookmarkScreen(
             scrollBehavior = null,
             modifier = Modifier.aboveWorkTransition(),
             actions = {
-                IconButton(onClick = { private = !private }) {
-                    AppIcon(
+                val visibilityFeedback = toggleFeedback()
+                IconToggleButton(
+                    checked = private,
+                    onCheckedChange = { isPrivate ->
+                        visibilityFeedback(isPrivate)
+                        private = isPrivate
+                    },
+                ) {
+                    FeedbackIcon(
                         materialSymbol(
                             if (private) MaterialSymbol.Lock else MaterialSymbol.LockOpen,
                         ),
                         if (private) "当前私人收藏，切换到公开收藏" else "当前公开收藏，切换到私人收藏",
+                        selected = private,
                     )
                 }
             },
