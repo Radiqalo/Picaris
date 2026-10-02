@@ -36,14 +36,14 @@ class AppViewModel
 @Inject
 constructor(
     private val savedState: SavedStateHandle,
-    val repo: WorkRepository,
-    val auth: AuthRepository,
+    private val repo: WorkRepository,
+    internal val auth: AuthRepository,
     val settingsStore: SettingsStore,
-    val downloads: DownloadManager,
+    internal val downloads: DownloadManager,
     private val downloadEvents: DownloadEvents,
     private val downloadStorage: io.github.radiqalo.picaris.download.DownloadStorage,
-    val dao: LibraryDao,
-    val network: Network,
+    internal val dao: LibraryDao,
+    private val network: Network,
     private val pixivision: PixivisionRepository,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
@@ -98,8 +98,8 @@ constructor(
     val bookmarkStates = MutableStateFlow<Map<WorkIdentity, BookmarkState>>(emptyMap())
     val bookmarkBusy = MutableStateFlow<Set<WorkIdentity>>(emptySet())
     val comments = CommentThreads(viewModelScope, repo)
-    private val peopleFeeds = mutableMapOf<Triple<Long, String, String>, Flow<PagingData<User>>>()
-    private val followedSeriesFeeds = mutableMapOf<Pair<Long, String>, Flow<PagingData<FollowedSeries>>>()
+    private val peopleFeeds = BoundedLruCache<Triple<Long, String, String>, Flow<PagingData<User>>>()
+    private val followedSeriesFeeds = BoundedLruCache<Pair<Long, String>, Flow<PagingData<FollowedSeries>>>()
 
     fun people(section: String, restrict: String): Flow<PagingData<User>> {
         val account = accountId
@@ -118,7 +118,7 @@ constructor(
         }
     }
 
-    private val seriesDetailsCache = mutableMapOf<Triple<Long, String, Long>, SeriesDetails>()
+    private val seriesDetailsCache = BoundedLruCache<Triple<Long, String, Long>, SeriesDetails>()
 
     fun cachedSeriesDetails(kind: String, id: Long): SeriesDetails? =
         seriesDetailsCache[Triple(accountId, kind, id)]
@@ -245,27 +245,18 @@ constructor(
     suspend fun detail(initial: Work): Work =
         repo.detail(accountId, initial.id, initial.isNovel)
 
-    private val popularSearchTags = mutableMapOf<Long, Deferred<List<Tag>>>()
+    private val popularSearchTags = SingleFlightCache<Long, List<Tag>>(viewModelScope)
 
-    fun cachedTags(): List<Tag>? = popularSearchTags[accountId]?.let {
-        if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
-    }
+    fun cachedTags(): List<Tag>? = popularSearchTags.completed(accountId)
 
     suspend fun tags(): List<Tag> {
         val account = accountId
-        if (popularSearchTags[account]?.isCancelled == true) popularSearchTags.remove(account)
-        val request = popularSearchTags.getOrPut(account) { viewModelScope.async { repo.tags(account) } }
-        return try {
-            request.await()
-        } catch (error: Throwable) {
-            if (popularSearchTags[account] === request) popularSearchTags.remove(account)
-            throw error
-        }
+        return popularSearchTags.get(account) { repo.tags(account) }.await()
     }
 
     suspend fun tagSuggestions(word: String): List<String> = repo.tagSuggestions(word)
 
-    private val tagTranslationCache = mutableMapOf<String, String?>()
+    private val tagTranslationCache = BoundedLruCache<String, String?>()
     suspend fun tagTranslation(name: String): String? {
         if (tagTranslationCache.containsKey(name)) return tagTranslationCache[name]
         return repo.tagTranslation(name).also { tagTranslationCache[name] = it }
@@ -289,46 +280,28 @@ constructor(
         }
     }
 
-    private val discoveryTrends = mutableMapOf<FeedSession, Deferred<List<TrendingTag>>>()
-    private val discoveryAuthors = mutableMapOf<FeedSession, Deferred<List<UserPreview>>>()
-    private var pixivisionRequest: Deferred<List<PixivisionArticle>>? = null
-    private val authorProfiles = mutableMapOf<Pair<Long, Long>, Deferred<AuthorDetails>>()
+    private val discoveryTrends = SingleFlightCache<FeedSession, List<TrendingTag>>(viewModelScope)
+    private val discoveryAuthors = SingleFlightCache<FeedSession, List<UserPreview>>(viewModelScope)
+    private val pixivisionCache = SingleFlightCache<Unit, List<PixivisionArticle>>(viewModelScope)
+    private val authorProfiles = SingleFlightCache<Pair<Long, Long>, AuthorDetails>(viewModelScope)
     private fun discoveryKey() = FeedSession(accountId,
         FeedSpec(kind = settings.value.contentKind), settings.value.contentFilter())
-    fun cachedTrendingTags(): List<TrendingTag>? = discoveryTrends[discoveryKey()]?.let {
-        if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
-    }
-    fun cachedRecommendedAuthors(): List<UserPreview>? = discoveryAuthors[discoveryKey()]?.let {
-        if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
-    }
+    fun cachedTrendingTags(): List<TrendingTag>? = discoveryTrends.completed(discoveryKey())
+    fun cachedRecommendedAuthors(): List<UserPreview>? = discoveryAuthors.completed(discoveryKey())
 
-    fun cachedPixivisionArticles(): List<PixivisionArticle>? {
-        return pixivisionRequest?.let {
-            if (it.isCompleted && !it.isCancelled) runCatching { it.getCompleted() }.getOrNull() else null
-        }
-    }
+    fun cachedPixivisionArticles(): List<PixivisionArticle>? = pixivisionCache.completed(Unit)
 
-    suspend fun pixivisionArticles(): List<PixivisionArticle> {
-        if (pixivisionRequest?.isCancelled == true) pixivisionRequest = null
-        val request = pixivisionRequest ?: viewModelScope.async { pixivision.articles() }
-            .also { pixivisionRequest = it }
-        return request.await()
-    }
+    suspend fun pixivisionArticles(): List<PixivisionArticle> =
+        pixivisionCache.get(Unit) { pixivision.articles() }.await()
 
     suspend fun trendingTags(): List<TrendingTag> {
         val key = discoveryKey()
-        if (discoveryTrends[key]?.isCancelled == true) discoveryTrends.remove(key)
-        return discoveryTrends.getOrPut(key) { viewModelScope.async {
-            repo.trendingTags(key.account)
-        } }.await()
+        return discoveryTrends.get(key) { repo.trendingTags(key.account) }.await()
     }
 
     suspend fun recommendedAuthors(): List<UserPreview> {
         val key = discoveryKey()
-        if (discoveryAuthors[key]?.isCancelled == true) discoveryAuthors.remove(key)
-        return discoveryAuthors.getOrPut(key) { viewModelScope.async {
-            repo.recommendedAuthors(key.account)
-        } }.await()
+        return discoveryAuthors.get(key) { repo.recommendedAuthors(key.account) }.await()
     }
 
     suspend fun searchUsers(word: String): List<User> =
@@ -466,11 +439,9 @@ constructor(
 
     suspend fun authorDetails(initial: User): AuthorDetails {
         val account = accountId
-        if (authorProfiles[account to initial.id]?.isCancelled == true)
-            authorProfiles.remove(account to initial.id)
-        return authorProfiles.getOrPut(account to initial.id) { viewModelScope.async {
+        return authorProfiles.get(account to initial.id) {
             repo.authorDetails(account, initial.id)
-        } }.await()
+        }.await()
     }
 
     suspend fun user(initial: User): User =
