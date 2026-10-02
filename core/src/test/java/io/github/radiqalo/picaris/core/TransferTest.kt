@@ -84,6 +84,37 @@ class TransferTest {
     }
 
     @Test
+    fun malformedRangeMetadataDoesNotCorruptTheExistingFile() = fixture { server, file ->
+        val ranges = listOf(
+            "bytes 3-2/6", // End precedes the requested offset.
+            "bytes 3-6/6", // End lies outside the resource.
+            "bytes 3-4/6", // Body contains three bytes, range declares two.
+            "bytes 3-5/9223372036854775808", // Total overflows Long.
+        )
+        for (range in ranges) {
+            file.writeText("abc")
+            server.enqueue(
+                MockResponse().setResponseCode(206)
+                    .setHeader("Content-Range", range)
+                    .setHeader("ETag", "\"same\"")
+                    .setBody("def")
+            )
+            var progressReported = false
+            try {
+                ResumableTransfer(OkHttpClient()).transfer(
+                    server.url("/file").toString(), file, "\"same\"",
+                ) { _, _, _ ->
+                    progressReported = true
+                    true
+                }
+                fail("Accepted malformed range: $range")
+            } catch (_: IllegalStateException) {}
+            assertEquals("abc", file.readText())
+            assertFalse(progressReported)
+        }
+    }
+
+    @Test
     fun rangeNotSatisfiableRestartsOnceAndCompletes() = fixture { server, file ->
         file.writeText("abc")
         server.enqueue(MockResponse().setResponseCode(416))

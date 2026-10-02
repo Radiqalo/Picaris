@@ -56,14 +56,20 @@ class ResumableTransfer(private val client: OkHttpClient) {
                             response.header("Content-Range")?.let {
                                 Regex("bytes (\\d+)-(\\d+)/(\\d+)").matchEntire(it)
                             }
-                        if (resumed)
+                        val rangeStart = range?.groupValues?.get(1)?.toLongOrNull()
+                        val rangeEnd = range?.groupValues?.get(2)?.toLongOrNull()
+                        val rangeTotal = range?.groupValues?.get(3)?.toLongOrNull()
+                        if (resumed) {
                             check(
-                                offset > 0 &&
-                                    range != null &&
-                                    range.groupValues[1].toLong() == offset
-                            ) {
-                                "服务器返回了无效的续传范围"
+                                offset > 0 && rangeStart == offset &&
+                                    rangeEnd != null && rangeTotal != null &&
+                                    rangeEnd >= offset && rangeEnd < rangeTotal
+                            ) { "服务器返回了无效的续传范围" }
+                            val length = response.body.contentLength()
+                            check(length < 0 || length == rangeEnd - offset + 1) {
+                                "服务器返回的续传长度与范围不一致"
                             }
+                        }
                         val current =
                             response.header("ETag")?.takeUnless { it.startsWith("W/") }
                                 ?: response.header("Last-Modified")
@@ -78,7 +84,7 @@ class ResumableTransfer(private val client: OkHttpClient) {
                         }
                         val start = if (resumed) offset else 0
                         val total =
-                            if (resumed) range!!.groupValues[3].toLong()
+                            if (resumed) rangeTotal!!
                             else response.body.contentLength().coerceAtLeast(0)
                         if (!onProgress(start, total, current)) return@withContext null
                         var bytes = start
