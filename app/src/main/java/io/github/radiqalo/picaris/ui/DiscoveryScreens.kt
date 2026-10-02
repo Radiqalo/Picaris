@@ -6,8 +6,14 @@ import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
+import androidx.compose.material3.carousel.CarouselDefaults
+import androidx.compose.material3.carousel.HorizontalUncontainedCarousel
+import androidx.compose.material3.carousel.CarouselParallaxScrollEffectState
+import androidx.compose.material3.carousel.carouselParallaxScrollEffect
+import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -143,19 +149,9 @@ private fun DiscoveryLanding(
                         stringResource(R.string.discover_tags),
                         style = MaterialTheme.typography.titleMedium,
                     )
-                    val tagColors =
-                        listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.secondaryContainer,
-                            MaterialTheme.colorScheme.tertiaryContainer,
-                        )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        itemsIndexed(
-                            trends.take(3),
-                            key = { _, trend -> trend.tag.name },
-                        ) { index, trend ->
-                            val containerColor = tagColors[index % tagColors.size]
-                            Surface(
+                        items(trends, key = { it.tag.name }) { trend ->
+                            SuggestionChip(
                                 onClick = {
                                     navigate(
                                         Collection(
@@ -166,18 +162,8 @@ private fun DiscoveryLanding(
                                         ),
                                     )
                                 },
-                                modifier = Modifier.height(48.dp),
-                                shape = MaterialTheme.shapes.small,
-                                color = containerColor,
-                                contentColor = contentColorFor(containerColor),
-                            ) {
-                                Box(
-                                    Modifier.padding(horizontal = 16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    TagLabel(trend.tag)
-                                }
-                            }
+                                label = { TagLabel(trend.tag) },
+                            )
                         }
                     }
                     if (trends.size > 3) {
@@ -185,9 +171,54 @@ private fun DiscoveryLanding(
                             stringResource(R.string.discover_popular_tags),
                             style = MaterialTheme.typography.titleMedium,
                         )
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            items(trends.drop(3).take(7), key = { it.tag.name }) { trend ->
-                                Card(
+                        val popularTrends = trends.drop(3).take(7)
+                        val popularTagCarousel = rememberCarouselState(itemCount = { popularTrends.size })
+                        HorizontalUncontainedCarousel(
+                            state = popularTagCarousel,
+                            modifier = Modifier.fillMaxWidth(),
+                            itemWidth = 124.dp,
+                            itemSpacing = PixivSpacing.compact,
+                            flingBehavior = CarouselDefaults.singleAdvanceFlingBehavior(popularTagCarousel),
+                        ) { index ->
+                            val trend = popularTrends[index]
+                            val coverRatio = trend.cover.width.toFloat() / trend.cover.height.coerceAtLeast(1)
+                            val itemHeight = 204.dp
+                            val itemWidth = (itemHeight * coverRatio).coerceIn(124.dp, 240.dp)
+                            Box(
+                                Modifier
+                                    .maskClip(MaterialTheme.shapes.medium)
+                                    .width(itemWidth)
+                                    .height(itemHeight)
+                            ) {
+                                WorkImage(
+                                    trend.cover,
+                                    Modifier.fillMaxSize(),
+                                    rounded = false,
+                                    overlay = {
+                                        Box(
+                                            Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.78f)),
+                                                    ),
+                                                ),
+                                        )
+                                        Surface(
+                                            Modifier
+                                                .align(Alignment.BottomStart)
+                                                .padding(start = 8.dp, bottom = 8.dp)
+                                                .clip(MaterialTheme.shapes.small),
+                                            color = Color.Black.copy(alpha = 0.48f),
+                                            contentColor = Color.White,
+                                        ) {
+                                            Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                                TagLabel(trend.tag, translationFirst = false)
+                                            }
+                                        }
+                                    },
+                                )
+                                Surface(
                                     onClick = {
                                         navigate(
                                             Collection(
@@ -198,44 +229,16 @@ private fun DiscoveryLanding(
                                             ),
                                         )
                                     },
-                                    modifier = Modifier.width(124.dp).height(204.dp),
-                                    shape = MaterialTheme.shapes.medium,
-                                ) {
-                                    WorkImage(
-                                        trend.cover,
-                                        Modifier.fillMaxSize(),
-                                        rounded = false,
-                                        overlay = {
-                                            Box(
-                                                Modifier
-                                                    .fillMaxSize()
-                                                    .background(
-                                                        Brush.verticalGradient(
-                                                            listOf(
-                                                                Color.Transparent,
-                                                                Color.Black.copy(alpha = 0.78f),
-                                                            ),
-                                                        ),
-                                                    ),
-                                            )
-                                            Column(
-                                                Modifier
-                                                    .align(Alignment.BottomStart)
-                                                    .padding(10.dp),
-                                            ) {
-                                                CompositionLocalProvider(
-                                                    LocalContentColor provides Color.White,
-                                                ) {
-                                                    TagLabel(trend.tag, translationFirst = false)
-                                                }
-                                            }
-                                        },
-                                    )
-                                }
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(MaterialTheme.shapes.medium),
+                                    color = Color.Transparent,
+                                    contentColor = Color.Transparent,
+                                ) {}
                             }
                         }
                     }
-                    trends.take(3).forEach { trend ->
+                    trends.drop(3).take(3).forEach { trend ->
                         DiscoveryTagWorks(trend, vm, navigate, refreshVersion)
                     }
                 }
@@ -309,38 +312,85 @@ private fun DiscoveryTagWorks(
                 navigate(Collection(tag.name, "search", word = tag.name, tagCover = trend.cover))
             }) { Text("查看全部") }
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
-            if (works.itemCount == 0 && works.loadState.refresh is LoadState.Loading) {
-                items(5) {
+        val workListState = key(spec) { rememberLazyListState() }
+        val parallaxState = remember(workListState) { CarouselParallaxScrollEffectState(workListState) }
+        LazyRow(
+            state = workListState,
+            horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+            modifier = Modifier.fillMaxWidth().height(224.dp),
+        ) {
+            items(
+                count = works.itemCount.coerceAtLeast(if (works.loadState.refresh is LoadState.Loading) 5 else 0),
+                key = { index ->
+                    if (index < works.itemCount) works.peek(index)?.id ?: -(index + 1L)
+                    else Long.MIN_VALUE + index
+                },
+            ) { index ->
+                if (index >= works.itemCount) {
                     Spacer(
                         Modifier
                             .width(144.dp)
-                            .height(180.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceContainerHigh,
-                                MaterialTheme.shapes.small,
-                            ),
+                            .height(204.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     )
-                }
-            } else {
-                items(minOf(5, works.itemCount), key = { index ->
-                    works.peek(index)?.id
-                        ?: -index.toLong()
-                }) { index ->
+                } else {
                     works[index]?.let { work ->
                         val identity = work.identity(vm.accountId)
                         val current = bookmarks[identity]?.apply(work) ?: work
-                        Box(Modifier.width(180.dp * current.aspect)) {
-                            WorkCard(
-                                current,
-                                likedBusy = identity in busy,
-                                showMetadata = settings.showHomeMetadata,
-                                onLike = { vm.run { vm.bookmark(current) } },
-                                onClick = {
+                        val imageHeight = 204.dp
+                        val imageAspect = if (current.isNovel) .9f else current.aspect
+                        val cardShape = MaterialTheme.shapes.medium
+                        Box(
+                            Modifier
+                                .width(imageHeight * imageAspect)
+                                .height(imageHeight)
+                                .carouselParallaxScrollEffect(index, parallaxState, cardShape)
+                                .clickable {
                                     vm.record(current)
                                     navigate(Detail(current, spec, index))
                                 },
-                            )
+                        ) {
+                            WorkImage(
+                                current,
+                                Modifier.fillMaxSize(),
+                                sharedTransition = true,
+                            ) {
+                                if (current.page_count > 1 || current.type == "ugoira" || current.isNovel) {
+                                    Surface(
+                                        Modifier.align(Alignment.TopStart).padding(PixivSpacing.compact),
+                                        shape = MaterialTheme.shapes.small,
+                                        color = Color.Black.copy(alpha = .48f),
+                                        contentColor = Color.White,
+                                    ) {
+                                        Text(
+                                            if (current.isNovel) stringResource(R.string.content_novel)
+                                            else if (current.type == "ugoira") stringResource(R.string.ui_de9dcfdf88)
+                                            else "${current.page_count}P",
+                                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                        )
+                                    }
+                                }
+                                Surface(
+                                    onClick = { vm.run { vm.bookmark(current) } },
+                                    enabled = identity !in busy,
+                                    modifier = Modifier.align(Alignment.BottomEnd).padding(PixivSpacing.compact).size(32.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    color = Color.Black.copy(alpha = .48f),
+                                    contentColor = Color.White,
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        FeedbackIcon(
+                                            if (current.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled)
+                                            else materialSymbol(MaterialSymbol.Favorite),
+                                            null,
+                                            selected = current.is_bookmarked,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
