@@ -13,9 +13,7 @@ internal object GifEncoder {
         destination.parentFile?.mkdirs()
         BufferedOutputStream(destination.outputStream()).use { output ->
             output.write("GIF89a".toByteArray(Charsets.US_ASCII))
-            val first = zip.getInputStream(zip.getEntry(frames.first().file)
-                ?: error("动图帧缺失: ${frames.first().file}")).use(BitmapFactory::decodeStream)
-                ?: error("无法解码动图帧")
+            val first = decodeFrame(zip, frames.first(), "无法解码动图帧")
             val width = first.width
             val height = first.height
             require(width in 1..65535 && height in 1..65535) { "动图尺寸超出 GIF 格式范围" }
@@ -28,9 +26,7 @@ internal object GifEncoder {
             first.recycle()
 
             frames.forEach { frame ->
-                val bitmap = zip.getInputStream(zip.getEntry(frame.file)
-                    ?: error("动图帧缺失: ${frame.file}")).use(BitmapFactory::decodeStream)
-                    ?: error("无法解码动图帧: ${frame.file}")
+                val bitmap = decodeFrame(zip, frame, "无法解码动图帧: ${frame.file}")
                 try {
                     require(bitmap.width == width && bitmap.height == height) { "动图帧尺寸不一致" }
                     writeGraphicControl(output, ((frame.delay + 5) / 10).coerceIn(1, 65535))
@@ -50,6 +46,15 @@ internal object GifEncoder {
             }
             output.write(0x3B)
         }
+    }
+
+    private fun decodeFrame(
+        zip: ZipFile,
+        frame: Frame,
+        failureMessage: String,
+    ): android.graphics.Bitmap {
+        val entry = zip.getEntry(frame.file) ?: error("动图帧缺失: ${frame.file}")
+        return zip.getInputStream(entry).use(BitmapFactory::decodeStream) ?: error(failureMessage)
     }
 
     private fun writePalette(output: OutputStream, palette: IntArray) {

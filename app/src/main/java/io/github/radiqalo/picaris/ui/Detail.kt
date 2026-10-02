@@ -32,17 +32,7 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.designsystem.*
 import kotlinx.coroutines.launch
 
-private fun formatDownloadEstimate(bytes: Long): String =
-    when {
-        bytes >= 1024L * 1024L ->
-            String.format(
-                java.util.Locale.ROOT,
-                "约 %.1f MB",
-                bytes / (1024.0 * 1024),
-            )
-        bytes >= 1024L -> String.format(java.util.Locale.ROOT, "约 %.1f KB", bytes / 1024.0)
-        else -> "约 $bytes B"
-    }
+private fun formatDownloadEstimate(bytes: Long): String = "约 ${formatByteSize(bytes)}"
 
 @Composable
 fun DetailScreen(

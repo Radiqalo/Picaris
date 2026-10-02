@@ -18,6 +18,7 @@ import io.github.radiqalo.picaris.core.*
 import io.github.radiqalo.picaris.download.DownloadManager
 import io.github.radiqalo.picaris.download.DownloadEvents
 import io.github.radiqalo.picaris.download.resolveDownloadFolder
+import io.github.radiqalo.picaris.download.useCancellable
 import java.io.File
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
@@ -70,26 +71,32 @@ constructor(
     val active =
         accounts.map { data -> data.accounts.find { it.user.id == data.activeId } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, auth.active)
-    val history =
-        accounts.map { data -> data.accounts.find { it.user.id == data.activeId }?.user?.id ?: 0L }
-            .distinctUntilChanged()
-            .flatMapLatest { dao.history(it) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val searchHistory =
-        accounts.map { data -> data.accounts.find { it.user.id == data.activeId }?.user?.id ?: 0L }
-            .distinctUntilChanged()
-            .flatMapLatest { dao.searches(it) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val downloadList =
-        accounts.map { data -> data.accounts.find { it.user.id == data.activeId }?.user?.id ?: 0L }
-            .distinctUntilChanged()
-            .flatMapLatest { dao.downloads(it) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val cachedFeedBytes =
-        accounts.map { data -> data.accounts.find { it.user.id == data.activeId }?.user?.id ?: 0L }
-            .distinctUntilChanged()
-            .flatMapLatest { dao.cachedFeedBytes(it) }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
+        private val activeAccountIds =
+            accounts
+                .map { data ->
+                    data.accounts
+                        .find { it.user.id == data.activeId }
+                        ?.user
+                        ?.id ?: 0L
+                }.distinctUntilChanged()
+                .stateIn(viewModelScope, SharingStarted.Eagerly, accountId)
+
+        val history =
+            activeAccountIds
+                .flatMapLatest { dao.history(it) }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        val searchHistory =
+            activeAccountIds
+                .flatMapLatest { dao.searches(it) }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        val downloadList =
+            activeAccountIds
+                .flatMapLatest { dao.downloads(it) }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+        val cachedFeedBytes =
+            activeAccountIds
+                .flatMapLatest { dao.cachedFeedBytes(it) }
+                .stateIn(viewModelScope, SharingStarted.Eagerly, 0L)
     val imageCacheBytes = MutableStateFlow(0L)
 
     private val feeds =
@@ -557,16 +564,8 @@ constructor(
                     network
                         .okHttp()
                         .newCall(Request.Builder().url(metadata.zip_urls.medium).build())
-                val cancellation =
-                    launch(start = CoroutineStart.UNDISPATCHED) {
-                        try {
-                            awaitCancellation()
-                        } finally {
-                            call.cancel()
-                        }
-                    }
                 try {
-                    call.execute().use { response ->
+                        call.useCancellable { response ->
                         check(response.isSuccessful) { "动图下载失败（${response.code}）" }
                         response.body.byteStream().use { input ->
                             partial.outputStream().use { out ->
@@ -586,8 +585,6 @@ constructor(
                 } catch (e: Exception) {
                     ensureActive()
                     throw e
-                } finally {
-                    cancellation.cancel()
                 }
                 ensureActive()
                 check(partial.renameTo(file)) { "动图文件保存失败" }
@@ -639,25 +636,15 @@ constructor(
             try {
                 withContext(Dispatchers.IO) {
                     val call = network.okHttp().newCall(Request.Builder().url(url).build())
-                    val cancellation = launch(start = CoroutineStart.UNDISPATCHED) {
-                        try {
-                            awaitCancellation()
-                        } finally {
-                            call.cancel()
-                        }
-                    }
-                    try {
-                        call.execute().use { response ->
+                        call.useCancellable { response ->
                             check(response.isSuccessful) { "源文件下载失败（${response.code}）" }
-                            val output = appContext.contentResolver.openOutputStream(destination, "w")
-                                ?: error("无法写入所选文件")
+                            val output =
+                                appContext.contentResolver.openOutputStream(destination, "w")
+                                    ?: error("无法写入所选文件")
                             response.body.byteStream().use { input ->
                                 output.use { input.copyTo(it) }
                             }
                         }
-                    } finally {
-                        cancellation.cancel()
-                    }
                 }
                 message.emit("${work.title} 源文件已保存")
             } catch (error: Exception) {

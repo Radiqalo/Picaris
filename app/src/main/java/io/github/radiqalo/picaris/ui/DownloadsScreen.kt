@@ -41,31 +41,11 @@ import io.github.radiqalo.picaris.designsystem.*
 private fun downloadProgressText(
     bytes: Long,
     total: Long,
-): String {
-    fun format(size: Long): String =
-        when {
-            size >= 1024 * 1024 ->
-                String.format(
-                    java.util.Locale.ROOT,
-                    "%.1f MB",
-                    size / (1024.0 * 1024),
-                )
-            size >= 1024 -> String.format(java.util.Locale.ROOT, "%.1f KB", size / 1024.0)
-            else -> "$size B"
-        }
-    return if (total > 0) "${format(bytes)} / ${format(total)}" else format(bytes)
-}
-
-private fun downloadSizeText(size: Long): String =
-    when {
-        size >= 1024 * 1024 ->
-            String.format(
-                java.util.Locale.ROOT,
-                "%.1f MB",
-                size / (1024.0 * 1024),
-            )
-        size >= 1024 -> String.format(java.util.Locale.ROOT, "%.1f KB", size / 1024.0)
-        else -> "$size B"
+): String =
+    if (total > 0) {
+        "${formatByteSize(bytes)} / ${formatByteSize(total)}"
+    } else {
+        formatByteSize(bytes)
     }
 
 private data class DownloadSpeedSample(
@@ -690,7 +670,7 @@ fun DownloadsScreen(
                                                     if (group.bytes >
                                                         0
                                                     ) {
-                                                        downloadSizeText(group.bytes)
+                                                        formatByteSize(group.bytes)
                                                     } else {
                                                         ""
                                                     }
@@ -740,7 +720,7 @@ fun DownloadsScreen(
                                                             )
                                                             if (group.status == "running") {
                                                                 Text(
-                                                                    "${downloadSizeText(
+                                                                    "${formatByteSize(
                                                                         groupSpeed,
                                                                     )}/s",
                                                                     style = MaterialTheme.typography.bodySmall,

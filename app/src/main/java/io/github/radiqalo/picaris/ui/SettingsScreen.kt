@@ -460,9 +460,9 @@ fun SettingsScreen(
                     }
                     SettingRow(
                         stringResource(R.string.ui_92ec4c46d9),
-                        "作品列表 ${formatCacheSize(
+                        "作品列表 ${formatByteSize(
                             cachedFeedBytes,
-                        )} · 图片 ${formatCacheSize(imageCacheBytes)}",
+                        )} · 图片 ${formatByteSize(imageCacheBytes)}",
                         icon = materialSymbol(MaterialSymbol.ClearCache),
                         position = SettingsRowPosition.Last,
                     ) {
@@ -705,14 +705,6 @@ fun SettingsScreen(
                 },
             )
     }
-}
-
-private fun formatCacheSize(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val kib = bytes / 1024.0
-    if (kib < 1024) return "${"%.1f".format(java.util.Locale.ROOT, kib)} KB"
-    val mib = kib / 1024.0
-    return "${"%.1f".format(java.util.Locale.ROOT, mib)} MB"
 }
 
 @Composable
