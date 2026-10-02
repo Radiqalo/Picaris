@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -85,7 +84,7 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
                 .coerceAtMost(PixivisionMaxItemWidth)
         val heroHeight = heroWidth / PixivisionHeroAspectRatio
         if (articles.isNullOrEmpty()) {
-            val placeholderCarousel = rememberCarouselState(itemCount = { 1 })
+            val placeholderCarousel = rememberCarouselState(itemCount = { 3 })
             HorizontalCenteredHeroCarousel(
                 state = placeholderCarousel,
                 modifier = Modifier.fillMaxWidth().testTag("pixivisionCarousel"),
@@ -93,26 +92,28 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
                 minSmallItemWidth = PixivisionMinSmallItemWidth,
                 maxSmallItemWidth = PixivisionMaxSmallItemWidth,
                 itemSpacing = PixivSpacing.compact,
-            ) {
+            ) { placeholderIndex ->
                 Box(
                     Modifier
                         .maskClip(MaterialTheme.shapes.extraLarge)
-                        .width(heroWidth)
+                        .fillMaxWidth()
                         .height(heroHeight)
                         .clip(MaterialTheme.shapes.extraLarge)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(
-                        Modifier.padding(PixivSpacing.content),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
-                    ) {
-                        Text(stringResource(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
-                        if (result.failed) {
-                            Text(stringResource(R.string.pixivision_load_failed))
-                            TextButton(onClick = { retry++ }) { Text(stringResource(R.string.pixivision_retry)) }
-                        } else CircularWavyProgressIndicator(Modifier.size(32.dp))
+                    if (placeholderIndex == placeholderCarousel.currentItem) {
+                        Column(
+                            Modifier.padding(PixivSpacing.content),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+                        ) {
+                            Text(stringResource(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
+                            if (result.failed) {
+                                Text(stringResource(R.string.pixivision_load_failed))
+                                TextButton(onClick = { retry++ }) { Text(stringResource(R.string.pixivision_retry)) }
+                            } else CircularWavyProgressIndicator(Modifier.size(32.dp))
+                        }
                     }
                 }
             }
