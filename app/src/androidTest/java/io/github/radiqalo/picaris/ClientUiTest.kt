@@ -87,7 +87,7 @@ class ClientUiTest {
             val model = androidx.lifecycle.ViewModelProvider(it)[AppViewModel::class.java]
             loggedOut = model.auth.active == null
         }
-        org.junit.Assume.assumeTrue("Requires an unauthenticated QA installation", loggedOut)
+        org.junit.Assume.assumeTrue("Requires an unauthenticated Debug installation", loggedOut)
         ui.onNodeWithContentDescription("设置").performClick()
         ui.onNodeWithText("主题").performClick()
         ui.onNode(hasText("深色") and hasAnyAncestor(isDialog())).performClick()

@@ -26,26 +26,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_21
     }
     buildTypes {
-        debug { applicationIdSuffix = ".qa" }
-        create("qa") {
-            initWith(getByName("release"))
-            applicationIdSuffix = ".qa"
-            signingConfig = signingConfigs.getByName("debug")
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-            )
-            matchingFallbacks += listOf("release")
-        }
-        create("benchmark") {
-            initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("debug")
-            matchingFallbacks += listOf("release")
-            isDebuggable = false
-            isMinifyEnabled = !providers.gradleProperty("generateProfile").isPresent
-            isShrinkResources = isMinifyEnabled
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-dev"
         }
         release {
             isMinifyEnabled = true

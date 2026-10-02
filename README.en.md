@@ -50,7 +50,7 @@ Run unit tests:
 ./gradlew :app:testDebugUnitTest :core:testDebugUnitTest :designsystem:testDebugUnitTest
 ```
 
-The debug build uses the separate application ID `io.github.radiqalo.picaris.qa`, so it can be installed alongside the regular app. Release builds require your own signing configuration.
+The debug build uses the separate application ID `io.github.radiqalo.picaris.debug`, so it can be installed alongside the regular app. The app provides only Debug and Release build types. Release builds require signing configuration.
 
 ## Project structure
 

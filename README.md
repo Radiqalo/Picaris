@@ -42,6 +42,8 @@ sdk.dir=/path/to/Android/Sdk
 ./gradlew :app:assembleDebug
 ```
 
+Debug 使用独立包名 `io.github.radiqalo.picaris.debug`，可与正式版并行安装。应用仅提供 Debug 和 Release 构建类型。
+
 运行单元测试：
 
 ```sh
