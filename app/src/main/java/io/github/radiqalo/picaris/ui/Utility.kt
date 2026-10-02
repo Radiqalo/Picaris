@@ -649,15 +649,6 @@ fun SettingsScreen(vm: AppViewModel, back: () -> Unit) {
                     }
                 }
             }
-            item {
-                Text(
-                    "Picaris ${io.github.radiqalo.picaris.BuildConfig.VERSION_NAME}",
-                    Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
     when (dialog) {
