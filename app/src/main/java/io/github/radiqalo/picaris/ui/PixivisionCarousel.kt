@@ -5,11 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +49,11 @@ import io.github.radiqalo.picaris.designsystem.PixivSpacing
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
+private val PixivisionMaxItemWidth = 520.dp
+private val PixivisionMinSmallItemWidth = 36.dp
+private val PixivisionMaxSmallItemWidth = 64.dp
+private const val PixivisionHeroAspectRatio = 1.65f
+
 private data class PixivisionContent(
     val articles: List<PixivisionArticle>? = null,
     val failed: Boolean = false,
@@ -71,115 +78,122 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
         }
     }
     val articles = result.articles
-    if (articles.isNullOrEmpty()) {
-        val placeholderCarousel = rememberCarouselState(itemCount = { 1 })
-        HorizontalCenteredHeroCarousel(
-            state = placeholderCarousel,
-            modifier = Modifier.fillMaxWidth().testTag("pixivisionCarousel"),
-            maxItemWidth = 520.dp,
-            minSmallItemWidth = 36.dp,
-            maxSmallItemWidth = 64.dp,
-            itemSpacing = PixivSpacing.compact,
-        ) {
-            Box(
-                Modifier
-                    .maskClip(MaterialTheme.shapes.extraLarge)
-                    .fillMaxWidth()
-                    .aspectRatio(1.65f)
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center,
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val heroWidth =
+            (maxWidth - 2 * (PixivisionMinSmallItemWidth + PixivSpacing.compact))
+                .coerceAtLeast(0.dp)
+                .coerceAtMost(PixivisionMaxItemWidth)
+        val heroHeight = heroWidth / PixivisionHeroAspectRatio
+        if (articles.isNullOrEmpty()) {
+            val placeholderCarousel = rememberCarouselState(itemCount = { 1 })
+            HorizontalCenteredHeroCarousel(
+                state = placeholderCarousel,
+                modifier = Modifier.fillMaxWidth().testTag("pixivisionCarousel"),
+                maxItemWidth = PixivisionMaxItemWidth,
+                minSmallItemWidth = PixivisionMinSmallItemWidth,
+                maxSmallItemWidth = PixivisionMaxSmallItemWidth,
+                itemSpacing = PixivSpacing.compact,
             ) {
-                Column(
-                    Modifier.padding(PixivSpacing.content),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+                Box(
+                    Modifier
+                        .maskClip(MaterialTheme.shapes.extraLarge)
+                        .width(heroWidth)
+                        .height(heroHeight)
+                        .clip(MaterialTheme.shapes.extraLarge)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(stringResource(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
-                    if (result.failed) {
-                        Text(stringResource(R.string.pixivision_load_failed))
-                        TextButton(onClick = { retry++ }) { Text(stringResource(R.string.pixivision_retry)) }
-                    } else CircularWavyProgressIndicator(Modifier.size(32.dp))
+                    Column(
+                        Modifier.padding(PixivSpacing.content),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+                    ) {
+                        Text(stringResource(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
+                        if (result.failed) {
+                            Text(stringResource(R.string.pixivision_load_failed))
+                            TextButton(onClick = { retry++ }) { Text(stringResource(R.string.pixivision_retry)) }
+                        } else CircularWavyProgressIndicator(Modifier.size(32.dp))
+                    }
                 }
             }
-        }
-        return
-    }
-    val carousel = rememberCarouselState(itemCount = { articles.size })
-    val carouselScope = rememberCoroutineScope()
-    val pageDescription = stringResource(R.string.pixivision_page, carousel.currentItem + 1, articles.size)
-    HorizontalCenteredHeroCarousel(
-        state = carousel,
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("pixivisionCarousel")
-            .semantics { stateDescription = pageDescription },
-        maxItemWidth = 520.dp,
-        minSmallItemWidth = 36.dp,
-        maxSmallItemWidth = 64.dp,
-        itemSpacing = PixivSpacing.compact,
-    ) { articleIndex ->
-        val article = articles[articleIndex]
-        val itemInfo = carouselItemDrawInfo
-        val targetTextAlpha =
-            if (itemInfo.maxSize > 0f) {
-                (itemInfo.size / itemInfo.maxSize).coerceIn(0f, 1f)
-            } else {
-                0f
-            }
-        val textAlpha by animateFloatAsState(targetTextAlpha, label = "pixivisionTitleFade")
-        Box(
-            Modifier
-                .maskClip(MaterialTheme.shapes.extraLarge)
-                .fillMaxWidth()
-                .aspectRatio(1.65f)
-                .clip(MaterialTheme.shapes.extraLarge)
-                .clickable {
-                    if (carousel.currentItem == articleIndex) {
-                        if (article.url.isNotBlank()) {
-                            CustomTabsIntent.Builder().build().launchUrl(context, article.url.toUri())
-                        }
-                    } else {
-                        carouselScope.launch { carousel.animateScrollToItem(articleIndex) }
-                    }
-                },
-        ) {
-            AsyncImage(
-                model = article.cover,
-                contentDescription = null,
+        } else {
+            val carousel = rememberCarouselState(itemCount = { articles.size })
+            val carouselScope = rememberCoroutineScope()
+            val pageDescription = stringResource(R.string.pixivision_page, carousel.currentItem + 1, articles.size)
+            HorizontalCenteredHeroCarousel(
+                state = carousel,
                 modifier = Modifier
-                    .matchParentSize()
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentScale = ContentScale.Crop,
-            )
-            Box(
-                Modifier
-                    .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
-                        ),
-                    ),
-            )
-            Column(
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(PixivSpacing.content)
-                    .graphicsLayer { alpha = textAlpha },
-                verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
-            ) {
-                Text(
-                    stringResource(R.string.discover_pixivision),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White.copy(alpha = 0.85f),
-                )
-                Text(
-                    article.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                    .fillMaxWidth()
+                    .testTag("pixivisionCarousel")
+                    .semantics { stateDescription = pageDescription },
+                maxItemWidth = PixivisionMaxItemWidth,
+                minSmallItemWidth = PixivisionMinSmallItemWidth,
+                maxSmallItemWidth = PixivisionMaxSmallItemWidth,
+                itemSpacing = PixivSpacing.compact,
+            ) { articleIndex ->
+                val article = articles[articleIndex]
+                val itemInfo = carouselItemDrawInfo
+                val targetTextAlpha =
+                    if (itemInfo.maxSize > 0f) {
+                        (itemInfo.size / itemInfo.maxSize).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                val textAlpha by animateFloatAsState(targetTextAlpha, label = "pixivisionTitleFade")
+                Box(
+                    Modifier
+                        .maskClip(MaterialTheme.shapes.extraLarge)
+                        .fillMaxWidth()
+                        .height(heroHeight)
+                        .clip(MaterialTheme.shapes.extraLarge)
+                        .clickable {
+                            if (carousel.currentItem == articleIndex) {
+                                if (article.url.isNotBlank()) {
+                                    CustomTabsIntent.Builder().build().launchUrl(context, article.url.toUri())
+                                }
+                            } else {
+                                carouselScope.launch { carousel.animateScrollToItem(articleIndex) }
+                            }
+                        },
+                ) {
+                    AsyncImage(
+                        model = article.cover,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        contentScale = ContentScale.Crop,
+                    )
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
+                                ),
+                            ),
+                    )
+                    Column(
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(PixivSpacing.content)
+                            .graphicsLayer { alpha = textAlpha },
+                        verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
+                    ) {
+                        Text(
+                            stringResource(R.string.discover_pixivision),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.85f),
+                        )
+                        Text(
+                            article.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
     }
