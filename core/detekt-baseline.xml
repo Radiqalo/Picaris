@@ -1,0 +1,123 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:Network.kt:Network$http != null &amp;&amp; last?.let { it.proxyType == s.proxyType &amp;&amp; it.proxyHost == s.proxyHost &amp;&amp; it.proxyPort == s.proxyPort } == true</ID>
+    <ID>ComplexCondition:Pixivision.kt:title.isBlank() || cover == null || cover.scheme != "https" || !cover.host.endsWith(".pximg.net")</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorDetails$val profile_publicity: ProfilePublicity = ProfilePublicity()</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val background_image_url: String? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val birth_day: String = ""</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val birth_year: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val pawoo_url: String? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val total_follow_users: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val total_illust_bookmarks_public: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val total_illust_series: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val total_illusts: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val total_manga: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val total_novel_series: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val total_novels: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val twitter_account: String = ""</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorProfile$val twitter_url: String? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:AuthorWorkspace$val workspace_image_url: String? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Comment$val has_replies: Boolean = false</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Comment$val parent_comment: Comment? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:CommentStamp$val stamp_id: Long = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:CommentStamp$val stamp_url: String = ""</ID>
+    <ID>ConstructorParameterNaming:Models.kt:CommentsResponse$val next_url: String? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:CommentsResponse$val total_comments: Int? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:FeedResponse$val next_url: String? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:ImageUrls$val square_medium: String = ""</ID>
+    <ID>ConstructorParameterNaming:Models.kt:MetaPage$val image_urls: ImageUrls = ImageUrls()</ID>
+    <ID>ConstructorParameterNaming:Models.kt:ProfilePublicity$val birth_day: String = ""</ID>
+    <ID>ConstructorParameterNaming:Models.kt:ProfilePublicity$val birth_year: String = ""</ID>
+    <ID>ConstructorParameterNaming:Models.kt:SinglePage$val original_image_url: String = ""</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Tag$val translated_name: String? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Ugoira$val zip_urls: ZipUrls = ZipUrls()</ID>
+    <ID>ConstructorParameterNaming:Models.kt:UgoiraResponse$val ugoira_metadata: Ugoira</ID>
+    <ID>ConstructorParameterNaming:Models.kt:User$val is_followed: Boolean = false</ID>
+    <ID>ConstructorParameterNaming:Models.kt:User$val profile_image_urls: ImageUrls = ImageUrls()</ID>
+    <ID>ConstructorParameterNaming:Models.kt:UserResponse$val next_url: String? = null</ID>
+    <ID>ConstructorParameterNaming:Models.kt:UserResponse$val user_previews: List&lt;UserPreview&gt; = emptyList()</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val create_date: String = ""</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val illust_ai_type: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val image_urls: ImageUrls = ImageUrls()</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val is_bookmarked: Boolean = false</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val meta_pages: List&lt;MetaPage&gt; = emptyList()</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val meta_single_page: SinglePage = SinglePage()</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val page_count: Int = 1</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val text_length: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val total_bookmarks: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val total_view: Int = 0</ID>
+    <ID>ConstructorParameterNaming:Models.kt:Work$val x_restrict: Int = 0</ID>
+    <ID>CyclomaticComplexMethod:NovelParser.kt:@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class) fun parseNovelHtml: NovelBody</ID>
+    <ID>CyclomaticComplexMethod:Repository.kt:WorkRepository$internal fun endpoint: Pair&lt;String, Map&lt;String, String&gt;&gt;</ID>
+    <ID>CyclomaticComplexMethod:Repository.kt:WorkRepository$suspend fun seriesDetails: SeriesDetails</ID>
+    <ID>CyclomaticComplexMethod:ResumableTransfer.kt:ResumableTransfer$suspend fun transfer: TransferResult?</ID>
+    <ID>CyclomaticComplexMethod:SearchJump.kt:fun parseSearchJump: SearchJump?</ID>
+    <ID>LongMethod:ResumableTransfer.kt:ResumableTransfer$suspend fun transfer: TransferResult?</ID>
+    <ID>LoopWithTooManyJumpStatements:Repository.kt:WorkRepository$for</ID>
+    <ID>MagicNumber:DownloadNaming.kt:DownloadNaming$120</ID>
+    <ID>MagicNumber:Network.kt:AuthRepository$15</ID>
+    <ID>MagicNumber:Network.kt:AuthRepository$400</ID>
+    <ID>MagicNumber:Network.kt:AuthRepository$60_000</ID>
+    <ID>MagicNumber:Network.kt:Network$200</ID>
+    <ID>MagicNumber:Network.kt:PixivApi$401</ID>
+    <ID>MagicNumber:Network.kt:PixivApi$403</ID>
+    <ID>MagicNumber:Network.kt:PixivApi$404</ID>
+    <ID>MagicNumber:Network.kt:PixivApi$429</ID>
+    <ID>MagicNumber:Network.kt:PixivOAuth$1000</ID>
+    <ID>MagicNumber:Network.kt:PixivOAuth$3600</ID>
+    <ID>MagicNumber:Pixivision.kt:5</ID>
+    <ID>MagicNumber:Repository.kt:WorkRepository$10</ID>
+    <ID>MagicNumber:Repository.kt:WorkRepository$100</ID>
+    <ID>MagicNumber:Repository.kt:WorkRepository$10000</ID>
+    <ID>MagicNumber:Repository.kt:WorkRepository$140</ID>
+    <ID>MagicNumber:ResumableTransfer.kt:ResumableTransfer$300</ID>
+    <ID>MagicNumber:ResumableTransfer.kt:ResumableTransfer$416</ID>
+    <ID>MagicNumber:Storage.kt:TokenVault$12</ID>
+    <ID>MatchingDeclarationName:Repository.kt:WorkRepository</ID>
+    <ID>MaxLineLength:ContentTest.kt:ContentTest$"""{"id":123,"title":"work","unknown":true,"series":null,"tags":[{"name":"x","translated_name":null}]}"""</ID>
+    <ID>MaxLineLength:DownloadNaming.kt:DownloadNaming$fun</ID>
+    <ID>MaxLineLength:Network.kt:PixivApi$header(HttpHeaders.UserAgent, "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/132.0.0.0 Mobile Safari/537.36")</ID>
+    <ID>MaxLineLength:Repository.kt:WorkRepository$"${if(work.is_bookmarked) "v1" else "v2"}/${if(work.isNovel) "novel" else "illust"}/bookmark/${if(work.is_bookmarked) "delete" else "add"}"</ID>
+    <ID>MaxLineLength:Storage.kt:LibraryDao$"UPDATE downloads SET status='queued',error='',url=:url,workJson=:json,name=COALESCE(:name,name) WHERE id=:id AND status NOT IN ('queued','running')"</ID>
+    <ID>MaxLineLength:Storage.kt:LibraryDao$@Query("SELECT COUNT(*) FROM downloads WHERE accountId=:account AND workId=:work AND status IN ('queued','running')")</ID>
+    <ID>MaxLineLength:Storage.kt:LibraryDao$@Query("UPDATE downloads SET status='queued',error='',bytes=0,total=0,uri='',etag='' WHERE id=:id AND status='complete'")</ID>
+    <ID>ReturnCount:NovelParser.kt:fun imageUrl: String?</ID>
+    <ID>ReturnCount:Repository.kt:WorkRepository$private fun JsonObject.seriesCover: String</ID>
+    <ID>ReturnCount:Repository.kt:WorkRepository$suspend fun isPrivatelyFollowing: Boolean</ID>
+    <ID>ReturnCount:SearchJump.kt:fun parseSearchJump: SearchJump?</ID>
+    <ID>ThrowsCount:Repository.kt:WorkRepository$suspend fun novel: NovelBody</ID>
+    <ID>ThrowsCount:Repository.kt:WorkRepository$suspend fun ugoira: Ugoira</ID>
+    <ID>TooGenericExceptionCaught:Repository.kt:WorkRepository$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Repository.kt:WorkRepository.&lt;no name provided&gt;$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ResumableTransfer.kt:ResumableTransfer$e: Exception</ID>
+    <ID>TooManyFunctions:Repository.kt:WorkRepository</ID>
+    <ID>TooManyFunctions:Storage.kt:LibraryDao</ID>
+    <ID>WildcardImport:AuthConcurrencyTest.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:AuthConcurrencyTest.kt:import org.junit.Assert.*</ID>
+    <ID>WildcardImport:ContentTest.kt:import org.junit.Assert.*</ID>
+    <ID>WildcardImport:Network.kt:import io.ktor.client.request.*</ID>
+    <ID>WildcardImport:Network.kt:import io.ktor.client.request.forms.*</ID>
+    <ID>WildcardImport:Network.kt:import io.ktor.client.statement.*</ID>
+    <ID>WildcardImport:Network.kt:import io.ktor.http.*</ID>
+    <ID>WildcardImport:Network.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:Network.kt:import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:Network.kt:import kotlinx.serialization.json.*</ID>
+    <ID>WildcardImport:NovelParser.kt:import kotlinx.serialization.json.*</ID>
+    <ID>WildcardImport:NovelParserTest.kt:import org.junit.Assert.*</ID>
+    <ID>WildcardImport:Repository.kt:import androidx.paging.*</ID>
+    <ID>WildcardImport:Repository.kt:import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:Repository.kt:import kotlinx.serialization.json.*</ID>
+    <ID>WildcardImport:ResumableTransfer.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:RetainedFeedStore.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:RetainedFeedTest.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:RetainedFeedTest.kt:import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:RetainedFeedTest.kt:import org.junit.Assert.*</ID>
+    <ID>WildcardImport:SocialProtocolTest.kt:import org.junit.Assert.*</ID>
+    <ID>WildcardImport:Storage.kt:import androidx.room.*</ID>
+    <ID>WildcardImport:Storage.kt:import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:TransferTest.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:TransferTest.kt:import org.junit.Assert.*</ID>
+  </CurrentIssues>
+</SmellBaseline>

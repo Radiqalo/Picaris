@@ -1,0 +1,468 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:Art.kt:size.width.isFinite() &amp;&amp; size.height.isFinite() &amp;&amp; size.width &gt; 0f &amp;&amp; size.height &gt; 0f</ID>
+    <ID>ComplexCondition:CommentThreads.kt:CommentThreads$old.loading || (!refresh &amp;&amp; old.loaded &amp;&amp; old.next == null &amp;&amp; old.error == null)</ID>
+    <ID>ComplexCondition:DownloadStorage.kt:DownloadStorage$matches(task.uri, dest, target) &amp;&amp; (task.coverUri.isEmpty() || privateNovelCover || matches(task.coverUri, dest, coverName))</ID>
+    <ID>ComplexCondition:NavigationArtwork.kt:NavigationArtwork$disposed || coordinator.phase == NavigationTransitionPhase.Previewing || (pending.isEmpty() &amp;&amp; flights.isEmpty())</ID>
+    <ID>ComplexCondition:NavigationArtwork.kt:painter != null &amp;&amp; intrinsic != null &amp;&amp; intrinsic.width.isFinite() &amp;&amp; intrinsic.height.isFinite() &amp;&amp; intrinsic.width &gt; 0f &amp;&amp; intrinsic.height &gt; 0f</ID>
+    <ID>ComplexCondition:NavigationArtwork.kt:source.size.width &gt; 0 &amp;&amp; source.size.height &gt; 0 &amp;&amp; bounds.width &gt; 0f &amp;&amp; bounds.height &gt; 0f</ID>
+    <ID>ComplexCondition:NavigationMotion.kt:visible &amp;&amp; !seeking &amp;&amp; !artwork.isActive &amp;&amp; !coordinator.hasAnimations &amp;&amp; kotlin.math.abs(rounding - roundingTarget) &lt; 0.001f &amp;&amp; transitions.none { it.isRunning || it.currentState != it.targetState }</ID>
+    <ID>ComplexCondition:NavigationTransitionCoordinator.kt:NavigationInteractionNode$!permission.value() || coordinator?.phase == NavigationTransitionPhase.Previewing || (claim != null &amp;&amp; (!claim.accepted || claim.epoch != coordinator?.interactionEpoch))</ID>
+    <ID>ComplexCondition:NavigationTransitionCoordinator.kt:NavigationTransitionCoordinator$disposed || id != transitionId || phase == NavigationTransitionPhase.Previewing || hasAnimations</ID>
+    <ID>CyclomaticComplexMethod:App.kt:@Composable fun HomeScreen</ID>
+    <ID>CyclomaticComplexMethod:App.kt:@Composable fun PixivApp</ID>
+    <ID>CyclomaticComplexMethod:AppViewModel.kt:AppViewModel$fun importAppData</ID>
+    <ID>CyclomaticComplexMethod:AppViewModel.kt:AppViewModel$private suspend fun ugoiraArchive: Pair&lt;Ugoira, File&gt;</ID>
+    <ID>CyclomaticComplexMethod:AuthorProfile.kt:@Composable fun AuthorProfileContent</ID>
+    <ID>CyclomaticComplexMethod:CommentThreads.kt:CommentThreads$fun load</ID>
+    <ID>CyclomaticComplexMethod:Detail.kt:@Composable fun AuthorScreen</ID>
+    <ID>CyclomaticComplexMethod:Detail.kt:@Composable fun DetailScreen</ID>
+    <ID>CyclomaticComplexMethod:DetailPager.kt:@Composable fun DetailPagerScreen</ID>
+    <ID>CyclomaticComplexMethod:DownloadSettings.kt:@Composable @OptIn(ExperimentalLayoutApi::class) private fun TokenEditor</ID>
+    <ID>CyclomaticComplexMethod:DownloadSettings.kt:@Composable internal fun DownloadSettingsRows</ID>
+    <ID>CyclomaticComplexMethod:DownloadStorage.kt:DownloadStorage$fun write: Uri</ID>
+    <ID>CyclomaticComplexMethod:DownloadStorage.kt:DownloadStorage$private suspend fun organizeFolder</ID>
+    <ID>CyclomaticComplexMethod:DownloadStorage.kt:DownloadStorage$suspend fun organize: Pair&lt;Int, Int&gt;</ID>
+    <ID>CyclomaticComplexMethod:Downloads.kt:DownloadManager$suspend fun enqueue: DownloadEnqueueResult</ID>
+    <ID>CyclomaticComplexMethod:Downloads.kt:DownloadManager$suspend fun removeRecords</ID>
+    <ID>CyclomaticComplexMethod:Downloads.kt:DownloadService$private suspend fun transfer</ID>
+    <ID>CyclomaticComplexMethod:Feeds.kt:@Composable fun FeedGrid</ID>
+    <ID>CyclomaticComplexMethod:Feeds.kt:@Composable fun SearchScreen</ID>
+    <ID>CyclomaticComplexMethod:Feeds.kt:@Composable fun WorkCard</ID>
+    <ID>CyclomaticComplexMethod:Feeds.kt:@Composable private fun DiscoveryLanding</ID>
+    <ID>CyclomaticComplexMethod:GifEncoder.kt:GifEncoder$private fun quantize: IndexedImage</ID>
+    <ID>CyclomaticComplexMethod:NavigationArtwork.kt:NavigationArtwork$fun refreshTargets</ID>
+    <ID>CyclomaticComplexMethod:NavigationArtwork.kt:NavigationArtwork$private fun animate</ID>
+    <ID>CyclomaticComplexMethod:NavigationMotion.kt:@Composable internal fun NavigationPage</ID>
+    <ID>CyclomaticComplexMethod:NavigationMotion.kt:NavigationMotion$fun forward: ContentTransform</ID>
+    <ID>CyclomaticComplexMethod:NavigationTransitionCoordinator.kt:NavigationTransitionCoordinator$fun commit</ID>
+    <ID>CyclomaticComplexMethod:Reader.kt:@Composable fun NovelReader</ID>
+    <ID>CyclomaticComplexMethod:Reader.kt:@Composable fun ReaderScreen</ID>
+    <ID>CyclomaticComplexMethod:Social.kt:@Composable fun PeopleScreen</ID>
+    <ID>CyclomaticComplexMethod:Utility.kt:@Composable fun SettingsScreen</ID>
+    <ID>CyclomaticComplexMethod:Utility.kt:@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class) @Composable fun DownloadsScreen</ID>
+    <ID>FunctionNaming:App.kt:@Composable fun HomeScreen</ID>
+    <ID>FunctionNaming:App.kt:@Composable fun PixivApp</ID>
+    <ID>FunctionNaming:Art.kt:@Composable fun WorkImage</ID>
+    <ID>FunctionNaming:Art.kt:@Composable internal fun NavigationSceneContent</ID>
+    <ID>FunctionNaming:Art.kt:@Composable internal fun NavigationVisualContent</ID>
+    <ID>FunctionNaming:AuthorProfile.kt:@Composable fun AuthorProfileContent</ID>
+    <ID>FunctionNaming:AuthorProfile.kt:@Composable private fun ProfileField</ID>
+    <ID>FunctionNaming:BottomNavigationPages.kt:@Composable internal fun BottomNavigationPages</ID>
+    <ID>FunctionNaming:Detail.kt:@Composable fun AuthorScreen</ID>
+    <ID>FunctionNaming:Detail.kt:@Composable fun DetailScreen</ID>
+    <ID>FunctionNaming:Detail.kt:@Composable private fun DetailArtworkFlow</ID>
+    <ID>FunctionNaming:Detail.kt:@Composable private fun DetailArtworkPage</ID>
+    <ID>FunctionNaming:Detail.kt:@Composable private fun RelatedWorkStrip</ID>
+    <ID>FunctionNaming:DetailPager.kt:@Composable fun DetailPagerScreen</ID>
+    <ID>FunctionNaming:DownloadSettings.kt:@Composable @OptIn(ExperimentalLayoutApi::class) private fun TokenEditor</ID>
+    <ID>FunctionNaming:DownloadSettings.kt:@Composable internal fun DownloadSettingsRows</ID>
+    <ID>FunctionNaming:Feedback.kt:@Composable fun FeedbackIcon</ID>
+    <ID>FunctionNaming:Feedback.kt:@Composable fun FeedbackSwitch</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun Avatar</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun BookmarkScreen</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun ChoiceChips</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun CollectionScreen</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun ContentKindAction</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun DiscoverScreen</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun EmptyState</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun FeedGrid</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun FollowScreen</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun LoadingState</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun RecommendedHomeScreen</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun ScreenBar</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun ScrollingScreen</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun SearchScreen</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun UserRow</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable fun WorkCard</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun DiscoveryAuthorCard</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun DiscoveryLanding</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun DiscoveryPlaceholders</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun DiscoveryTagWorks</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun FeedAppendState</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun FeedGridStatus</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun FollowedSeriesList</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun FollowedSeriesScreen</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun NovelListItem</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun RankingPages</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun SeriesHeader</ID>
+    <ID>FunctionNaming:Feeds.kt:@Composable private fun SeriesOverlayActions</ID>
+    <ID>FunctionNaming:HomeNavigationBar.kt:@Composable internal fun HomeNavigationBar</ID>
+    <ID>FunctionNaming:NavigationArtwork.kt:@Composable internal fun NavigationArtworkOverlay</ID>
+    <ID>FunctionNaming:NavigationMotion.kt:@Composable internal fun NavigationPage</ID>
+    <ID>FunctionNaming:NavigationMotion.kt:@Composable internal fun NavigationPageDisplay</ID>
+    <ID>FunctionNaming:PixivisionCarousel.kt:@Composable fun PixivisionCarousel</ID>
+    <ID>FunctionNaming:Reader.kt:@Composable fun NovelReader</ID>
+    <ID>FunctionNaming:Reader.kt:@Composable fun ReaderScreen</ID>
+    <ID>FunctionNaming:Reader.kt:@Composable fun UgoiraPlayer</ID>
+    <ID>FunctionNaming:Reader.kt:@Composable private fun ReaderImage</ID>
+    <ID>FunctionNaming:Sheets.kt:@Composable fun ActionSheet</ID>
+    <ID>FunctionNaming:Sheets.kt:@Composable fun DateSelectionSheet</ID>
+    <ID>FunctionNaming:Social.kt:@Composable fun CommentPreview</ID>
+    <ID>FunctionNaming:Social.kt:@Composable fun CommentsScreen</ID>
+    <ID>FunctionNaming:Social.kt:@Composable fun PeopleScreen</ID>
+    <ID>FunctionNaming:Social.kt:@Composable fun RepliesScreen</ID>
+    <ID>FunctionNaming:Social.kt:@Composable private fun CommentCard</ID>
+    <ID>FunctionNaming:Social.kt:@Composable private fun CommentFooter</ID>
+    <ID>FunctionNaming:Social.kt:@Composable private fun CommentInputBar</ID>
+    <ID>FunctionNaming:Social.kt:@Composable private fun ThreadScreen</ID>
+    <ID>FunctionNaming:TagLabel.kt:@Composable internal fun TagLabel</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun AboutScreen</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun AccountScreen</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun HistoryScreen</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun LoginScreen</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun ProfileScreen</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun ProxyDialog</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun SettingRow</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun SettingsGroup</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun SettingsScreen</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable fun UtilityScreen</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable private fun AboutInfoRow</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable private fun ProfileLibraryActions</ID>
+    <ID>FunctionNaming:Utility.kt:@Composable private fun SettingChoiceBlock</ID>
+    <ID>FunctionNaming:Utility.kt:@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class) @Composable fun DownloadsScreen</ID>
+    <ID>LargeClass:AppViewModel.kt:AppViewModel : ViewModel</ID>
+    <ID>LongMethod:App.kt:@Composable fun HomeScreen</ID>
+    <ID>LongMethod:App.kt:@Composable fun PixivApp</ID>
+    <ID>LongMethod:AppViewModel.kt:AppViewModel$private suspend fun ugoiraArchive: Pair&lt;Ugoira, File&gt;</ID>
+    <ID>LongMethod:AuthorProfile.kt:@Composable fun AuthorProfileContent</ID>
+    <ID>LongMethod:Detail.kt:@Composable fun AuthorScreen</ID>
+    <ID>LongMethod:Detail.kt:@Composable fun DetailScreen</ID>
+    <ID>LongMethod:DetailPager.kt:@Composable fun DetailPagerScreen</ID>
+    <ID>LongMethod:DownloadSettings.kt:@Composable @OptIn(ExperimentalLayoutApi::class) private fun TokenEditor</ID>
+    <ID>LongMethod:DownloadSettings.kt:@Composable internal fun DownloadSettingsRows</ID>
+    <ID>LongMethod:DownloadStorage.kt:DownloadStorage$suspend fun organize: Pair&lt;Int, Int&gt;</ID>
+    <ID>LongMethod:Downloads.kt:DownloadManager$suspend fun enqueue: DownloadEnqueueResult</ID>
+    <ID>LongMethod:Feeds.kt:@Composable fun CollectionScreen</ID>
+    <ID>LongMethod:Feeds.kt:@Composable fun FeedGrid</ID>
+    <ID>LongMethod:Feeds.kt:@Composable fun SearchScreen</ID>
+    <ID>LongMethod:Feeds.kt:@Composable fun WorkCard</ID>
+    <ID>LongMethod:Feeds.kt:@Composable private fun DiscoveryLanding</ID>
+    <ID>LongMethod:Feeds.kt:@Composable private fun FollowedSeriesList</ID>
+    <ID>LongMethod:Feeds.kt:@Composable private fun SeriesHeader</ID>
+    <ID>LongMethod:GifEncoder.kt:GifEncoder$private fun quantize: IndexedImage</ID>
+    <ID>LongMethod:HomeNavigationBar.kt:@Composable internal fun HomeNavigationBar</ID>
+    <ID>LongMethod:NavigationMotion.kt:@Composable internal fun NavigationPage</ID>
+    <ID>LongMethod:NavigationMotion.kt:@Composable internal fun NavigationPageDisplay</ID>
+    <ID>LongMethod:PixivisionCarousel.kt:@Composable fun PixivisionCarousel</ID>
+    <ID>LongMethod:Reader.kt:@Composable fun NovelReader</ID>
+    <ID>LongMethod:Reader.kt:@Composable fun ReaderScreen</ID>
+    <ID>LongMethod:Social.kt:@Composable fun PeopleScreen</ID>
+    <ID>LongMethod:Social.kt:@Composable private fun ThreadScreen</ID>
+    <ID>LongMethod:Utility.kt:@Composable fun AboutScreen</ID>
+    <ID>LongMethod:Utility.kt:@Composable fun AccountScreen</ID>
+    <ID>LongMethod:Utility.kt:@Composable fun HistoryScreen</ID>
+    <ID>LongMethod:Utility.kt:@Composable fun LoginScreen</ID>
+    <ID>LongMethod:Utility.kt:@Composable fun ProfileScreen</ID>
+    <ID>LongMethod:Utility.kt:@Composable fun SettingsScreen</ID>
+    <ID>LongMethod:Utility.kt:@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class) @Composable fun DownloadsScreen</ID>
+    <ID>LoopWithTooManyJumpStatements:Downloads.kt:DownloadManager$for</ID>
+    <ID>LoopWithTooManyJumpStatements:GifEncoder.kt:GifEncoder$while</ID>
+    <ID>MagicNumber:App.kt:3</ID>
+    <ID>MagicNumber:AppViewModel.kt:AppViewModel$100</ID>
+    <ID>MagicNumber:AppViewModel.kt:AppViewModel$10000</ID>
+    <ID>MagicNumber:AppViewModel.kt:AppViewModel$1024</ID>
+    <ID>MagicNumber:AppViewModel.kt:AppViewModel$16</ID>
+    <ID>MagicNumber:AppViewModel.kt:AppViewModel$1600</ID>
+    <ID>MagicNumber:AppViewModel.kt:AppViewModel$256</ID>
+    <ID>MagicNumber:AppViewModel.kt:AppViewModel$32</ID>
+    <ID>MagicNumber:AuthorProfile.kt:.85f</ID>
+    <ID>MagicNumber:BottomNavigationPages.kt:0.6f</ID>
+    <ID>MagicNumber:BottomNavigationPages.kt:6f</ID>
+    <ID>MagicNumber:Detail.kt:.75f</ID>
+    <ID>MagicNumber:Detail.kt:0.72f</ID>
+    <ID>MagicNumber:Detail.kt:1024</ID>
+    <ID>MagicNumber:Detail.kt:1024.0</ID>
+    <ID>MagicNumber:Detail.kt:1024L</ID>
+    <ID>MagicNumber:Detail.kt:3</ID>
+    <ID>MagicNumber:Detail.kt:5</ID>
+    <ID>MagicNumber:Downloads.kt:80</ID>
+    <ID>MagicNumber:Downloads.kt:DownloadManager$1001</ID>
+    <ID>MagicNumber:Downloads.kt:DownloadManager$5</ID>
+    <ID>MagicNumber:Downloads.kt:DownloadService$100</ID>
+    <ID>MagicNumber:Downloads.kt:DownloadService$2001</ID>
+    <ID>MagicNumber:Feeds.kt:.5f</ID>
+    <ID>MagicNumber:Feeds.kt:.75f</ID>
+    <ID>MagicNumber:Feeds.kt:.9f</ID>
+    <ID>MagicNumber:Feeds.kt:0xFFFF80A2</ID>
+    <ID>MagicNumber:Feeds.kt:1000</ID>
+    <ID>MagicNumber:Feeds.kt:10000</ID>
+    <ID>MagicNumber:Feeds.kt:10000f</ID>
+    <ID>MagicNumber:Feeds.kt:1000f</ID>
+    <ID>MagicNumber:Feeds.kt:120</ID>
+    <ID>MagicNumber:Feeds.kt:3</ID>
+    <ID>MagicNumber:Feeds.kt:300</ID>
+    <ID>MagicNumber:Feeds.kt:4</ID>
+    <ID>MagicNumber:Feeds.kt:5</ID>
+    <ID>MagicNumber:Feeds.kt:6</ID>
+    <ID>MagicNumber:Feeds.kt:8</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x03</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x0B</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x21</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x2C</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x2E</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x30</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x32</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x3B</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x41</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x43</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x45</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x4E</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x50</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x53</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x54</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x70</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0x87</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0xF9</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$0xFF</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$10</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$12</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$16</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$256</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$258</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$4</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$4096</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$5</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$65535</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$8</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder$9</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder.GifBitWriter$0xFF</ID>
+    <ID>MagicNumber:GifEncoder.kt:GifEncoder.GifBitWriter$8</ID>
+    <ID>MagicNumber:NavigationArtwork.kt:NavigationArtwork$0.001f</ID>
+    <ID>MagicNumber:NavigationArtwork.kt:NavigationArtwork$0.1f</ID>
+    <ID>MagicNumber:NavigationMotion.kt:0.001f</ID>
+    <ID>MagicNumber:NavigationMotion.kt:NavigationMotion$0.01f</ID>
+    <ID>MagicNumber:NavigationMotion.kt:NavigationMotion$1.5f</ID>
+    <ID>MagicNumber:NavigationTransitionCoordinator.kt:NavigationTransitionCoordinator$0.001f</ID>
+    <ID>MagicNumber:NavigationTransitionCoordinator.kt:NavigationTransitionCoordinator$0.1f</ID>
+    <ID>MagicNumber:PixivisionCarousel.kt:1.65f</ID>
+    <ID>MagicNumber:Social.kt:16</ID>
+    <ID>MagicNumber:Social.kt:3</ID>
+    <ID>MagicNumber:Utility.kt:.78f</ID>
+    <ID>MagicNumber:Utility.kt:.9f</ID>
+    <ID>MagicNumber:Utility.kt:0xFF0061A4</ID>
+    <ID>MagicNumber:Utility.kt:0xFF006874</ID>
+    <ID>MagicNumber:Utility.kt:0xFF006C65</ID>
+    <ID>MagicNumber:Utility.kt:0xFF006D8F</ID>
+    <ID>MagicNumber:Utility.kt:0xFF386A20</ID>
+    <ID>MagicNumber:Utility.kt:0xFF386A5B</ID>
+    <ID>MagicNumber:Utility.kt:0xFF4F378B</ID>
+    <ID>MagicNumber:Utility.kt:0xFF565D6E</ID>
+    <ID>MagicNumber:Utility.kt:0xFF565D7E</ID>
+    <ID>MagicNumber:Utility.kt:0xFF596400</ID>
+    <ID>MagicNumber:Utility.kt:0xFF6256CA</ID>
+    <ID>MagicNumber:Utility.kt:0xFF6750A4</ID>
+    <ID>MagicNumber:Utility.kt:0xFF705746</ID>
+    <ID>MagicNumber:Utility.kt:0xFF7A5900</ID>
+    <ID>MagicNumber:Utility.kt:0xFF7D5260</ID>
+    <ID>MagicNumber:Utility.kt:0xFF825500</ID>
+    <ID>MagicNumber:Utility.kt:0xFF984061</ID>
+    <ID>MagicNumber:Utility.kt:0xFF9B4428</ID>
+    <ID>MagicNumber:Utility.kt:0xFF9C4146</ID>
+    <ID>MagicNumber:Utility.kt:0xFFBA1A1A</ID>
+    <ID>MagicNumber:Utility.kt:10</ID>
+    <ID>MagicNumber:Utility.kt:100</ID>
+    <ID>MagicNumber:Utility.kt:1024</ID>
+    <ID>MagicNumber:Utility.kt:1024.0</ID>
+    <ID>MagicNumber:Utility.kt:110</ID>
+    <ID>MagicNumber:Utility.kt:160</ID>
+    <ID>MagicNumber:Utility.kt:1_000L</ID>
+    <ID>MagicNumber:Utility.kt:3</ID>
+    <ID>MagicNumber:Utility.kt:7890</ID>
+    <ID>MagicNumber:Utility.kt:90f</ID>
+    <ID>MaxLineLength:App.kt:AuthorScreen(it.user, vm, guardedNavigation(navigate), guardedBack(back))</ID>
+    <ID>MaxLineLength:App.kt:CommentsScreen(it.work, vm, guardedNavigation(navigate), guardedBack(back))</ID>
+    <ID>MaxLineLength:App.kt:ScrollingScreen { ReaderScreen(it.work, vm, guardedBack(back), it.initialPage, it.localUris) }</ID>
+    <ID>MaxLineLength:App.kt:ScrollingScreen { RepliesScreen(it, vm, guardedNavigation(navigate), guardedBack(back)) }</ID>
+    <ID>MaxLineLength:App.kt:ScrollingScreen { SearchScreen(vm, guardedNavigation(navigate), guardedBack(back)) }</ID>
+    <ID>MaxLineLength:App.kt:ScrollingScreen { SearchScreen(vm, guardedNavigation(navigate), guardedBack(back), it.query) }</ID>
+    <ID>MaxLineLength:App.kt:ScrollingScreen(scrollBehaviorEnabled = false) { PeopleScreen(it, vm, guardedNavigation(navigate), guardedBack(back)) }</ID>
+    <ID>MaxLineLength:App.kt:ScrollingScreen(scrollBehaviorEnabled = it.section == "ranking") { CollectionScreen(it, vm, guardedNavigation(navigate), guardedBack(back)) }</ID>
+    <ID>MaxLineLength:App.kt:UtilityScreen(it.page, vm, guardedNavigation(navigate), guardedBack(back))</ID>
+    <ID>MaxLineLength:App.kt:entry</ID>
+    <ID>MaxLineLength:App.kt:icon = { FeedbackIcon(if (tab == index) selectedIcons[index] else icons[index], title, tab == index) }</ID>
+    <ID>MaxLineLength:App.kt:materialSymbol(MaterialSymbol.Feed)</ID>
+    <ID>MaxLineLength:App.kt:materialSymbol(MaterialSymbol.FeedFilled)</ID>
+    <ID>MaxLineLength:App.kt:val clipboard = context.getSystemService(android.content.ClipboardManager::class.java)</ID>
+    <ID>MaxLineLength:App.kt:val detailStrategy = remember(strategy, coordinator) { DetailSceneStrategy(strategy, coordinator) }</ID>
+    <ID>MaxLineLength:AppViewModel.kt:AppViewModel$dao.restoreDownloads(backup.downloads.map { if (it.status == "running") it.copy(status = "paused") else it })</ID>
+    <ID>MaxLineLength:Detail.kt:AppIcon(if (work.isNovel) materialSymbol(MaterialSymbol.Book) else materialSymbol(MaterialSymbol.PlayArrow), null)</ID>
+    <ID>MaxLineLength:Detail.kt:if (current.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite)</ID>
+    <ID>MaxLineLength:Detail.kt:leadingContent = { AppIcon(if (work.isNovel) materialSymbol(MaterialSymbol.Book) else materialSymbol(MaterialSymbol.PlayArrow), null) }</ID>
+    <ID>MaxLineLength:Detail.kt:modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = informationGap)</ID>
+    <ID>MaxLineLength:Detail.kt:val updated = if (isBlocked) ids.filterNot { it == user.id.toString() } else ids + user.id.toString()</ID>
+    <ID>MaxLineLength:Detail.kt:}</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:DownloadNaming.separators.size - 1 -&gt; ButtonGroupDefaults.connectedTrailingButtonShapes()</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:FlowRow</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:Row</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:SettingRow</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:Text("p0 页面省略", style = MaterialTheme.typography.labelSmall, modifier = Modifier.clickable { omitZero = !omitZero })</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:Text(DownloadNaming.preview(parts, omitZero = omitZero, separator = selectedSeparator) + if (author) "" else ".jpg", Modifier.padding(16.dp))</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:Text(DownloadNaming.tokens[token] ?: token, style = MaterialTheme.typography.labelSmall, maxLines = 1)</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:TokenEditor</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:else</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:if</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:label</ID>
+    <ID>MaxLineLength:DownloadSettings.kt:private</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$"${MediaStore.MediaColumns.RELATIVE_PATH} = ?"</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$context.contentResolver</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$context.contentResolver.openInputStream(uri)?.use { input -&gt; temp.outputStream().use { input.copyTo(it) } }</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$else</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$if</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$if (name.endsWith("_frames.json")) "_frames.json" else if (name.endsWith("_ugoira.zip")) "_ugoira.zip" else "." + name.substringAfterLast('.')</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$if (task.coverUri.isNotEmpty() &amp;&amp; !privateNovelCover) runCatching { deleteSourceAndPrune(task.coverUri.toUri()) }</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$newCover = write(dest, target.substringBeforeLast('.') + "_cover.jpg", "image/jpeg", file).toString()</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$null</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$return Destination(tree, (if (tree.isEmpty()) listOf(base) else emptyList&lt;String&gt;()).plus(parts).joinToString("/"))</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$return DownloadNaming.render(s.downloadFileTokens, work, task.page, s.downloadOmitPageZero, s.downloadFileSeparator) + ".$extension"</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$runCatching { AppJson.decodeFromString&lt;List&lt;String&gt;&gt;(existing.key).take(2) == identity.take(2) }.getOrDefault(false)</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$val</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$val base = DownloadNaming.render(s.downloadFileTokens, work, omitZero = true, separator = s.downloadFileSeparator)</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$val base = when (task.kind) { "novel" -&gt; "Documents/Picaris"; "ugoira-originals" -&gt; "Download/Picaris"; else -&gt; "Pictures/Picaris" }</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$val desired = if (dest.tree.isEmpty()) "media-folder|${nested.path}/" else "saf-folder|${dest.tree}|${nested.path}"</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$val folder = DocumentFile.fromTreeUri(context, tree.toUri())?.let { resolveDownloadFolder(it, name) } ?: error("原目录不可用")</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$val folderName = DownloadNaming.render(s.downloadFileTokens, work, omitZero = true, separator = s.downloadFileSeparator) + "_${task.id}"</ID>
+    <ID>MaxLineLength:DownloadStorage.kt:DownloadStorage$val requested = DownloadNaming.render(s.downloadAuthorTokens, work, separator = s.downloadAuthorSeparator)</ID>
+    <ID>MaxLineLength:Downloads.kt:DownloadManager$"${work.id}_p${index}.${url.toUri().lastPathSegment?.substringAfterLast('.')?.takeIf { it.length in 2..5 } ?: "jpg"}"</ID>
+    <ID>MaxLineLength:Downloads.kt:DownloadManager$DocumentFile.fromTreeUri(context, tree.toUri())?.let { resolveDownloadFolder(it, name) }?.isDirectory == true</ID>
+    <ID>MaxLineLength:Feeds.kt:IconButton(back) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), stringResource(R.string.ui_11d0241540)) }</ID>
+    <ID>MaxLineLength:Feeds.kt:Text</ID>
+    <ID>MaxLineLength:Feeds.kt:icon = { AppIcon(materialSymbol(MaterialSymbol.History), null, Modifier.size(16.dp)) }</ID>
+    <ID>MaxLineLength:Feeds.kt:if (afterHeader != null) item(span = StaggeredGridItemSpan.FullLine, key = "feed_after_header") { afterHeader() }</ID>
+    <ID>MaxLineLength:Feeds.kt:if (work.is_bookmarked) materialSymbol(MaterialSymbol.FavoriteFilled) else materialSymbol(MaterialSymbol.Favorite)</ID>
+    <ID>MaxLineLength:Feeds.kt:val</ID>
+    <ID>MaxLineLength:Feeds.kt:}</ID>
+    <ID>MaxLineLength:GifEncoder.kt:GifEncoder$output.write(byteArrayOf(0x21, 0xFF.toByte(), 0x0B, 0x4E, 0x45, 0x54, 0x53, 0x43, 0x41, 0x50, 0x45, 0x32, 0x2E, 0x30, 0x03, 0x01, 0x00, 0x00, 0x00))</ID>
+    <ID>MaxLineLength:NavigationArtwork.kt:NavigationArtwork$val alpha = ArtworkAnimation(flight.alpha, Float.VectorConverter, effects, flight.alphaVelocity, durationScale)</ID>
+    <ID>MaxLineLength:NavigationArtwork.kt:NavigationArtwork$val bounds = ArtworkAnimation(flight.bounds, Rect.VectorConverter, spatial, flight.boundsVelocity, durationScale)</ID>
+    <ID>MaxLineLength:NavigationArtwork.kt:NavigationArtwork$val corners = ArtworkAnimation(flight.corners, Rect.VectorConverter, spatial, flight.cornersVelocity, durationScale)</ID>
+    <ID>MaxLineLength:NavigationArtwork.kt:val artwork = remember(coordinator, scope, spatial, effects) { NavigationArtwork(coordinator, scope, spatial, effects) }</ID>
+    <ID>MaxLineLength:Social.kt:cancelReply = if (directReplyId != null) ({ directReplyId = null; replyName = parent?.user?.name ?: "" }) else null</ID>
+    <ID>MaxLineLength:Utility.kt:.</ID>
+    <ID>MaxLineLength:Utility.kt:Modifier.fillMaxSize().background(MaterialTheme.colorScheme.secondaryContainer)</ID>
+    <ID>MaxLineLength:Utility.kt:Modifier.fillMaxSize().padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp)</ID>
+    <ID>MaxLineLength:Utility.kt:Triple("settings", stringResource(R.string.ui_7debf9cb03), materialSymbol(MaterialSymbol.Settings))</ID>
+    <ID>MaxLineLength:Utility.kt:group.tasks.filter { it.status in setOf("failed", "complete") }</ID>
+    <ID>MaxLineLength:Utility.kt:group.tasks.filter { it.status in setOf("paused", "cancelled") }</ID>
+    <ID>MaxLineLength:Utility.kt:group.tasks.filter { it.status in setOf("running", "queued") }</ID>
+    <ID>MaxLineLength:Utility.kt:if</ID>
+    <ID>MaxLineLength:Utility.kt:java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())</ID>
+    <ID>MaxLineLength:Utility.kt:model = group.tasks.firstOrNull { it.coverUri.isNotEmpty() }?.coverUri ?: group.localImageUris.firstOrNull() ?: work.previews.firstOrNull() ?: work.cover</ID>
+    <ID>MaxLineLength:Utility.kt:trailingContent = action ?: { AppIcon(materialSymbol(MaterialSymbol.ChevronRight), null, Modifier.size(18.dp)) }</ID>
+    <ID>MaxLineLength:Utility.kt:trailingIcon = { AppIcon(materialSymbol(MaterialSymbol.Close), "移除", Modifier.size(18.dp)) }</ID>
+    <ID>MaxLineLength:Utility.kt:val</ID>
+    <ID>ReturnCount:AppViewModel.kt:AppViewModel$suspend fun estimateDownloadBytes: Long?</ID>
+    <ID>ReturnCount:DownloadStorage.kt:DownloadStorage$private fun pruneEmptyManagedMediaParents</ID>
+    <ID>ReturnCount:DownloadStorage.kt:DownloadStorage$private fun pruneEmptySafParents</ID>
+    <ID>ReturnCount:Downloads.kt:DownloadManager$private suspend fun queue: QueueDisposition</ID>
+    <ID>ReturnCount:Downloads.kt:DownloadService$private suspend fun publish: Uri</ID>
+    <ID>ReturnCount:Downloads.kt:DownloadService$private suspend fun transfer</ID>
+    <ID>ReturnCount:NavigationArtwork.kt:NavigationArtwork$fun currentFrame: ArtworkFrame</ID>
+    <ID>ReturnCount:NavigationArtwork.kt:NavigationArtwork$fun frame: ArtworkFrame?</ID>
+    <ID>ReturnCount:NavigationMotion.kt:DetailSceneStrategy$override fun SceneStrategyScope&lt;NavKey&gt;.calculateScene: Scene&lt;NavKey&gt;?</ID>
+    <ID>ReturnCount:NavigationMotion.kt:NavigationMotion$fun back: ContentTransform</ID>
+    <ID>ReturnCount:Utility.kt:private fun formatCacheSize: String</ID>
+    <ID>TooGenericExceptionCaught:AppViewModel.kt:AppViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AppViewModel.kt:AppViewModel$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:AppViewModel.kt:AppViewModel$error: Throwable</ID>
+    <ID>TooGenericExceptionCaught:CommentThreads.kt:CommentThreads$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:DownloadStorage.kt:DownloadStorage$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Downloads.kt:DownloadService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Feeds.kt:e: Exception</ID>
+    <ID>TooGenericExceptionCaught:Reader.kt:e: Exception</ID>
+    <ID>TooManyFunctions:AppViewModel.kt:AppViewModel : ViewModel</ID>
+    <ID>TooManyFunctions:DownloadStorage.kt:DownloadStorage</ID>
+    <ID>TooManyFunctions:Feeds.kt:io.github.radiqalo.picaris.ui.Feeds.kt</ID>
+    <ID>TooManyFunctions:NavigationArtwork.kt:NavigationArtwork</ID>
+    <ID>TooManyFunctions:NavigationTransitionCoordinator.kt:NavigationTransitionCoordinator</ID>
+    <ID>TooManyFunctions:Utility.kt:io.github.radiqalo.picaris.ui.Utility.kt</ID>
+    <ID>UnusedParameter:Downloads.kt:DownloadService$params: JobParameters</ID>
+    <ID>WildcardImport:App.kt:import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:App.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:App.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:App.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:App.kt:import androidx.navigation3.runtime.*</ID>
+    <ID>WildcardImport:App.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:App.kt:import io.github.radiqalo.picaris.designsystem.*</ID>
+    <ID>WildcardImport:AppViewModel.kt:import androidx.lifecycle.*</ID>
+    <ID>WildcardImport:AppViewModel.kt:import androidx.paging.*</ID>
+    <ID>WildcardImport:AppViewModel.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:AppViewModel.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:AppViewModel.kt:import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:AuthorProfile.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:AuthorProfile.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:CommentThreads.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:CommentThreads.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:CommentThreads.kt:import kotlinx.coroutines.flow.*</ID>
+    <ID>WildcardImport:CommentThreadsTest.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:CommentThreadsTest.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:CommentThreadsTest.kt:import org.junit.Assert.*</ID>
+    <ID>WildcardImport:Detail.kt:import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:Detail.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:Detail.kt:import androidx.compose.foundation.lazy.*</ID>
+    <ID>WildcardImport:Detail.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:Detail.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:Detail.kt:import androidx.compose.ui.*</ID>
+    <ID>WildcardImport:Detail.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:Detail.kt:import io.github.radiqalo.picaris.designsystem.*</ID>
+    <ID>WildcardImport:DownloadSettings.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:DownloadSettings.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:DownloadSettings.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:DownloadSettings.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:DownloadSettings.kt:import io.github.radiqalo.picaris.designsystem.*</ID>
+    <ID>WildcardImport:DownloadStorage.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:Downloads.kt:import android.app.*</ID>
+    <ID>WildcardImport:Downloads.kt:import android.app.job.*</ID>
+    <ID>WildcardImport:Downloads.kt:import android.content.*</ID>
+    <ID>WildcardImport:Downloads.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:Downloads.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:Feedback.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.foundation.lazy.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.foundation.lazy.staggeredgrid.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.foundation.shape.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.ui.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.compose.ui.semantics.*</ID>
+    <ID>WildcardImport:Feeds.kt:import androidx.paging.compose.*</ID>
+    <ID>WildcardImport:Feeds.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:Feeds.kt:import io.github.radiqalo.picaris.designsystem.*</ID>
+    <ID>WildcardImport:MainActivity.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:PixivApplication.kt:import androidx.work.*</ID>
+    <ID>WildcardImport:Reader.kt:import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:Reader.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:Reader.kt:import androidx.compose.foundation.lazy.*</ID>
+    <ID>WildcardImport:Reader.kt:import androidx.compose.foundation.pager.*</ID>
+    <ID>WildcardImport:Reader.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:Reader.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:Reader.kt:import androidx.compose.ui.*</ID>
+    <ID>WildcardImport:Reader.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:Reader.kt:import io.github.radiqalo.picaris.designsystem.*</ID>
+    <ID>WildcardImport:Reader.kt:import kotlinx.coroutines.*</ID>
+    <ID>WildcardImport:Sheets.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:Sheets.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:Social.kt:import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:Social.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:Social.kt:import androidx.compose.foundation.lazy.*</ID>
+    <ID>WildcardImport:Social.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:Social.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:Social.kt:import androidx.compose.ui.*</ID>
+    <ID>WildcardImport:Social.kt:import androidx.paging.compose.*</ID>
+    <ID>WildcardImport:Social.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:Social.kt:import io.github.radiqalo.picaris.designsystem.*</ID>
+    <ID>WildcardImport:Utility.kt:import androidx.compose.foundation.*</ID>
+    <ID>WildcardImport:Utility.kt:import androidx.compose.foundation.layout.*</ID>
+    <ID>WildcardImport:Utility.kt:import androidx.compose.foundation.lazy.*</ID>
+    <ID>WildcardImport:Utility.kt:import androidx.compose.foundation.shape.*</ID>
+    <ID>WildcardImport:Utility.kt:import androidx.compose.material3.*</ID>
+    <ID>WildcardImport:Utility.kt:import androidx.compose.runtime.*</ID>
+    <ID>WildcardImport:Utility.kt:import androidx.compose.ui.*</ID>
+    <ID>WildcardImport:Utility.kt:import androidx.compose.ui.text.input.*</ID>
+    <ID>WildcardImport:Utility.kt:import io.github.radiqalo.picaris.core.*</ID>
+    <ID>WildcardImport:Utility.kt:import io.github.radiqalo.picaris.designsystem.*</ID>
+  </CurrentIssues>
+</SmellBaseline>

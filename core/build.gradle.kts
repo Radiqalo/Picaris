@@ -3,6 +3,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
+}
+
+ktlint {
+    baseline.set(file("ktlint-baseline.xml"))
+}
+
+detekt {
+    baseline = file("detekt-baseline.xml")
 }
 
 android {

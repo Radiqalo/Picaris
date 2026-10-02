@@ -14,6 +14,8 @@ coil = "3.6.3"
 lifecycle = "2.12.0-alpha04"
 coroutines = "1.11.0"
 serialization = "1.12.0-RC"
+ktlint = "14.2.0"
+detekt = "2.0.0-alpha.6"
 [libraries]
 compose-bom = { module = "androidx.compose:compose-bom-alpha", version.ref = "compose" }
 compose-ui = { module = "androidx.compose.ui:ui" }
@@ -64,3 +66,5 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }

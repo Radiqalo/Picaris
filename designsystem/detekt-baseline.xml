@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>FunctionNaming:Icons.kt:@Composable fun AppIcon</ID>
+    <ID>FunctionNaming:Theme.kt:@Composable fun PixivTheme</ID>
+    <ID>MatchingDeclarationName:MaterialSymbols.kt:MaterialSymbol</ID>
+    <ID>WildcardImport:SeedSchemeTest.kt:import org.junit.Assert.*</ID>
+    <ID>WildcardImport:Theme.kt:import androidx.compose.material3.*</ID>
+  </CurrentIssues>
+</SmellBaseline>
