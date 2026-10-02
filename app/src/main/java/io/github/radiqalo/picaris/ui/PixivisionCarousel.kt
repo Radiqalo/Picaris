@@ -6,17 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -78,17 +72,35 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
     }
     val articles = result.articles
     if (articles.isNullOrEmpty()) {
-        Card(Modifier.fillMaxWidth().height(200.dp), shape = MaterialTheme.shapes.extraLarge) {
-            Column(
-                Modifier.fillMaxSize().padding(PixivSpacing.content),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact, Alignment.CenterVertically),
+        val placeholderCarousel = rememberCarouselState(itemCount = { 1 })
+        HorizontalCenteredHeroCarousel(
+            state = placeholderCarousel,
+            modifier = Modifier.fillMaxWidth().testTag("pixivisionCarousel"),
+            maxItemWidth = 520.dp,
+            minSmallItemWidth = 36.dp,
+            maxSmallItemWidth = 64.dp,
+            itemSpacing = PixivSpacing.compact,
+        ) {
+            Box(
+                Modifier
+                    .maskClip(MaterialTheme.shapes.extraLarge)
+                    .fillMaxWidth()
+                    .aspectRatio(1.65f)
+                    .clip(MaterialTheme.shapes.extraLarge)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(stringResource(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
-                if (result.failed) {
-                    Text(stringResource(R.string.pixivision_load_failed))
-                    TextButton(onClick = { retry++ }) { Text(stringResource(R.string.pixivision_retry)) }
-                } else CircularWavyProgressIndicator(Modifier.size(32.dp))
+                Column(
+                    Modifier.padding(PixivSpacing.content),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
+                ) {
+                    Text(stringResource(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
+                    if (result.failed) {
+                        Text(stringResource(R.string.pixivision_load_failed))
+                        TextButton(onClick = { retry++ }) { Text(stringResource(R.string.pixivision_retry)) }
+                    } else CircularWavyProgressIndicator(Modifier.size(32.dp))
+                }
             }
         }
         return
@@ -96,90 +108,78 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
     val carousel = rememberCarouselState(itemCount = { articles.size })
     val carouselScope = rememberCoroutineScope()
     val pageDescription = stringResource(R.string.pixivision_page, carousel.currentItem + 1, articles.size)
-    Column(verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
-        HorizontalCenteredHeroCarousel(
-            state = carousel,
-            modifier = Modifier.fillMaxWidth().testTag("pixivisionCarousel"),
-            maxItemWidth = 520.dp,
-            minSmallItemWidth = 36.dp,
-            maxSmallItemWidth = 64.dp,
-            itemSpacing = PixivSpacing.compact,
-        ) { articleIndex ->
-            val article = articles[articleIndex]
-            val itemInfo = carouselItemDrawInfo
-            val targetTextAlpha =
-                if (itemInfo.maxSize > 0f) {
-                    (itemInfo.size / itemInfo.maxSize).coerceIn(0f, 1f)
-                } else {
-                    0f
-                }
-            val textAlpha by animateFloatAsState(targetTextAlpha, label = "pixivisionTitleFade")
+    HorizontalCenteredHeroCarousel(
+        state = carousel,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("pixivisionCarousel")
+            .semantics { stateDescription = pageDescription },
+        maxItemWidth = 520.dp,
+        minSmallItemWidth = 36.dp,
+        maxSmallItemWidth = 64.dp,
+        itemSpacing = PixivSpacing.compact,
+    ) { articleIndex ->
+        val article = articles[articleIndex]
+        val itemInfo = carouselItemDrawInfo
+        val targetTextAlpha =
+            if (itemInfo.maxSize > 0f) {
+                (itemInfo.size / itemInfo.maxSize).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+        val textAlpha by animateFloatAsState(targetTextAlpha, label = "pixivisionTitleFade")
+        Box(
+            Modifier
+                .maskClip(MaterialTheme.shapes.extraLarge)
+                .fillMaxWidth()
+                .aspectRatio(1.65f)
+                .clip(MaterialTheme.shapes.extraLarge)
+                .clickable {
+                    if (carousel.currentItem == articleIndex) {
+                        if (article.url.isNotBlank()) {
+                            CustomTabsIntent.Builder().build().launchUrl(context, article.url.toUri())
+                        }
+                    } else {
+                        carouselScope.launch { carousel.animateScrollToItem(articleIndex) }
+                    }
+                },
+        ) {
+            AsyncImage(
+                model = article.cover,
+                contentDescription = null,
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentScale = ContentScale.Crop,
+            )
             Box(
                 Modifier
-                    .maskClip(MaterialTheme.shapes.extraLarge)
-                    .fillMaxWidth()
-                    .aspectRatio(1.65f)
-                    .clip(MaterialTheme.shapes.extraLarge)
-                    .clickable {
-                        if (carousel.currentItem == articleIndex) {
-                            if (article.url.isNotBlank()) {
-                                CustomTabsIntent.Builder().build().launchUrl(context, article.url.toUri())
-                            }
-                        } else {
-                            carouselScope.launch { carousel.animateScrollToItem(articleIndex) }
-                        }
-                    },
-            ) {
-                AsyncImage(
-                    model = article.cover,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentScale = ContentScale.Crop,
-                )
-                Box(
-                    Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
-                            ),
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f)),
                         ),
+                    ),
+            )
+            Column(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(PixivSpacing.content)
+                    .graphicsLayer { alpha = textAlpha },
+                verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
+            ) {
+                Text(
+                    stringResource(R.string.discover_pixivision),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.85f),
                 )
-                Column(
-                    Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(PixivSpacing.content)
-                        .graphicsLayer { alpha = textAlpha },
-                    verticalArrangement = Arrangement.spacedBy(PixivSpacing.tight),
-                ) {
-                    Text(
-                        stringResource(R.string.discover_pixivision),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.85f),
-                    )
-                    Text(
-                        article.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().semantics {
-                stateDescription = pageDescription
-            },
-            horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            repeat(articles.size) { index ->
-                Spacer(Modifier.size(if (index == carousel.currentItem) 8.dp else 6.dp).clip(CircleShape)
-                    .background(if (index == carousel.currentItem) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)))
+                Text(
+                    article.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
