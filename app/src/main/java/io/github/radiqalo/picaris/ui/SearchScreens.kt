@@ -389,7 +389,7 @@ fun SearchScreen(
             }
         }
     }
-    val searchBackLimit = LocalWindowInfo.current.containerSize.height * 0.015f
+    val searchBackLimit = LocalWindowInfo.current.containerSize.height * 0.025f
     ExpandedFullScreenSearchBar(
         state = searchState,
         inputField = searchField,
@@ -403,16 +403,14 @@ fun SearchScreen(
             },
     ) {
         PredictiveBackHandler(enabled = true) { events ->
-            var maximumProgressTouchY: Float? = null
+            var gestureStartTouchY: Float? = null
             try {
                 events.collect { event ->
                     expandedBackProgress = event.progress.coerceIn(0f, 1f)
-                    if (event.progress >= 1f && maximumProgressTouchY == null) {
-                        maximumProgressTouchY = event.touchY
-                    }
+                    if (gestureStartTouchY == null) gestureStartTouchY = event.touchY
                     expandedBackOffsetY =
-                        maximumProgressTouchY?.let { anchor ->
-                            ((event.touchY - anchor) * 0.2f).coerceIn(-searchBackLimit, searchBackLimit)
+                        gestureStartTouchY?.let { anchor ->
+                            ((event.touchY - anchor) * 0.025f).coerceIn(-searchBackLimit, searchBackLimit)
                         } ?: 0f
                 }
                 searchState.animateToCollapsed()

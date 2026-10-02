@@ -108,7 +108,7 @@ internal fun NavigationPageDisplay(
     )
     var previousGestureInProgress by remember { mutableStateOf(false) }
     var previewEntries by remember { mutableStateOf<List<Long>?>(null) }
-    var maximumProgressTouchY by remember { mutableFloatStateOf(Float.NaN) }
+    var gestureStartTouchY by remember { mutableFloatStateOf(Float.NaN) }
     NavigationBackHandler(
         state = navigationEventState,
         isBackEnabled = scene.previousEntries.isNotEmpty() &&
@@ -123,10 +123,10 @@ internal fun NavigationPageDisplay(
             ?.latestEvent
     val gestureInProgress = backEvent != null
     val maximumGestureOffset =
-        androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height * 0.015f
+        androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height * 0.025f
     val gestureVerticalOffset =
-        if (gestureInProgress && backEvent!!.progress >= 1f && maximumProgressTouchY.isFinite()) {
-            ((backEvent.touchY - maximumProgressTouchY) * 0.2f)
+        if (gestureInProgress && gestureStartTouchY.isFinite()) {
+            ((backEvent!!.touchY - gestureStartTouchY) * 0.025f)
                 .coerceIn(-maximumGestureOffset, maximumGestureOffset)
         } else {
             0f
@@ -135,15 +135,12 @@ internal fun NavigationPageDisplay(
         if (gestureInProgress && !previousGestureInProgress) {
             coordinator.beginPreview()
             previewEntries = coordinator.instances.map { it.id }
-            maximumProgressTouchY = Float.NaN
-        }
-        if (gestureInProgress && backEvent!!.progress >= 1f && !maximumProgressTouchY.isFinite()) {
-            maximumProgressTouchY = backEvent.touchY
+            gestureStartTouchY = backEvent!!.touchY
         } else if (!gestureInProgress && previousGestureInProgress) {
             coordinator.cancelPreview()
             if (coordinator.phase == NavigationTransitionPhase.Restoring) artwork.resumePreview()
             previewEntries = null
-            maximumProgressTouchY = Float.NaN
+            gestureStartTouchY = Float.NaN
         }
         coordinator.updateSceneOwners(scene.entries.map { it.contentKey as Long }.toSet())
         artwork.refreshTargets()
