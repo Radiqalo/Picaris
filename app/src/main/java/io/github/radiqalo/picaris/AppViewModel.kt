@@ -137,7 +137,7 @@ constructor(
         seriesDetailsCache[key]?.let { seriesDetailsCache[key] = it.copy(isWatched = watched) }
     }
 
-    suspend fun bookmark(work: Work, public: Boolean = true): Work {
+    suspend fun bookmark(work: Work, public: Boolean = !settings.value.defaultPrivateBookmarks): Work {
         val account = accountId
         val key = work.identity(account)
         if (key in bookmarkBusy.value) return bookmarkStates.value[key]?.apply(work) ?: work
@@ -165,6 +165,14 @@ constructor(
                 it + (key to BookmarkState(result.is_bookmarked, result.total_bookmarks))
             }
             dao.historyItem(account, work.id, work.type)?.let { repo.record(account, result) }
+            if (result.is_bookmarked && !current.is_bookmarked && settings.value.autoDownloadAfterBookmark) {
+                val queued = downloads.enqueue(account, result)
+                message.emit(when {
+                    queued.queued > 0 -> "已收藏并加入下载队列"
+                    queued.alreadyDownloaded > 0 -> "已收藏，作品已下载"
+                    else -> "已收藏，作品已在下载队列中"
+                })
+            }
             return result
         } finally {
             bookmarkBusy.update { it - key }
@@ -470,6 +478,32 @@ constructor(
 
     suspend fun follow(user: User): User =
         repo.follow(accountId, user)
+
+    suspend fun follow(user: User, public: Boolean): User =
+        if (public) repo.follow(accountId, user.copy(is_followed = false), true)
+        else repo.followPrivately(accountId, user)
+
+    suspend fun isPrivatelyFollowing(userId: Long): Boolean =
+        repo.isPrivatelyFollowing(accountId, userId)
+
+    suspend fun setBookmarkVisibility(work: Work, public: Boolean) {
+        val account = accountId
+        val key = work.identity(account)
+        if (key in bookmarkBusy.value) return
+        bookmarkBusy.update { it + key }
+        try {
+            repo.setBookmarkVisibility(account, work, public)
+            bookmarkStates.update { states ->
+                val current = states[key]?.apply(work) ?: work
+                states + (key to BookmarkState(true, current.total_bookmarks))
+            }
+        } finally {
+            bookmarkBusy.update { it - key }
+        }
+    }
+
+    suspend fun isBookmarkPrivate(work: Work): Boolean =
+        repo.isBookmarkPrivate(accountId, work)
 
     suspend fun completed(work: Work) = dao.completed(accountId, work.id)
 

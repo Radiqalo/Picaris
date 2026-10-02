@@ -334,13 +334,94 @@ constructor(
         )
     }
 
-    suspend fun follow(account: Long, user: User): User {
+    suspend fun setBookmarkVisibility(account: Long, work: Work, public: Boolean) {
+        val type = if (work.isNovel) "novel" else "illust"
+        val idField = if (work.isNovel) "novel_id" else "illust_id"
+        val detail = bookmarkDetail(account, type, idField, work.id)
+        val oldRestrict = detail["restrict"]?.jsonPrimitive?.contentOrNull ?: "0"
+        val targetRestrict = if (public) "0" else "1"
+        if (oldRestrict == targetRestrict) return
+        val tags = detail["tags"]?.jsonArray.orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
+        api.post(account, "v1/$type/bookmark/delete", mapOf(idField to work.id.toString()))
+        try {
+            api.post(account, "v2/$type/bookmark/add", buildMap {
+                put(idField, work.id.toString())
+                put("restrict", if (public) "public" else "private")
+                if (tags.isNotEmpty()) put("tags[]", tags.joinToString(","))
+            })
+        } catch (e: Exception) {
+            runCatching {
+                api.post(account, "v2/$type/bookmark/add", buildMap {
+                    put(idField, work.id.toString())
+                    put("restrict", if (oldRestrict == "0") "public" else "private")
+                    if (tags.isNotEmpty()) put("tags[]", tags.joinToString(","))
+                })
+            }
+            throw e
+        }
+    }
+
+    suspend fun isBookmarkPrivate(account: Long, work: Work): Boolean {
+        val type = if (work.isNovel) "novel" else "illust"
+        val idField = if (work.isNovel) "novel_id" else "illust_id"
+        val detail = bookmarkDetail(account, type, idField, work.id)
+        val restrict = detail["restrict"]?.jsonPrimitive?.contentOrNull
+        return restrict == "1" || restrict.equals("private", ignoreCase = true)
+    }
+
+    private suspend fun bookmarkDetail(
+        account: Long,
+        type: String,
+        idField: String,
+        workId: Long,
+    ): JsonObject = api.get(
+        account,
+        "v2/$type/bookmark/detail",
+        mapOf(idField to workId.toString()),
+    ).getValue("bookmark_detail").jsonObject
+
+    suspend fun follow(account: Long, user: User, public: Boolean = true): User {
         api.post(
             account,
             "v1/user/follow/${if(user.is_followed) "delete" else "add"}",
-            mapOf("user_id" to user.id.toString(), "restrict" to "public"),
+            mapOf("user_id" to user.id.toString(), "restrict" to if (public) "public" else "private"),
         )
         return user.copy(is_followed = !user.is_followed)
+    }
+
+    suspend fun followPrivately(account: Long, user: User): User {
+        if (user.is_followed) {
+            api.post(account, "v1/user/follow/delete", mapOf("user_id" to user.id.toString()))
+        }
+        try {
+            api.post(account, "v1/user/follow/add", mapOf(
+                "user_id" to user.id.toString(),
+                "restrict" to "private",
+            ))
+        } catch (e: Exception) {
+            if (user.is_followed) runCatching {
+                api.post(account, "v1/user/follow/add", mapOf(
+                    "user_id" to user.id.toString(),
+                    "restrict" to "public",
+                ))
+            }
+            throw e
+        }
+        return user.copy(is_followed = true)
+    }
+
+    suspend fun isPrivatelyFollowing(account: Long, followedUserId: Long): Boolean {
+        var path = "v1/user/following"
+        var query = mapOf("user_id" to account.toString(), "restrict" to "private")
+        repeat(100) {
+            val response = api.get(account, path, query)
+            val users = AppJson.decodeFromJsonElement<UserResponse>(response).user_previews
+            if (users.any { it.user.id == followedUserId }) return true
+            val next = response["next_url"]?.jsonPrimitive?.contentOrNull ?: return false
+            path = next
+            query = emptyMap()
+        }
+        return false
     }
 
     suspend fun authorDetails(account: Long, id: Long): AuthorDetails =

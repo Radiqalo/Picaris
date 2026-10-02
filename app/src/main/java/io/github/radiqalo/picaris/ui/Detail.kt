@@ -52,6 +52,7 @@ fun DetailScreen(
     val permitted = navigationPermission()
     val canOpenReader = permitted()
     val tagTranslations = LocalTagTranslationEnabled.current
+    val settings by vm.settings.collectAsStateWithLifecycle()
 
     fun openReader(work: Work) {
         if (permitted()) navigate(Reader(work))
@@ -63,6 +64,7 @@ fun DetailScreen(
     val identity = work.identity(vm.accountId)
     val current = bookmarks[identity]?.apply(work) ?: work
     val actionBusy = identity in busy
+    var bookmarkPrivate by remember(identity) { mutableStateOf<Boolean?>(null) }
     var privateDialog by remember { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
     var downloadPageSelection by remember(work.id) { mutableStateOf(false) }
@@ -106,11 +108,19 @@ fun DetailScreen(
             estimatingDownloadBytes = false
         }
     }
-    fun bookmark(public: Boolean = true) {
+    LaunchedEffect(moreMenu, current.is_bookmarked, identity) {
+        if (moreMenu && current.is_bookmarked) {
+            bookmarkPrivate = runCatching { vm.isBookmarkPrivate(current) }.getOrNull()
+        } else if (!current.is_bookmarked) {
+            bookmarkPrivate = null
+        }
+    }
+    fun bookmark(public: Boolean = !settings.defaultPrivateBookmarks) {
         if (!permitted()) return
         bookmarkFeedback(!current.is_bookmarked)
         vm.run {
             work = vm.bookmark(current, public)
+            bookmarkPrivate = !public
         }
     }
     fun share() {
@@ -476,6 +486,28 @@ fun DetailScreen(
                     leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Favorite), null) },
                     onClick = { moreMenu = false; privateDialog = true },
                 )
+            if (current.is_bookmarked && !actionBusy)
+                ListItem(
+                    colors = menuItemColors,
+                    content = {
+                        Text(when (bookmarkPrivate) {
+                            true -> "设为公开收藏"
+                            false -> "设为私人收藏"
+                            null -> "正在读取收藏状态…"
+                        })
+                    },
+                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Favorite), null) },
+                    enabled = bookmarkPrivate != null,
+                    onClick = {
+                        moreMenu = false
+                        vm.run {
+                            val makePublic = bookmarkPrivate == true
+                            vm.setBookmarkVisibility(current, makePublic)
+                            bookmarkPrivate = !makePublic
+                            work = current
+                        }
+                    },
+                )
         }
     }
     if (downloadPageSelection && permitted()) {
@@ -718,6 +750,8 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     var profile by remember(initial.id) { mutableStateOf(AuthorProfile()) }
     var profileLoaded by remember(initial.id) { mutableStateOf(false) }
     var details by remember(initial.id) { mutableStateOf(AuthorDetails(initial)) }
+    var privatelyFollowed by remember(initial.id) { mutableStateOf(false) }
+    var followVisibilityLoaded by remember(initial.id) { mutableStateOf(false) }
     val pageLabels = if (novelMode) listOf("小说", "收藏") else listOf("插画", "漫画", "收藏")
     val pager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { pageLabels.size })
     val outerScroll = rememberLazyListState()
@@ -754,12 +788,18 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
     }
     var busy by remember { mutableStateOf(false) }
     var showProfile by remember { mutableStateOf(false) }
+    var authorMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     LaunchedEffect(initial.id, vm.accountId) {
         try {
             vm.authorDetails(initial).let { details = it; user = it.user; profile = it.profile; profileLoaded = true }
+            privatelyFollowed = user.is_followed && vm.isPrivatelyFollowing(user.id)
+            followVisibilityLoaded = true
         } catch (e: kotlinx.coroutines.CancellationException) { throw e }
-        catch (_: Exception) { /* Keep the known author and their reachable works. */ }
+        catch (_: Exception) {
+            followVisibilityLoaded = true
+            /* Keep the known author and their reachable works. */
+        }
     }
     LaunchedEffect(pageLabels.size) {
         if (pager.currentPage >= pageLabels.size) pager.scrollToPage(pageLabels.lastIndex)
@@ -794,13 +834,21 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                             onClick = {
                                 vm.run {
                                     busy = true
-                                    try { user = vm.follow(user) } finally { busy = false }
+                                    try {
+                                        user = vm.follow(user)
+                                        privatelyFollowed = false
+                                        followVisibilityLoaded = true
+                                    } finally { busy = false }
                                 }
                             },
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth(.75f).height(ButtonDefaults.MediumContainerHeight),
                             shapes = ButtonDefaults.shapesFor(ButtonDefaults.MediumContainerHeight),
-                        ) { Text(if (user.is_followed) "已关注" else "关注") }
+                        ) { Text(when {
+                            !user.is_followed -> "关注"
+                            privatelyFollowed -> "非公开关注"
+                            else -> "已关注"
+                        }) }
                         Text(if (profileLoaded) "${profile.total_follow_users} 关注" else " ",
                             Modifier.heightIn(min = 24.dp),
                             style = MaterialTheme.typography.bodyMedium,
@@ -863,21 +911,55 @@ fun AuthorScreen(initial: User, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween) {
             IconButton(onClick = back) { AppIcon(materialSymbol(MaterialSymbol.ArrowBack), "返回") }
-            Row {
-                val isBlocked = settings.blockedUsers.split(',', '\n').any { it.trim() == user.id.toString() }
-                IconButton(onClick = {
+            IconButton(onClick = { authorMenu = true }) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(Color.Black.copy(alpha = .38f)),
+                    contentAlignment = Alignment.Center) {
+                    AppIcon(materialSymbol(MaterialSymbol.MoreHoriz), "更多操作", tint = Color.White)
+                }
+            }
+        }
+    }
+    val isBlocked = settings.blockedUsers.split(',', '\n').any { it.trim() == user.id.toString() }
+    if (authorMenu) ModalBottomSheet(
+        onDismissRequest = { authorMenu = false },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        val colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = PixivSpacing.content)) {
+            ListItem(colors = colors, content = { Text(if (isBlocked) "取消屏蔽作者" else "屏蔽作者") },
+                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.BlockedUser), null) },
+                onClick = {
+                    authorMenu = false
                     vm.update { current ->
                         val ids = current.blockedUsers.split(',', '\n').map(String::trim).filter(String::isNotEmpty)
-                        val updated = if (isBlocked) ids.filterNot { it == user.id.toString() }
-                        else ids + user.id.toString()
+                        val updated = if (isBlocked) ids.filterNot { it == user.id.toString() } else ids + user.id.toString()
                         current.copy(blockedUsers = updated.joinToString("\n"))
                     }
                     vm.message.tryEmit(if (isBlocked) "已取消屏蔽作者" else "已屏蔽作者")
-                }) {
-                    AppIcon(materialSymbol(MaterialSymbol.BlockedUser), if (isBlocked) "取消屏蔽作者" else "屏蔽作者")
-                }
-                IconButton(onClick = ::shareAuthor) { AppIcon(materialSymbol(MaterialSymbol.Share), "分享作者") }
-            }
+                })
+            ListItem(colors = colors, content = { Text("分享作者") },
+                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Share), null) },
+                onClick = { authorMenu = false; shareAuthor() })
+            ListItem(colors = colors,
+                content = { Text(when {
+                    user.is_followed && privatelyFollowed -> "已非公开关注"
+                    user.is_followed -> "设为非公开关注"
+                    else -> "非公开关注"
+                }) },
+                leadingContent = { AppIcon(materialSymbol(MaterialSymbol.Person), null) },
+                enabled = !busy && followVisibilityLoaded && !(user.is_followed && privatelyFollowed),
+                onClick = {
+                    authorMenu = false
+                    vm.run {
+                        busy = true
+                        try {
+                            user = vm.follow(user, public = false)
+                            privatelyFollowed = true
+                            followVisibilityLoaded = true
+                        } finally { busy = false }
+                    }
+                })
         }
     }
     if (showProfile && navigationPermission()()) ModalBottomSheet(onDismissRequest = { showProfile = false }) {

@@ -53,6 +53,24 @@ internal fun DownloadSettingsRows(
             action = { Switch(checked = enabled, onCheckedChange = { change(it) }) },
             position = SettingsRowPosition.Middle) { change(!enabled) }
     }
+    listOf(
+        Triple("下载完成后自动收藏", s.autoBookmarkAfterDownload, "autoBookmarkAfterDownload"),
+        Triple("收藏后自动下载", s.autoDownloadAfterBookmark, "autoDownloadAfterBookmark"),
+        Triple("默认私人收藏", s.defaultPrivateBookmarks, "defaultPrivateBookmarks"),
+    ).forEach { (label, enabled, key) ->
+        fun change(value: Boolean) = vm.update { when (key) {
+            "autoBookmarkAfterDownload" -> it.copy(autoBookmarkAfterDownload = value)
+            "autoDownloadAfterBookmark" -> it.copy(autoDownloadAfterBookmark = value)
+            else -> it.copy(defaultPrivateBookmarks = value)
+        } }
+        SettingRow(label, when (key) {
+            "autoBookmarkAfterDownload" -> "下载任务完成后收藏作品"
+            "autoDownloadAfterBookmark" -> "收藏作品后加入下载队列"
+            else -> "新收藏默认仅自己可见"
+        }, materialSymbol(MaterialSymbol.Favorite),
+            action = { Switch(checked = enabled, onCheckedChange = { change(it) }) },
+            position = SettingsRowPosition.Middle) { change(!enabled) }
+    }
     SettingRow("作者文件夹命名", DownloadNaming.preview(s.downloadAuthorTokens.filter { it in DownloadNaming.tokens }, separator = s.downloadAuthorSeparator),
         icon, position = SettingsRowPosition.Middle) { editor = "author" }
     SettingRow("作品文件命名", DownloadNaming.preview(s.downloadFileTokens.filter { it in DownloadNaming.tokens }, omitZero = s.downloadOmitPageZero, separator = s.downloadFileSeparator),

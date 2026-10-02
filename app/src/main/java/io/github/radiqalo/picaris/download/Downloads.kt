@@ -373,9 +373,14 @@ class DownloadService : JobService() {
         }
         part.delete()
         if (dao.activeDownloadsForWork(task.accountId, task.workId) == 0) {
-            val title = runCatching { AppJson.decodeFromString<Work>(task.workJson).title }
-                .getOrDefault(task.title)
+            val work = runCatching { AppJson.decodeFromString<Work>(task.workJson) }.getOrNull()
+            val title = work?.title ?: task.title
             downloadEvents.completed.tryEmit(title)
+            val currentSettings = settings.flow.first()
+            if (currentSettings.autoBookmarkAfterDownload && work != null && !work.is_bookmarked) {
+                runCatching { repo.bookmark(task.accountId, work, public = !currentSettings.defaultPrivateBookmarks) }
+                    .onFailure { downloadEvents.completed.tryEmit("下载完成，自动收藏失败：${work.title}") }
+            }
         }
     }
 
