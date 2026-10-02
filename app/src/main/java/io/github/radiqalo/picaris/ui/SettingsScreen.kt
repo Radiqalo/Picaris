@@ -117,6 +117,7 @@ fun SettingRow(
 @Composable
 private fun SettingChoiceBlock(
     title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector = materialSymbol(MaterialSymbol.Settings),
     selected: String,
     options: List<Pair<String, String>>,
     onSelect: (String) -> Unit,
@@ -156,7 +157,7 @@ private fun SettingChoiceBlock(
                         contentAlignment = Alignment.Center,
                     ) {
                         AppIcon(
-                            materialSymbol(MaterialSymbol.Theme),
+                            icon,
                             null,
                             Modifier.size(20.dp),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -228,52 +229,12 @@ fun SettingsScreen(
                 SettingsGroup(stringResource(R.string.ui_09b58aa342)) {
                     SettingChoiceBlock(
                         title = stringResource(R.string.ui_e848ddd482),
+                        icon = materialSymbol(MaterialSymbol.Theme),
                         selected = s.theme,
                         options = listOf("system" to "系统", "light" to "浅色", "dark" to "深色"),
                         onSelect = { theme -> vm.update { it.copy(theme = theme) } },
                         position = SettingsRowPosition.First,
                     )
-                    SettingRow(
-                        "纯黑深色主题",
-                        "深色模式下使用纯黑背景",
-                        icon = materialSymbol(MaterialSymbol.Contrast),
-                        action = {
-                            FeedbackSwitch(s.pureBlackDarkTheme, { enabled ->
-                                vm.update { it.copy(pureBlackDarkTheme = enabled) }
-                            })
-                        },
-                        position = SettingsRowPosition.Middle,
-                    ) {
-                        vm.update { it.copy(pureBlackDarkTheme = !it.pureBlackDarkTheme) }
-                    }
-                    SettingRow(
-                        "悬浮底栏",
-                        "启用悬浮底栏",
-                        icon = materialSymbol(MaterialSymbol.Home),
-                        action = {
-                            FeedbackSwitch(s.bottomBarStyle == "floating", { enabled ->
-                                vm.update {
-                                    it.copy(
-                                        bottomBarStyle = if (enabled) "floating" else "standard",
-                                    )
-                                }
-                            })
-                        },
-                        position = SettingsRowPosition.Middle,
-                    ) {
-                        vm.update {
-                            it.copy(
-                                bottomBarStyle =
-                                    if (it.bottomBarStyle ==
-                                        "floating"
-                                    ) {
-                                        "standard"
-                                    } else {
-                                        "floating"
-                                    },
-                            )
-                        }
-                    }
                     SettingRow(
                         stringResource(R.string.ui_9d180a2c78),
                         stringResource(R.string.ui_d80ba66133),
@@ -304,9 +265,58 @@ fun SettingsScreen(
                                         .Color(s.seed),
                             ) {}
                         },
-                        position = SettingsRowPosition.Last,
+                        position = SettingsRowPosition.Middle,
                     ) {
                         dialog = "color"
+                    }
+                    SettingRow(
+                        "纯黑深色主题",
+                        "深色模式下使用纯黑背景",
+                        icon = materialSymbol(MaterialSymbol.Contrast),
+                        action = {
+                            FeedbackSwitch(s.pureBlackDarkTheme, { enabled ->
+                                vm.update { it.copy(pureBlackDarkTheme = enabled) }
+                            })
+                        },
+                        position = SettingsRowPosition.Middle,
+                    ) {
+                        vm.update { it.copy(pureBlackDarkTheme = !it.pureBlackDarkTheme) }
+                    }
+                    SettingRow(
+                        stringResource(R.string.ui_d5edf52f07),
+                        stringResource(R.string.ui_5b34213640),
+                        materialSymbol(MaterialSymbol.Contrast),
+                        action = {
+                            FeedbackSwitch(
+                                s.blackReader,
+                                { v -> vm.update { it.copy(blackReader = v) } },
+                            )
+                        },
+                        position = SettingsRowPosition.Middle,
+                    ) {
+                        vm.update { it.copy(blackReader = !it.blackReader) }
+                    }
+                    SettingRow(
+                        "悬浮底栏",
+                        "启用悬浮底栏",
+                        icon = materialSymbol(MaterialSymbol.DockToBottom),
+                        action = {
+                            FeedbackSwitch(s.bottomBarStyle == "floating", { enabled ->
+                                vm.update {
+                                    it.copy(
+                                        bottomBarStyle = if (enabled) "floating" else "standard",
+                                    )
+                                }
+                            })
+                        },
+                        position = SettingsRowPosition.Last,
+                    ) {
+                        vm.update {
+                            it.copy(
+                                bottomBarStyle =
+                                    if (it.bottomBarStyle == "floating") "standard" else "floating",
+                            )
+                        }
                     }
                 }
             }
@@ -331,7 +341,7 @@ fun SettingsScreen(
                     SettingRow(
                         "显示标签翻译",
                         "在标签旁显示译名",
-                        icon = materialSymbol(MaterialSymbol.Search),
+                        icon = materialSymbol(MaterialSymbol.Translate),
                         action = {
                             FeedbackSwitch(s.showTagTranslations, { value ->
                                 vm.update { it.copy(showTagTranslations = value) }
@@ -343,6 +353,7 @@ fun SettingsScreen(
                     }
                     SettingChoiceBlock(
                         title = "图流预览画质",
+                        icon = materialSymbol(MaterialSymbol.Image),
                         selected = s.feedImageQuality,
                         options = listOf("medium" to "中", "large" to "高", "original" to "原图"),
                         onSelect = { quality -> vm.update { it.copy(feedImageQuality = quality) } },
@@ -350,6 +361,7 @@ fun SettingsScreen(
                     )
                     SettingChoiceBlock(
                         title = "插画详情页画质",
+                        icon = materialSymbol(MaterialSymbol.Hd),
                         selected = s.detailImageQuality,
                         options = listOf("medium" to "中", "large" to "高", "original" to "原图"),
                         onSelect = { quality -> vm.update { it.copy(detailImageQuality = quality) } },
@@ -357,25 +369,16 @@ fun SettingsScreen(
                     )
                     SettingChoiceBlock(
                         title = "查看器画质",
+                        icon = materialSymbol(MaterialSymbol.ZoomIn),
                         selected = s.largeImageQuality,
                         options = listOf("large" to "高", "original" to "原图"),
                         onSelect = { quality -> vm.update { it.copy(largeImageQuality = quality) } },
                         position = SettingsRowPosition.Middle,
                     )
-                    SettingRow(
-                        stringResource(R.string.ui_d5edf52f07),
-                        stringResource(R.string.ui_5b34213640),
-                        materialSymbol(MaterialSymbol.Contrast),
-                        action = {
-                            FeedbackSwitch(
-                                s.blackReader,
-                                { v -> vm.update { it.copy(blackReader = v) } },
-                            )
-                        },
-                        position = SettingsRowPosition.Middle,
-                    ) {
-                        vm.update { it.copy(blackReader = !it.blackReader) }
-                    }
+                }
+            }
+            item {
+                SettingsGroup("内容筛选") {
                     SettingRow(
                         stringResource(R.string.ui_da33a1a4d5),
                         stringResource(R.string.ui_9cc2ab8295),
@@ -386,6 +389,7 @@ fun SettingsScreen(
                                 { v -> vm.update { it.copy(showAdult = v) } },
                             )
                         },
+                        position = SettingsRowPosition.First,
                     ) {
                         vm.update { it.copy(showAdult = !it.showAdult) }
                     }
@@ -446,7 +450,7 @@ fun SettingsScreen(
                     SettingRow(
                         "同时下载任务数",
                         "当前 ${s.downloadConcurrency.coerceIn(1, 10)} 个并发任务",
-                        materialSymbol(MaterialSymbol.Download),
+                        materialSymbol(MaterialSymbol.Speed),
                         action = { Text("${s.downloadConcurrency.coerceIn(1, 10)}/10") },
                         position = SettingsRowPosition.Last,
                     ) {
@@ -467,7 +471,7 @@ fun SettingsScreen(
                     SettingRow(
                         "导出应用数据 ZIP",
                         "设置、历史和下载记录；不含图片缓存及登录凭据",
-                        materialSymbol(MaterialSymbol.Download),
+                        materialSymbol(MaterialSymbol.Backup),
                         position = SettingsRowPosition.Middle,
                     ) {
                         val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.ROOT).format(Date())
@@ -476,7 +480,7 @@ fun SettingsScreen(
                     SettingRow(
                         "导入应用数据 ZIP",
                         "导入备份中的设置和本地记录",
-                        materialSymbol(MaterialSymbol.Download),
+                        materialSymbol(MaterialSymbol.UploadFile),
                         position = SettingsRowPosition.Middle,
                     ) {
                         importAppData.launch(

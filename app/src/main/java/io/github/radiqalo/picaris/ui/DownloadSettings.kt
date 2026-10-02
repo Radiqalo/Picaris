@@ -30,26 +30,29 @@ internal fun DownloadSettingsRows(
 ) {
     var editor by remember { mutableStateOf<String?>(null) }
     var organize by remember { mutableStateOf(false) }
-    val icon = materialSymbol(MaterialSymbol.Download)
     listOf(false, true).forEach { novel ->
         val tree = if (novel) s.novelDownloadTree else s.downloadTree
         SettingRow(if (novel) "小说下载目录" else "图片下载目录",
-            tree.ifEmpty { if (novel) "Documents/Picaris" else "Pictures/Picaris" }, icon,
+            tree.ifEmpty { if (novel) "Documents/Picaris" else "Pictures/Picaris" },
+            materialSymbol(if (novel) MaterialSymbol.Book else MaterialSymbol.FolderOpen),
             position = SettingsRowPosition.Middle) { chooseTree(novel) }
         if (tree.isNotEmpty()) SettingRow(if (novel) "恢复默认小说目录" else "恢复默认图片目录",
-            "", icon, position = SettingsRowPosition.Middle) {
+            "", materialSymbol(MaterialSymbol.Refresh), position = SettingsRowPosition.Middle) {
             vm.update { if (novel) it.copy(novelDownloadTree = "") else it.copy(downloadTree = "") }
         }
     }
-    listOf(Triple("AI 单独文件夹", s.downloadAiFolder, "ai"),
-        Triple("R18 单独文件夹", s.downloadAdultFolder, "adult"),
-        Triple("作者单独文件夹", s.downloadAuthorFolder, "author")).forEach { (label, enabled, key) ->
+    listOf(
+        Triple("AI 单独文件夹", s.downloadAiFolder, "ai" to MaterialSymbol.Ai),
+        Triple("R18 单独文件夹", s.downloadAdultFolder, "adult" to MaterialSymbol.Adult),
+        Triple("作者单独文件夹", s.downloadAuthorFolder, "author" to MaterialSymbol.Person),
+    ).forEach { (label, enabled, config) ->
+        val (key, icon) = config
         fun change(value: Boolean) = vm.update { when (key) {
             "ai" -> it.copy(downloadAiFolder = value)
             "adult" -> it.copy(downloadAdultFolder = value)
             else -> it.copy(downloadAuthorFolder = value)
         } }
-        SettingRow(label, "", icon,
+        SettingRow(label, "", materialSymbol(icon),
             action = { Switch(checked = enabled, onCheckedChange = { change(it) }) },
             position = SettingsRowPosition.Middle) { change(!enabled) }
     }
@@ -57,7 +60,7 @@ internal fun DownloadSettingsRows(
         Triple("下载完成后自动收藏", s.autoBookmarkAfterDownload, "autoBookmarkAfterDownload"),
         Triple("收藏后自动下载", s.autoDownloadAfterBookmark, "autoDownloadAfterBookmark"),
         Triple("默认私人收藏", s.defaultPrivateBookmarks, "defaultPrivateBookmarks"),
-    ).forEach { (label, enabled, key) ->
+    ).forEachIndexed { index, (label, enabled, key) ->
         fun change(value: Boolean) = vm.update { when (key) {
             "autoBookmarkAfterDownload" -> it.copy(autoBookmarkAfterDownload = value)
             "autoDownloadAfterBookmark" -> it.copy(autoDownloadAfterBookmark = value)
@@ -67,15 +70,21 @@ internal fun DownloadSettingsRows(
             "autoBookmarkAfterDownload" -> "下载任务完成后收藏作品"
             "autoDownloadAfterBookmark" -> "收藏作品后加入下载队列"
             else -> "新收藏默认仅自己可见"
-        }, materialSymbol(MaterialSymbol.Favorite),
+        }, materialSymbol(
+            when (index) {
+                0 -> MaterialSymbol.Favorite
+                1 -> MaterialSymbol.Download
+                else -> MaterialSymbol.Lock
+            },
+        ),
             action = { Switch(checked = enabled, onCheckedChange = { change(it) }) },
             position = SettingsRowPosition.Middle) { change(!enabled) }
     }
     SettingRow("作者文件夹命名", DownloadNaming.preview(s.downloadAuthorTokens.filter { it in DownloadNaming.tokens }, separator = s.downloadAuthorSeparator),
-        icon, position = SettingsRowPosition.Middle) { editor = "author" }
+        materialSymbol(MaterialSymbol.Person), position = SettingsRowPosition.Middle) { editor = "author" }
     SettingRow("作品文件命名", DownloadNaming.preview(s.downloadFileTokens.filter { it in DownloadNaming.tokens }, omitZero = s.downloadOmitPageZero, separator = s.downloadFileSeparator),
-        icon, position = SettingsRowPosition.Middle) { editor = "file" }
-    SettingRow("整理历史下载", "", icon, position = SettingsRowPosition.Middle) { organize = true }
+        materialSymbol(MaterialSymbol.Edit), position = SettingsRowPosition.Middle) { editor = "file" }
+    SettingRow("整理历史下载", "", materialSymbol(MaterialSymbol.Sort), position = SettingsRowPosition.Middle) { organize = true }
     if (organize) ModalBottomSheet(onDismissRequest = { organize = false }) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)) {
