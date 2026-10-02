@@ -423,7 +423,7 @@ internal fun NavigationPage(
             }
     }
     Box(
-        modifier = Modifier.fillMaxSize().onGloballyPositioned { pageCoordinates[0] = it }.graphicsLayer {
+        modifier = Modifier.fillMaxSize().graphicsLayer {
             if (seeking && visible) translationY = gestureVerticalOffset
             pageRadius[0] = pageShape.topStart.toPx(size, density) * renderedRounding
             shape = pageShape.copy(
@@ -433,7 +433,7 @@ internal fun NavigationPage(
                 bottomEnd = CornerSize(pageShape.bottomEnd.toPx(size, density) * renderedRounding),
             )
             clip = true
-        }.background(MaterialTheme.colorScheme.background),
+        }.onGloballyPositioned { pageCoordinates[0] = it }.background(MaterialTheme.colorScheme.background),
     ) {
         CompositionLocalProvider(
             LocalNavigationPageCoordinates provides { pageCoordinates[0] },
