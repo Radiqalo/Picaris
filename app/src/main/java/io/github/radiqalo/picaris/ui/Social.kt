@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
@@ -28,6 +30,8 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
         remember(route.section, restrict, vm.accountId) { vm.people(route.section, restrict) }
     val people = flow.collectAsLazyPagingItems()
     val list = rememberLazyListState()
+    val refreshState = rememberPullToRefreshState()
+    val isRefreshing = people.loadState.refresh is LoadState.Loading && people.itemCount > 0
     Column(Modifier.fillMaxSize()) {
         ScreenBar(route.title, back = back, scrollBehavior = null)
         if (route.section == "following")
@@ -39,9 +43,17 @@ fun PeopleScreen(route: People, vm: AppViewModel, navigate: (NavKey) -> Unit, ba
                 alignment = Alignment.CenterHorizontally,
             )
         PullToRefreshBox(
-            people.loadState.refresh is LoadState.Loading && people.itemCount > 0,
+            isRefreshing,
             { people.refresh() },
             Modifier.weight(1f).fillMaxWidth(),
+            state = refreshState,
+            indicator = {
+                PullToRefreshDefaults.LoadingIndicator(
+                    state = refreshState,
+                    isRefreshing = isRefreshing,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                )
+            },
         ) {
             when {
                 people.loadState.refresh is LoadState.Loading && people.itemCount == 0 ->
