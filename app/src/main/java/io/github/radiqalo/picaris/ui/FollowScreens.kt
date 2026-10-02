@@ -424,7 +424,15 @@ fun CollectionScreen(
                     TextButton(onClick = { showDatePicker = false }) { Text("取消") }
                 }
             },
-        ) { DatePicker(state, showModeToggle = false) }
+        ) {
+            DatePicker(
+                state,
+                showModeToggle = false,
+                colors = DatePickerDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ),
+            )
+        }
     }
 }
 

@@ -611,7 +611,13 @@ fun SearchScreen(
                 TextButton({ dateField = null }) { Text(stringResource(R.string.ui_11d0241540)) }
             },
         ) {
-            DatePicker(state, showModeToggle = false)
+            DatePicker(
+                state,
+                showModeToggle = false,
+                colors = DatePickerDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                ),
+            )
         }
     }
 }

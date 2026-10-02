@@ -53,7 +53,7 @@ fun DateSelectionSheet(
     dismissButton: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) = ActionSheet(onDismissRequest, confirmButton, dismissButton,
-    title = { Text("选择日期") }, text = {
+    text = {
         Box(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.extraLarge)) {
             content()
         }
