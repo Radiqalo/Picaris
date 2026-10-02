@@ -66,6 +66,7 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.flow.collectLatest
 
 internal val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
+internal val LocalNavigationGestureVerticalOffset = staticCompositionLocalOf { 0f }
 private val LocalNavigationCurrentSceneKey = staticCompositionLocalOf<Any?> { null }
 internal val LocalNavigationSharedElementVisible = staticCompositionLocalOf { true }
 
@@ -145,18 +146,18 @@ internal fun NavigationPageDisplay(
             maximumProgressTouchY = Float.NaN
         }
         coordinator.updateSceneOwners(scene.entries.map { it.contentKey as Long }.toSet())
-        artwork.previewVerticalOffset = gestureVerticalOffset
         artwork.refreshTargets()
         previousGestureInProgress = gestureInProgress
     }
     CompositionLocalProvider(
         LocalNavigationGestureInProgress provides gestureInProgress,
+        LocalNavigationGestureVerticalOffset provides gestureVerticalOffset,
         LocalNavigationCurrentSceneKey provides scene.key,
     ) {
         NavDisplay(
             sceneState = sceneState,
             navigationEventState = navigationEventState,
-            modifier = modifier.graphicsLayer { translationY = gestureVerticalOffset }.navigationInteractionGate {
+            modifier = modifier.navigationInteractionGate {
                 coordinator.permits(null)
             }.onGloballyPositioned { artwork.root = it },
             transitionSpec = { motion.forward(this) },
@@ -348,6 +349,7 @@ internal fun NavigationPage(
         it.parentTransition
     }.toList()
     val seeking = LocalNavigationGestureInProgress.current
+    val gestureVerticalOffset = LocalNavigationGestureVerticalOffset.current
     val coordinator = checkNotNull(LocalNavigationCoordinator.current)
     val artwork = checkNotNull(LocalNavigationArtwork.current)
     val visible = LocalNavigationSharedElementVisible.current
@@ -425,6 +427,7 @@ internal fun NavigationPage(
     }
     Box(
         modifier = Modifier.fillMaxSize().onGloballyPositioned { pageCoordinates[0] = it }.graphicsLayer {
+            if (seeking && visible) translationY = gestureVerticalOffset
             pageRadius[0] = pageShape.topStart.toPx(size, density) * renderedRounding
             shape = pageShape.copy(
                 topStart = CornerSize(pageShape.topStart.toPx(size, density) * renderedRounding),

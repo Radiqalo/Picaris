@@ -15,14 +15,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import androidx.paging.compose.*
+import androidx.activity.compose.PredictiveBackHandler
 import coil3.compose.AsyncImage
 import io.github.radiqalo.picaris.AppViewModel
 import io.github.radiqalo.picaris.R
@@ -32,6 +35,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -47,6 +51,8 @@ fun SearchScreen(
     val word = rememberTextFieldState(initialQuery.orEmpty())
     val searchState = rememberSearchBarState()
     val searchScope = rememberCoroutineScope()
+    var expandedBackProgress by remember { mutableFloatStateOf(0f) }
+    var expandedBackOffsetY by remember { mutableFloatStateOf(0f) }
     var submitted by rememberSaveable { mutableStateOf(initialQuery.orEmpty()) }
     val resultPager = rememberPagerState(pageCount = { 2 })
     var sort by rememberSaveable { mutableStateOf("date_desc") }
@@ -383,7 +389,40 @@ fun SearchScreen(
             }
         }
     }
-    ExpandedFullScreenSearchBar(state = searchState, inputField = searchField) {
+    val searchBackLimit = LocalWindowInfo.current.containerSize.height * 0.08f
+    ExpandedFullScreenSearchBar(
+        state = searchState,
+        inputField = searchField,
+        modifier =
+            Modifier.graphicsLayer {
+                scaleX = 1f - expandedBackProgress * 0.08f
+                scaleY = 1f - expandedBackProgress * 0.08f
+                translationY = expandedBackOffsetY
+                shape = RoundedCornerShape(32.dp * expandedBackProgress)
+                clip = expandedBackProgress > 0f
+            },
+    ) {
+        PredictiveBackHandler(enabled = true) { events ->
+            var maximumProgressTouchY: Float? = null
+            try {
+                events.collect { event ->
+                    expandedBackProgress = event.progress.coerceIn(0f, 1f)
+                    if (event.progress >= 1f && maximumProgressTouchY == null) {
+                        maximumProgressTouchY = event.touchY
+                    }
+                    expandedBackOffsetY =
+                        maximumProgressTouchY?.let { anchor ->
+                            ((event.touchY - anchor) * 0.35f).coerceIn(-searchBackLimit, searchBackLimit)
+                        } ?: 0f
+                }
+                searchState.animateToCollapsed()
+                focus.clearFocus()
+                keyboard?.hide()
+            } finally {
+                expandedBackProgress = 0f
+                expandedBackOffsetY = 0f
+            }
+        }
         Box(
             modifier =
                 Modifier.weight(1f)
