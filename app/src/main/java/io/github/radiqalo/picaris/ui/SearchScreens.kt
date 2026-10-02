@@ -389,7 +389,7 @@ fun SearchScreen(
             }
         }
     }
-    val searchBackLimit = LocalWindowInfo.current.containerSize.height * 0.08f
+    val searchBackLimit = LocalWindowInfo.current.containerSize.height * 0.015f
     ExpandedFullScreenSearchBar(
         state = searchState,
         inputField = searchField,
@@ -412,7 +412,7 @@ fun SearchScreen(
                     }
                     expandedBackOffsetY =
                         maximumProgressTouchY?.let { anchor ->
-                            ((event.touchY - anchor) * 0.35f).coerceIn(-searchBackLimit, searchBackLimit)
+                            ((event.touchY - anchor) * 0.2f).coerceIn(-searchBackLimit, searchBackLimit)
                         } ?: 0f
                 }
                 searchState.animateToCollapsed()

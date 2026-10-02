@@ -123,10 +123,10 @@ internal fun NavigationPageDisplay(
             ?.latestEvent
     val gestureInProgress = backEvent != null
     val maximumGestureOffset =
-        androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height * 0.08f
+        androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height * 0.015f
     val gestureVerticalOffset =
         if (gestureInProgress && backEvent!!.progress >= 1f && maximumProgressTouchY.isFinite()) {
-            ((backEvent.touchY - maximumProgressTouchY) * 0.35f)
+            ((backEvent.touchY - maximumProgressTouchY) * 0.2f)
                 .coerceIn(-maximumGestureOffset, maximumGestureOffset)
         } else {
             0f
