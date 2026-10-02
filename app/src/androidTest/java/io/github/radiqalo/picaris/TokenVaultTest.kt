@@ -13,6 +13,40 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class TokenVaultTest {
     @Test
+    fun corruptCiphertextIsReportedAndCannotBeOverwritten() {
+        val context =
+            object : ContextWrapper(ApplicationProvider.getApplicationContext<Context>()) {
+                override fun getSharedPreferences(
+                    name: String,
+                    mode: Int,
+                ): SharedPreferences = super.getSharedPreferences("corrupt_test_$name", mode)
+            }
+        val prefs = context.getSharedPreferences("credential_vault", Context.MODE_PRIVATE)
+        val damaged = "not-valid-ciphertext"
+        try {
+            check(prefs.edit().clear().commit())
+            TokenVault(context).write(VaultData())
+            val blob =
+                android.util.Base64.decode(
+                    prefs.getString("payload", null),
+                    android.util.Base64.NO_WRAP,
+                )
+            blob[blob.lastIndex] = (blob.last().toInt() xor 1).toByte()
+            val tampered = android.util.Base64.encodeToString(blob, android.util.Base64.NO_WRAP)
+            for (payload in listOf(damaged, tampered)) {
+                check(prefs.edit().putString("payload", payload).commit())
+                assertThrows(CredentialReadException::class.java) { TokenVault(context).read() }
+                assertThrows(
+                    CredentialReadException::class.java,
+                ) { TokenVault(context).write(VaultData()) }
+                assertEquals(payload, prefs.getString("payload", null))
+            }
+        } finally {
+            prefs.edit().clear().commit()
+        }
+    }
+
+    @Test
     fun pkceSessionSurvivesRepositoryRecreationAndIsConsumedByCallback() =
         kotlinx.coroutines.runBlocking {
             val context =

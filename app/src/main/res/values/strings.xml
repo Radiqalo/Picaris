@@ -146,4 +146,6 @@
     <string name="about_source_code">源代码</string>
     <string name="about_license_note">本项目以 GPL-3.0 或更高版本许可发布。</string>
     <string name="about_license">开源许可</string>
+    <string name="credential_read_failed">无法读取已保存的登录信息，可能是密钥不可用或数据损坏。原始凭据已保留，请重试。</string>
+    <string name="credential_read_retry">重新读取登录信息</string>
 </resources>

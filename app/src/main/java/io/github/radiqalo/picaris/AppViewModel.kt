@@ -54,6 +54,10 @@ constructor(
     }
 
     val settings = settingsStore.flow.stateIn(viewModelScope, SharingStarted.Eagerly, Settings())
+        val credentialReadError = auth.readError
+
+        fun retryCredentials() = run { auth.retryCredentials() }
+
     val accounts = auth.data.stateIn(viewModelScope, SharingStarted.Eagerly, auth.data.value)
     private var legacyNavigationReset = savedState.remove<Boolean>("demo") == true
     val busy = MutableStateFlow(false)

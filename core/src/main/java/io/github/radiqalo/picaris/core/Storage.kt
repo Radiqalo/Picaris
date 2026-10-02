@@ -46,58 +46,103 @@ class SettingsStore @Inject constructor(@ApplicationContext private val context:
     }
 }
 
+class CredentialReadException(
+    cause: Exception,
+) : IllegalStateException("无法读取已保存的登录信息，请重试；原始凭据已保留", cause)
+
 interface CredentialStore {
+    /** Returns empty data only for an absent vault; unreadable data throws [CredentialReadException]. */
     fun read(): VaultData
 
     fun write(data: VaultData)
 }
 
 @Singleton
-class TokenVault @Inject constructor(@ApplicationContext context: Context) : CredentialStore {
-    private val prefs = context.getSharedPreferences("credential_vault", Context.MODE_PRIVATE)
-    private val secret: SecretKey
-        get() {
-            val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-            return (store.getKey("picaris_vault", null) as? SecretKey)
-                ?: KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-                    .apply {
-                        init(
-                            KeyGenParameterSpec.Builder(
-                                    "picaris_vault",
-                                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
-                                )
-                                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                                .build()
-                        )
-                    }
-                    .generateKey()
+class TokenVault
+    @Inject
+    constructor(
+        @ApplicationContext context: Context,
+    ) : CredentialStore {
+        private companion object {
+            const val GCM_IV_BYTES = 12
+            const val GCM_TAG_BYTES = 16
         }
 
-    override fun read(): VaultData = runCatching {
-        val blob =
-            Base64.decode(prefs.getString("payload", null) ?: return VaultData(), Base64.NO_WRAP)
-        val cipher =
-            Cipher.getInstance("AES/GCM/NoPadding").apply {
-                init(Cipher.DECRYPT_MODE, secret, GCMParameterSpec(128, blob.copyOfRange(0, 12)))
+        private val prefs = context.getSharedPreferences("credential_vault", Context.MODE_PRIVATE)
+        private val secret: SecretKey
+            get() {
+                val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                return (store.getKey("picaris_vault", null) as? SecretKey)
+                    ?: KeyGenerator
+                        .getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+                        .apply {
+                            init(
+                                KeyGenParameterSpec
+                                    .Builder(
+                                        "picaris_vault",
+                                        KeyProperties.PURPOSE_ENCRYPT or
+                                            KeyProperties.PURPOSE_DECRYPT,
+                                    ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                                    .build(),
+                            )
+                        }.generateKey()
             }
-        AppJson.decodeFromString<VaultData>(
-            cipher.doFinal(blob.copyOfRange(12, blob.size)).decodeToString()
-        )
-    }
-        .getOrDefault(VaultData())
 
-    override fun write(data: VaultData) {
-        val cipher =
-            Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, secret) }
-        val blob = cipher.iv + cipher.doFinal(AppJson.encodeToString(data).encodeToByteArray())
-        check(
-            prefs.edit().putString("payload", Base64.encodeToString(blob, Base64.NO_WRAP)).commit()
-        ) {
-            "无法保存登录信息"
+        // Crypto, preference type and serialization failures all represent an unreadable vault.
+        @Suppress("TooGenericExceptionCaught")
+        @Synchronized
+        override fun read(): VaultData =
+            try {
+                val payload = prefs.getString("payload", null)
+                if (payload == null) {
+                    VaultData()
+                } else {
+                    val blob = Base64.decode(payload, Base64.NO_WRAP)
+                    require(
+                        blob.size >= GCM_IV_BYTES + GCM_TAG_BYTES,
+                    ) { "Invalid credential payload" }
+                    val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                    val existingKey = store.getKey("picaris_vault", null) as? SecretKey
+                    checkNotNull(existingKey) { "Credential key unavailable" }
+                    val cipher =
+                        Cipher.getInstance("AES/GCM/NoPadding").apply {
+                            init(
+                                Cipher.DECRYPT_MODE,
+                                existingKey,
+                                GCMParameterSpec(128, blob.copyOfRange(0, GCM_IV_BYTES)),
+                            )
+                        }
+                    AppJson.decodeFromString<VaultData>(
+                        cipher
+                            .doFinal(
+                                blob.copyOfRange(GCM_IV_BYTES, blob.size),
+                            ).decodeToString(throwOnInvalidSequence = true),
+                    )
+                }
+            } catch (error: Exception) {
+                throw CredentialReadException(error)
+            }
+
+        @Synchronized
+        override fun write(data: VaultData) {
+            // Validate existing ciphertext before replacing it, including writes from a fresh instance.
+            read()
+            val cipher =
+                Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, secret) }
+            val blob = cipher.iv + cipher.doFinal(AppJson.encodeToString(data).encodeToByteArray())
+            check(
+                prefs
+                    .edit()
+                    .putString(
+                        "payload",
+                        Base64.encodeToString(blob, Base64.NO_WRAP),
+                    ).commit(),
+            ) {
+                "无法保存登录信息"
+            }
         }
     }
-}
 
 @Serializable @Entity(primaryKeys = ["accountId", "key"])
 data class CachedFeed(val accountId: Long, val key: String, val json: String, val savedAt: Long)

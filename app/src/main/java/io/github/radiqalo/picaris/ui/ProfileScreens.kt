@@ -33,6 +33,7 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val busy by vm.busy.collectAsStateWithLifecycle()
+    val credentialError by vm.credentialReadError.collectAsStateWithLifecycle()
     var import by remember { mutableStateOf(false) }
     val tokenState = rememberTextFieldState()
     Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
@@ -52,6 +53,15 @@ fun LoginScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Picaris", style = MaterialTheme.typography.headlineSmall)
+            if (credentialError != null) {
+                Text(
+                    stringResource(R.string.credential_read_failed),
+                    color = MaterialTheme.colorScheme.error,
+                )
+                OutlinedButton(onClick = { vm.retryCredentials() }) {
+                    Text(stringResource(R.string.credential_read_retry))
+                }
+            }
             Spacer(Modifier.height(8.dp))
             Button(
                 {
@@ -65,7 +75,7 @@ fun LoginScreen(
                     }
                 },
                 Modifier.fillMaxWidth().height(56.dp),
-                enabled = !busy,
+                enabled = !busy && credentialError == null,
             ) {
                 AppIcon(materialSymbol(MaterialSymbol.Person), null)
                 Spacer(Modifier.width(10.dp))
@@ -74,7 +84,7 @@ fun LoginScreen(
             OutlinedButton(
                 { import = true },
                 Modifier.fillMaxWidth().height(52.dp),
-                enabled = !busy,
+                enabled = !busy && credentialError == null,
             ) {
                 Text(stringResource(R.string.ui_91e037beb0))
             }
@@ -95,7 +105,7 @@ fun LoginScreen(
                         state = tokenState,
                         label = { Text("Refresh token") },
                         textObfuscationMode = TextObfuscationMode.Hidden,
-                        enabled = !busy,
+                        enabled = !busy && credentialError == null,
                     )
                 }
             },
@@ -117,7 +127,7 @@ fun LoginScreen(
                         tokenState.clearText()
                         import = false
                     },
-                    enabled = !busy,
+                    enabled = !busy && credentialError == null,
                 ) {
                     Text(stringResource(R.string.ui_4d0b4688c7))
                 }

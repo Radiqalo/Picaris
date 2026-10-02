@@ -118,117 +118,199 @@ class Network @Inject constructor(private val settings: SettingsStore) {
 
 @Singleton
 class AuthRepository
-@Inject
-constructor(private val vault: CredentialStore, private val oauth: OAuthExchange) {
-    private val mutex = Mutex()
-    private val _data = MutableStateFlow(vault.read())
-    val data = _data.asStateFlow()
-    val active
-        get() = _data.value.accounts.find { it.user.id == _data.value.activeId }
+    @Inject
+    constructor(
+        private val vault: CredentialStore,
+        private val oauth: OAuthExchange,
+    ) {
+        private val mutex = Mutex()
+        private val _readError = MutableStateFlow<CredentialReadException?>(null)
+        val readError = _readError.asStateFlow()
+        private val _data =
+            MutableStateFlow(
+                try {
+                    vault.read()
+                } catch (error: CredentialReadException) {
+                    _readError.value = error
+                    VaultData()
+                },
+            )
 
-    private fun commit(data: VaultData) {
-        vault.write(data)
-        _data.value = data
-    }
+        suspend fun retryCredentials() =
+            mutex.withLock {
+                try {
+                    val restored = vault.read()
+                    _data.value = restored
+                    _readError.value = null
+                } catch (error: CredentialReadException) {
+                    _readError.value = error
+                }
+            }
 
-    suspend fun select(id: Long) = mutex.withLock {
-        require(data.value.accounts.any { it.user.id == id })
-        commit(data.value.copy(activeId = id))
-    }
-
-    suspend fun updateUser(accountId: Long, user: User) = mutex.withLock {
-        require(user.id == accountId) { "账号资料不匹配" }
-        val current = data.value
-        if (current.accounts.any { it.user.id == accountId && it.user != user }) {
-            commit(current.copy(accounts = current.accounts.map {
-                if (it.user.id == accountId) it.copy(user = user) else it
-            }))
+        private fun requireReadableCredentials() {
+            _readError.value?.let { throw it }
         }
-    }
 
-    suspend fun remove(id: Long) = mutex.withLock {
-        val accounts = data.value.accounts.filterNot { it.user.id == id }
-        commit(
-            data.value.copy(
-                accounts = accounts,
-                activeId =
-                    if (active?.user?.id == id) accounts.firstOrNull()?.user?.id
-                    else data.value.activeId,
-            )
-        )
-    }
+        val data = _data.asStateFlow()
+        val active
+            get() = _data.value.accounts.find { it.user.id == _data.value.activeId }
 
-    suspend fun startLogin(): String = mutex.withLock {
-        val verifier =
-            Base64.encodeToString(
-                ByteArray(32).also { SecureRandom().nextBytes(it) },
-                Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
-            )
-        val challenge =
-            Base64.encodeToString(
-                MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()),
-                Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
-            )
-        commit(data.value.copy(pending = AuthSession(verifier, System.currentTimeMillis())))
-        "https://app-api.pixiv.net/web/v1/login?code_challenge=$challenge&code_challenge_method=S256&client=pixiv-android"
-    }
+        private fun commit(data: VaultData) {
+            requireReadableCredentials()
+            try {
+                vault.write(data)
+            } catch (error: CredentialReadException) {
+                _readError.value = error
+                throw error
+            }
+            _data.value = data
+        }
 
-    suspend fun finishLogin(code: String) = mutex.withLock {
-        val session = data.value.pending ?: throw PixivException(400, "登录会话已失效，请重新打开网页登录")
-        if (System.currentTimeMillis() - session.createdAt > 15 * 60_000)
-            throw PixivException(400, "登录链接已过期，请重新登录")
-        val account =
-            oauth.exchange(
-                mapOf(
-                    "grant_type" to "authorization_code",
-                    "code" to code,
-                    "code_verifier" to session.verifier,
-                    "redirect_uri" to "https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback",
+        suspend fun select(id: Long) =
+            mutex.withLock {
+                requireReadableCredentials()
+                require(data.value.accounts.any { it.user.id == id })
+                commit(data.value.copy(activeId = id))
+            }
+
+        suspend fun updateUser(
+            accountId: Long,
+            user: User,
+        ) = mutex.withLock {
+            requireReadableCredentials()
+            require(user.id == accountId) { "账号资料不匹配" }
+            val current = data.value
+            if (current.accounts.any { it.user.id == accountId && it.user != user }) {
+                commit(
+                    current.copy(
+                        accounts =
+                            current.accounts.map {
+                                if (it.user.id == accountId) it.copy(user = user) else it
+                            },
+                    ),
                 )
-            )
-        save(account)
-        commit(data.value.copy(pending = null))
-    }
+            }
+        }
 
-    suspend fun importToken(token: String) = mutex.withLock {
-        require(token.isNotBlank()) { "请输入 refresh token" }
-        save(
-            oauth.exchange(mapOf("grant_type" to "refresh_token", "refresh_token" to token.trim()))
-        )
-    }
-
-    private fun save(account: Account) =
-        commit(
-            data.value.copy(
-                accounts =
-                    data.value.accounts.filterNot { it.user.id == account.user.id } + account,
-                activeId = account.user.id,
-            )
-        )
-
-    suspend fun token(accountId: Long, force: Boolean = false, rejected: String? = null): String =
-        mutex.withLock {
-            val before =
-                data.value.accounts.find { it.user.id == accountId }
-                    ?: throw PixivException(401, "请登录 Pixiv")
-            if (rejected != null && before.accessToken != rejected)
-                return@withLock before.accessToken
-            if (!force && System.currentTimeMillis() < before.expiresAt - 60_000)
-                return@withLock before.accessToken
-            val refreshed =
-                oauth.exchange(
-                    mapOf("grant_type" to "refresh_token", "refresh_token" to before.refreshToken)
+        suspend fun remove(id: Long) =
+            mutex.withLock {
+                requireReadableCredentials()
+                val accounts = data.value.accounts.filterNot { it.user.id == id }
+                commit(
+                    data.value.copy(
+                        accounts = accounts,
+                        activeId =
+                            if (active?.user?.id == id) {
+                                accounts.firstOrNull()?.user?.id
+                            } else {
+                                data.value.activeId
+                            },
+                    ),
                 )
-            check(refreshed.user.id == accountId) { "刷新凭据的账号不匹配，请重新登录" }
+            }
+
+        suspend fun startLogin(): String =
+            mutex.withLock {
+                requireReadableCredentials()
+                val verifier =
+                    Base64.encodeToString(
+                        ByteArray(32).also { SecureRandom().nextBytes(it) },
+                        Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
+                    )
+                val challenge =
+                    Base64.encodeToString(
+                        MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray()),
+                        Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
+                    )
+                commit(data.value.copy(pending = AuthSession(verifier, System.currentTimeMillis())))
+                "https://app-api.pixiv.net/web/v1/login?code_challenge=$challenge&code_challenge_method=S256&client=pixiv-android"
+            }
+
+        suspend fun finishLogin(code: String) =
+            mutex.withLock {
+                requireReadableCredentials()
+                val session = data.value.pending ?: throw PixivException(400, "登录会话已失效，请重新打开网页登录")
+                if (System.currentTimeMillis() - session.createdAt > 15 * 60_000) {
+                    throw PixivException(400, "登录链接已过期，请重新登录")
+                }
+                val account =
+                    oauth.exchange(
+                        mapOf(
+                            "grant_type" to "authorization_code",
+                            "code" to code,
+                            "code_verifier" to session.verifier,
+                            "redirect_uri" to
+                                "https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback",
+                        ),
+                    )
+                save(account)
+                commit(data.value.copy(pending = null))
+            }
+
+        suspend fun importToken(token: String) =
+            mutex.withLock {
+                requireReadableCredentials()
+                require(token.isNotBlank()) { "请输入 refresh token" }
+                save(
+                    oauth.exchange(
+                        mapOf(
+                            "grant_type" to "refresh_token",
+                            "refresh_token" to token.trim(),
+                        ),
+                    ),
+                )
+            }
+
+        private fun save(account: Account) =
             commit(
                 data.value.copy(
                     accounts =
-                        data.value.accounts.map { if (it.user.id == accountId) refreshed else it }
-                )
+                        data.value.accounts.filterNot { it.user.id == account.user.id } + account,
+                    activeId = account.user.id,
+                ),
             )
-            refreshed.accessToken
-        }
-}
+
+        suspend fun token(
+            accountId: Long,
+            force: Boolean = false,
+            rejected: String? = null,
+        ): String =
+            mutex.withLock {
+                requireReadableCredentials()
+                val before =
+                    data.value.accounts.find { it.user.id == accountId }
+                        ?: throw PixivException(401, "请登录 Pixiv")
+                if (rejected != null && before.accessToken != rejected) {
+                    return@withLock before.accessToken
+                }
+                if (!force && System.currentTimeMillis() < before.expiresAt - 60_000) {
+                    return@withLock before.accessToken
+                }
+                val refreshed =
+                    oauth.exchange(
+                        mapOf(
+                            "grant_type" to "refresh_token",
+                            "refresh_token" to before.refreshToken,
+                        ),
+                    )
+                check(refreshed.user.id == accountId) { "刷新凭据的账号不匹配，请重新登录" }
+                commit(
+                    data.value.copy(
+                        accounts =
+                            data.value.accounts.map {
+                                if (it.user.id ==
+                                    accountId
+                                ) {
+                                    refreshed
+                                } else {
+                                    it
+                                }
+                            },
+                    ),
+                )
+                refreshed.accessToken
+            }
+    }
 
 interface OAuthExchange {
     suspend fun exchange(fields: Map<String, String>): Account

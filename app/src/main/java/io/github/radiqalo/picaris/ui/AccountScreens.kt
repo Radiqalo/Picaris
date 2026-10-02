@@ -37,6 +37,7 @@ fun AccountScreen(
     back: () -> Unit,
 ) {
     val data by vm.accounts.collectAsStateWithLifecycle()
+    val credentialError by vm.credentialReadError.collectAsStateWithLifecycle()
     var add by remember { mutableStateOf(false) }
     val tokenState = rememberTextFieldState()
     var remove by remember { mutableStateOf<Account?>(null) }
@@ -51,6 +52,17 @@ fun AccountScreen(
             contentPadding = PaddingValues(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (credentialError != null) {
+                item {
+                    Text(
+                        stringResource(R.string.credential_read_failed),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    OutlinedButton(onClick = { vm.retryCredentials() }) {
+                        Text(stringResource(R.string.credential_read_retry))
+                    }
+                }
+            }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)) {
                     data.accounts.forEachIndexed { index, a ->
