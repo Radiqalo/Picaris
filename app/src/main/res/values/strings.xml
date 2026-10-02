@@ -17,7 +17,7 @@
     <string name="pixivision_load_failed">特辑暂时无法加载</string>
     <string name="pixivision_retry">重试</string>
     <string name="pixivision_page">第 %1$d 篇，共 %2$d 篇特辑</string>
-    <string name="ui_09b58aa342">外观</string>
+    <string name="settings_appearance_interaction">外观与交互</string>
     <string name="ui_0a7bef0788">清理浏览历史</string>
     <string name="ui_0aa214d301">加载更多失败 · 点击重试</string>
     <string name="ui_0b554f5235">月榜</string>

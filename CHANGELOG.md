@@ -2,6 +2,13 @@
 
 Picaris 的版本变更记录。项目从 0.2.0 基线起步，更早的历史不在本文件内。
 
+## 0.3.1
+
+- 新增图流、插画详情页和查看器画质选项。
+- 增强下载管理，支持按作者创建独立文件夹保存作品。
+- 持续完善 MD3E，优化视觉层级、交互反馈与页面动画。
+- 优化发现页、搜索联想与作品浏览体验。
+
 ## 0.3.0
 
 - 项目更名为 Picaris，包名由 `io.github.pixivnext` 改为 `io.github.radiqalo.picaris`，模块 namespace、applicationId、baseline/startup profile 与 Room schema 目录同步更新。

@@ -226,7 +226,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             item {
-                SettingsGroup(stringResource(R.string.ui_09b58aa342)) {
+                SettingsGroup(stringResource(R.string.settings_appearance_interaction)) {
                     SettingChoiceBlock(
                         title = stringResource(R.string.ui_e848ddd482),
                         icon = materialSymbol(MaterialSymbol.Theme),
@@ -309,7 +309,7 @@ fun SettingsScreen(
                                 }
                             })
                         },
-                        position = SettingsRowPosition.Last,
+                        position = SettingsRowPosition.Middle,
                     ) {
                         vm.update {
                             it.copy(
@@ -321,24 +321,22 @@ fun SettingsScreen(
                 }
             }
             item {
-                SettingsGroup("交互") {
-                    SettingRow(
-                        "触摸震动反馈",
-                        "点击、切换和选择时提供轻微震动",
-                        icon = materialSymbol(MaterialSymbol.Vibration),
-                        action = {
-                            FeedbackSwitch(
-                                checked = s.touchFeedbackEnabled,
-                                onCheckedChange = { enabled ->
-                                    vm.update { it.copy(touchFeedbackEnabled = enabled) }
-                                },
-                                feedbackWhenDisabled = true,
-                            )
-                        },
-                        position = SettingsRowPosition.Only,
-                    ) {
-                        vm.update { it.copy(touchFeedbackEnabled = !it.touchFeedbackEnabled) }
-                    }
+                SettingRow(
+                    "触摸震动反馈",
+                    "点击、切换和选择时提供轻微震动",
+                    icon = materialSymbol(MaterialSymbol.Vibration),
+                    action = {
+                        FeedbackSwitch(
+                            checked = s.touchFeedbackEnabled,
+                            onCheckedChange = { enabled ->
+                                vm.update { it.copy(touchFeedbackEnabled = enabled) }
+                            },
+                            feedbackWhenDisabled = true,
+                        )
+                    },
+                    position = SettingsRowPosition.Last,
+                ) {
+                    vm.update { it.copy(touchFeedbackEnabled = !it.touchFeedbackEnabled) }
                 }
             }
             item {
