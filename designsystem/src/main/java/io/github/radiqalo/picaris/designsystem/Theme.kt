@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /** Shared layout rhythm; component shapes and colors come from Material 3 Expressive. */
@@ -90,11 +91,23 @@ fun PixivTheme(
             onTertiaryContainer = surfaceColors.onPrimaryContainer,
         )
     }
+    val baseTypography = Typography()
+    val typography = baseTypography.copy(
+        headlineLarge = baseTypography.headlineLarge.copy(fontWeight = FontWeight.SemiBold),
+        headlineMedium = baseTypography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+        headlineSmall = baseTypography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+        titleLarge = baseTypography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+        titleMedium = baseTypography.titleMedium.copy(fontWeight = FontWeight.Medium),
+        titleSmall = baseTypography.titleSmall.copy(fontWeight = FontWeight.Medium),
+        labelLarge = baseTypography.labelLarge.copy(fontWeight = FontWeight.Medium),
+        labelMedium = baseTypography.labelMedium.copy(fontWeight = FontWeight.Medium),
+        labelSmall = baseTypography.labelSmall.copy(fontWeight = FontWeight.Normal),
+    )
     MaterialExpressiveTheme(
         colorScheme = colors,
         motionScheme = MotionScheme.expressive(),
         shapes = Shapes(),
-        typography = Typography(),
+        typography = typography,
         content = content,
     )
 }

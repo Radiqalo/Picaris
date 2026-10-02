@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -140,14 +141,14 @@ private fun DiscoveryLanding(
                 ) {
                     AppIcon(materialSymbol(MaterialSymbol.Leaderboard), null)
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                    Text(rankingTitle)
+                    Text(rankingTitle, style = MaterialTheme.typography.labelLarge)
                 }
                 if (loadingTrends) {
                     DiscoveryPlaceholders()
                 } else if (trends.isNotEmpty()) {
                     Text(
                         stringResource(R.string.discover_tags),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(trends, key = { it.tag.name }) { trend ->
@@ -169,7 +170,7 @@ private fun DiscoveryLanding(
                     if (trends.size > 3) {
                         Text(
                             stringResource(R.string.discover_popular_tags),
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleLarge,
                         )
                         val popularTrends = trends.drop(3).take(7)
                         val popularTagCarousel = rememberCarouselState(itemCount = { popularTrends.size })
@@ -246,7 +247,7 @@ private fun DiscoveryLanding(
                 if (settings.contentKind != "novel") {
                     Text(
                         stringResource(R.string.discover_artists),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(PixivSpacing.compact)) {
                         if (authorResult == null) {
@@ -275,6 +276,7 @@ private fun DiscoveryLanding(
                         stringResource(R.string.discover_works)
                     },
                     style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         },
@@ -305,13 +307,13 @@ private fun DiscoveryTagWorks(
             Text(
                 "#${if (settings.showTagTranslations) tag.translated_name ?: tag.name else tag.name} · 相关作品",
                 Modifier.weight(1f),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             TextButton(onClick = {
                 navigate(Collection(tag.name, "search", word = tag.name, tagCover = trend.cover))
-            }) { Text("查看全部") }
+            }) { Text("查看全部", style = MaterialTheme.typography.labelLarge) }
         }
         val workListState = key(spec) { rememberLazyListState() }
         val parallaxState = remember(workListState) { CarouselParallaxScrollEffectState(workListState) }
@@ -445,7 +447,7 @@ private fun DiscoveryAuthorCard(
             Avatar(user, Modifier.size(64.dp), sharedTransition = true)
             Text(
                 user.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -490,7 +492,7 @@ private fun DiscoveryAuthorCard(
 private fun DiscoveryPlaceholders() {
     Text(
         stringResource(R.string.discover_tags),
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.titleLarge,
     )
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(3) {
@@ -504,7 +506,7 @@ private fun DiscoveryPlaceholders() {
     }
     Text(
         stringResource(R.string.discover_popular_tags),
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.titleLarge,
     )
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(5) {

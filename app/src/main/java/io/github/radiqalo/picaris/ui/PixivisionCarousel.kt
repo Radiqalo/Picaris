@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -108,7 +109,10 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(PixivSpacing.compact),
                         ) {
-                            Text(stringResource(R.string.discover_pixivision), style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                stringResource(R.string.discover_pixivision),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            )
                             if (result.failed) {
                                 Text(stringResource(R.string.pixivision_load_failed))
                                 TextButton(onClick = { retry++ }) { Text(stringResource(R.string.pixivision_retry)) }
@@ -184,11 +188,12 @@ fun PixivisionCarousel(vm: AppViewModel, refreshVersion: Int = 0) {
                         Text(
                             stringResource(R.string.discover_pixivision),
                             style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
                             color = Color.White.copy(alpha = 0.85f),
                         )
                         Text(
                             article.title,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
                             color = Color.White,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
