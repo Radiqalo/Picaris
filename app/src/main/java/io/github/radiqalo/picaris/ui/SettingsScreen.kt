@@ -318,25 +318,23 @@ fun SettingsScreen(
                             )
                         }
                     }
-                }
-            }
-            item {
-                SettingRow(
-                    "触摸震动反馈",
-                    "点击、切换和选择时提供轻微震动",
-                    icon = materialSymbol(MaterialSymbol.Vibration),
-                    action = {
-                        FeedbackSwitch(
-                            checked = s.touchFeedbackEnabled,
-                            onCheckedChange = { enabled ->
-                                vm.update { it.copy(touchFeedbackEnabled = enabled) }
-                            },
-                            feedbackWhenDisabled = true,
-                        )
-                    },
-                    position = SettingsRowPosition.Last,
-                ) {
-                    vm.update { it.copy(touchFeedbackEnabled = !it.touchFeedbackEnabled) }
+                    SettingRow(
+                        "触摸震动反馈",
+                        "操作时轻微震动",
+                        icon = materialSymbol(MaterialSymbol.Vibration),
+                        action = {
+                            FeedbackSwitch(
+                                checked = s.touchFeedbackEnabled,
+                                onCheckedChange = { enabled ->
+                                    vm.update { it.copy(touchFeedbackEnabled = enabled) }
+                                },
+                                feedbackWhenDisabled = true,
+                            )
+                        },
+                        position = SettingsRowPosition.Last,
+                    ) {
+                        vm.update { it.copy(touchFeedbackEnabled = !it.touchFeedbackEnabled) }
+                    }
                 }
             }
             item {
