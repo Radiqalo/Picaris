@@ -11,8 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,6 +28,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.GraphicsContext
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -158,6 +160,7 @@ internal class NavigationArtwork(
     private val previews = mutableMapOf<String, PreviewAnchor>()
     var previewTick by mutableLongStateOf(0L)
         private set
+    var previewVerticalOffset by mutableFloatStateOf(0f)
     val isActive: Boolean get() = flights.isNotEmpty()
 
     fun hasFlight(key: String, owner: Long?): Boolean {
@@ -460,7 +463,8 @@ internal fun Modifier.navigationArtwork(key: String, corners: Rect, painter: Pai
 @Composable
 internal fun NavigationArtworkOverlay(modifier: Modifier = Modifier) {
     val artwork = LocalNavigationArtwork.current ?: return
-    Box(modifier.fillMaxSize().drawWithContent {
+    val previewVerticalOffset = artwork.previewVerticalOffset
+    Box(modifier.fillMaxSize().graphicsLayer { translationY = previewVerticalOffset }.drawWithContent {
         artwork.refreshTargets()
         artwork.previewTick
         artwork.flights.values.sortedBy { flight ->

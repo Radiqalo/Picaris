@@ -66,7 +66,6 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import kotlinx.coroutines.flow.collectLatest
 
 internal val LocalNavigationGestureInProgress = staticCompositionLocalOf { false }
-internal val LocalNavigationGestureVerticalOffset = staticCompositionLocalOf { 0f }
 private val LocalNavigationCurrentSceneKey = staticCompositionLocalOf<Any?> { null }
 internal val LocalNavigationSharedElementVisible = staticCompositionLocalOf { true }
 
@@ -122,9 +121,12 @@ internal fun NavigationPageDisplay(
         (navigationEventState.transitionState as? NavigationEventTransitionState.InProgress)
             ?.latestEvent
     val gestureInProgress = backEvent != null
+    val maximumGestureOffset =
+        androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height * 0.08f
     val gestureVerticalOffset =
         if (gestureInProgress && backEvent!!.progress >= 1f && maximumProgressTouchY.isFinite()) {
-            backEvent.touchY - maximumProgressTouchY
+            ((backEvent.touchY - maximumProgressTouchY) * 0.35f)
+                .coerceIn(-maximumGestureOffset, maximumGestureOffset)
         } else {
             0f
         }
@@ -143,18 +145,18 @@ internal fun NavigationPageDisplay(
             maximumProgressTouchY = Float.NaN
         }
         coordinator.updateSceneOwners(scene.entries.map { it.contentKey as Long }.toSet())
+        artwork.previewVerticalOffset = gestureVerticalOffset
         artwork.refreshTargets()
         previousGestureInProgress = gestureInProgress
     }
     CompositionLocalProvider(
         LocalNavigationGestureInProgress provides gestureInProgress,
-        LocalNavigationGestureVerticalOffset provides gestureVerticalOffset,
         LocalNavigationCurrentSceneKey provides scene.key,
     ) {
         NavDisplay(
             sceneState = sceneState,
             navigationEventState = navigationEventState,
-            modifier = modifier.navigationInteractionGate {
+            modifier = modifier.graphicsLayer { translationY = gestureVerticalOffset }.navigationInteractionGate {
                 coordinator.permits(null)
             }.onGloballyPositioned { artwork.root = it },
             transitionSpec = { motion.forward(this) },
@@ -346,7 +348,6 @@ internal fun NavigationPage(
         it.parentTransition
     }.toList()
     val seeking = LocalNavigationGestureInProgress.current
-    val gestureVerticalOffset = LocalNavigationGestureVerticalOffset.current
     val coordinator = checkNotNull(LocalNavigationCoordinator.current)
     val artwork = checkNotNull(LocalNavigationArtwork.current)
     val visible = LocalNavigationSharedElementVisible.current
@@ -424,7 +425,6 @@ internal fun NavigationPage(
     }
     Box(
         modifier = Modifier.fillMaxSize().onGloballyPositioned { pageCoordinates[0] = it }.graphicsLayer {
-            if (seeking && visible) translationY = gestureVerticalOffset
             pageRadius[0] = pageShape.topStart.toPx(size, density) * renderedRounding
             shape = pageShape.copy(
                 topStart = CornerSize(pageShape.topStart.toPx(size, density) * renderedRounding),
