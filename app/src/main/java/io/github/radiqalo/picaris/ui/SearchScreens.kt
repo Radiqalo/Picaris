@@ -384,46 +384,69 @@ fun SearchScreen(
         }
     }
     ExpandedFullScreenSearchBar(state = searchState, inputField = searchField) {
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(bottom = PixivSpacing.content),
+        Box(
+            modifier =
+                Modifier.weight(1f)
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.extraLarge),
         ) {
-            item(key = "id-suggestions") {
-                idSuggestions()
-            }
-            tagSuggestionError?.let { message ->
-                item(key = "tag-suggestion-error") {
-                    Text(
-                        "标签联想请求失败：$message",
-                        Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = PixivSpacing.content),
+            ) {
+                item(key = "id-suggestions") {
+                    idSuggestions()
+                }
+                tagSuggestionError?.let { message ->
+                    item(key = "tag-suggestion-error") {
+                        Text(
+                            "标签联想请求失败：$message",
+                            Modifier.fillMaxWidth().padding(horizontal = PixivSpacing.content),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+                itemsIndexed(
+                    items = tagSuggestions,
+                    key = { index, suggestion -> "tag-$index-${suggestion.name}" },
+                ) { _, suggestion ->
+                    ListItem(
+                        colors =
+                            ListItemDefaults.colors(
+                                containerColor = Color.Transparent,
+                            ),
+                        modifier =
+                            Modifier.fillMaxWidth().clickable {
+                                submit(suggestion.name)
+                            },
+                    ) { TagLabel(suggestion) }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = PixivSpacing.content),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                     )
                 }
-            }
-            itemsIndexed(
-                items = tagSuggestions,
-                key = { index, suggestion -> "tag-$index-${suggestion.name}" },
-            ) { _, suggestion ->
-                ListItem(
-                    modifier =
-                        Modifier.fillMaxWidth().clickable {
-                            submit(suggestion.name)
-                        },
-                ) { TagLabel(suggestion) }
-            }
-            itemsIndexed(
-                items = history.take(8),
-                key = { index, entry -> "history-$index-${entry.word}" },
-            ) { _, entry ->
-                ListItem(
-                    leadingContent = { AppIcon(materialSymbol(MaterialSymbol.History), null) },
-                    modifier =
-                        Modifier.fillMaxWidth().clickable {
-                            submit(entry.word)
-                        },
-                ) {
-                    Text(entry.word)
+                itemsIndexed(
+                    items = history.take(8),
+                    key = { index, entry -> "history-$index-${entry.word}" },
+                ) { _, entry ->
+                    ListItem(
+                        leadingContent = { AppIcon(materialSymbol(MaterialSymbol.History), null) },
+                        colors =
+                            ListItemDefaults.colors(
+                                containerColor = Color.Transparent,
+                            ),
+                        modifier =
+                            Modifier.fillMaxWidth().clickable {
+                                submit(entry.word)
+                            },
+                    ) {
+                        Text(entry.word)
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = PixivSpacing.content),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                    )
                 }
             }
         }
