@@ -7,6 +7,7 @@
 **/.cxx/
 **/.externalNativeBuild/
 /.agents/
+/.aws/
 /.codex/
 /work/
 /outputs/
