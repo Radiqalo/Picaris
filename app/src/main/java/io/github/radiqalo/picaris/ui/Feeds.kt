@@ -1360,7 +1360,7 @@ fun WorkCard(
                     contentColor = Color.White,
                 ) {
                     Text(
-                        if (work.isNovel) strings.getString(R.string.ui_6eb705b4ce)
+                        if (work.isNovel) strings.getString(R.string.content_novel)
                         else if (work.type == "ugoira") strings.getString(R.string.ui_de9dcfdf88)
                         else "${work.page_count}P",
                         Modifier.height(32.dp).wrapContentHeight()
